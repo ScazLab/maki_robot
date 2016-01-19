@@ -11,6 +11,8 @@
 /*       FPTZ              // get FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)
 /*       FPLZ              // get FEEDBACK of all servo PRESENT LOAD
 /*       FERZ              // get FEEDBACK of all servo ERROR (AX_ALARM_LED)
+/*       FDPZ              // return default position values
+/*       FDSZ              // return default speed values         
 /*
 /*       mm{GP|GS}xxx{IPT}yyyyyZ
 /*  where mm = {LR, LL, EP, ET, HT, HP} means eyelid right, eyelid left, eye pan, eye  tilt, head tilt, and head pan, respectively,
@@ -57,6 +59,8 @@
 #define SC_GET_PT  "PT"    // servo command syntax for feedback with PRESENT TEMPERATURE (in Celsius)
 #define SC_GET_PL  "PL"    // servo command syntax for feedback with PRESENT LOAD
 #define SC_GET_ER  "ER"  // servo command syntax for feedback with error returned from AX_ALARM_LED
+#define SC_GET_DP  "DP"  // servo command syntax for default positions
+#define SC_GET_DS  "DS"  // servo command syntax for default speed
 
 /* ---- USER DEFINED GLOBALS ---- */
 unsigned int baud_rate = 9600;    // NOTE: Make sure to set the serial monitor to this baud_rate
@@ -97,15 +101,15 @@ void setup()
 
   if (my_verbose_debug)  printServoInfoHeader();
   for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
-    makiServoPos[nServo-1] = getServoPos(nServo);
+    makiServoPos[nServo-1] = getServoPos(nServo, false);
     makiGoalPos[nServo-1] = makiServoPos[nServo-1];
     if (my_verbose_debug)  printServoInfo(nServo);
   }
 
   if (my_verbose_debug)  {  
     printMainHelp();
-    Serial.println("-- READY FOR COMMANDS --");
   } else  {
+     Serial.println("-- READY FOR COMMANDS --");
      readMotorValues(String(SC_GET_PP)); 
   }
 }
@@ -180,6 +184,7 @@ void loop() {
     } else  {}
   }  // end while (Serial.available() > 0)
  
+   
   if (newByte == TERM_CHAR)     // yay! process this properly terminated message
   {
     parseServoDriverCommand(commandString);
@@ -203,6 +208,8 @@ void printMainHelp()  {
   Serial.println("FPTZ\tget FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)");
   Serial.println("FPLZ\tget FEEDBACK of all servo PRESENT LOAD");
   Serial.println("FERZ\tget FEEDBACK of all servo ERROR STATE (AX_ALARM_LED)");
+  Serial.println("FDPZ\tget default position values");
+  Serial.println("FDSZ\tget default speed values");
   Serial.println("");
   Serial.println("mm{GP|GS}xxxIPTyyyyZ\tset GOAL POSITION or GOAL SPEED"); 
   Serial.println("\twhere xxx = [0, 1023], yyyy is INTERPOLATION TIME in milliseconds, and");
@@ -229,6 +236,7 @@ void parseServoDriverCommand(String servoCommand) {
   unsigned int parsed_int = INVALID_INT;    // expected input [0, 1023]
   unsigned int ipt = INVALID_INT;    // milliseconds
 
+
   // parse left to right
   while (tmp_string.length() > 0)  {
     if (tmp_string.startsWith(SC_FEEDBACK))    // syntax for printing feedback
@@ -244,7 +252,9 @@ void parseServoDriverCommand(String servoCommand) {
          tmp_string.startsWith(SC_GET_GS)  || 
          tmp_string.startsWith(SC_GET_PT)  ||
          tmp_string.startsWith(SC_GET_PL)  ||
-         tmp_string.startsWith(SC_GET_ER)) {
+         tmp_string.startsWith(SC_GET_ER)  ||
+         tmp_string.startsWith(SC_GET_DP)  ||
+         tmp_string.startsWith(SC_GET_DS)) {
         index += 2;
         String feedbackType = String(tmp_string.substring(0,2));
         readMotorValues(feedbackType);    // print current servo information to serial port output
@@ -339,15 +349,6 @@ void parseServoDriverCommand(String servoCommand) {
       Serial.println(tmp_string);
       Serial.flush();
     }
-
-    // need to reset GS to makiGoalSpeed after the movement has finished
-    if (ipt_flag)  {
-      for (index=1; index<=SERVOCOUNT; index++)  {
-        //Serial.println(makiGoalSpeed[index-1]);
-        setServoGoalSpeed(index, makiGoalSpeed[index-1]);
-      }
-      ipt_flag = false;
-    }
     
     if ((ipt != INVALID_INT) && (ipt > 0))  {
       // adjust servo goal speeds such that all movement begins and ends at the same time
@@ -368,6 +369,13 @@ void parseServoDriverCommand(String servoCommand) {
     } else  {
       writeGPSync();    // write makiGoalPos to all servos at the same time, but don't wait for resulting movement
     }
+     // need to reset GS to makiGoalSpeed after the movement has finished
+  
+    for (index=1; index<=SERVOCOUNT; index++)  {
+       setServoGoalSpeed(index, default_goal_speed[index-1]);
+    }
+    ipt_flag = false;
+    
   } 
 }  // end parseServoDriverCommand
 
@@ -436,7 +444,7 @@ void readMotorValues(String feedbackType)  {
   
   for (int nServo=1; nServo<=SERVOCOUNT; nServo++)   {
     if (feedbackType.equalsIgnoreCase(SC_GET_PP))  {
-      read_val = getServoPos(nServo);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
+      read_val = getServoPos(nServo, false);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
       makiServoPos[nServo-1] = read_val;   
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PS))  {
@@ -462,7 +470,11 @@ void readMotorValues(String feedbackType)  {
       read_val = errorCheckMotor(nServo, false);    // surpress printing the error string
       errorCheck_timer = millis();                             // reset timer
       
-    }  else  {
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_DP))  {
+        read_val = neutral_servo_pos[nServo];
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_DS))  {
+          read_val = default_goal_speed[nServo - 1];
+    } else  {
       // shouldn't get here
     }
     
@@ -489,25 +501,25 @@ int getServoPos(int nServo, boolean print_flag) {
   int pos = INVALID_INT;
   
   if (validServo(nServo))  {
-    pos = GetPosition(nServo);            // ax12.h; shorthand for ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
+    pos = ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2);            // ax12.h; shorthand for ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
     if (print_flag) {   
       Serial.print("(Servo ID: ");    
       Serial.print(nServo);   
       Serial.print(" ), Servo Position: ");   
-      Serial.println(pos);   
+      Serial.println(pos); 
     }
+    return pos;
   }
   Serial.flush();
-  
   return pos;
 }
 
 int getServoPos(int nServo) {     
-  return getServoPos(nServo, false);     
+  getServoPos(nServo, false);     
 }                                
 
 int printServoPos(int nServo)  {  
-  return getServoPos(nServo, true);      
+  getServoPos(nServo, true);      
 }  
 
 /* ----------------------------- */ 
@@ -628,11 +640,13 @@ int countAllMovingServos()  {
 void resetMotorPositions()  {
   // see http://www.arduino.cc/en/Reference/PROGMEM
   for (int nServo=1; nServo<=SERVOCOUNT; nServo++)  {
-    setServoGoalPos(nServo, pgm_read_word_near(neutral_servo_pos+nServo));
+    setServoGoalPos(nServo, neutral_servo_pos[nServo]);
   }
   writeGPSyncBlocking(2000);    // give sufficient time to reset
   
-  if (my_verbose_debug)  Serial.println("\n---- Servo positions reset! ----");
+  if (my_verbose_debug)  {
+    Serial.println("\n---- Servo positions reset! ----");
+  }
 }  // end resetMotorPositions 
  
 /* ----------------------------- */

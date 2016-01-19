@@ -39,24 +39,7 @@ int max_servo_pos[] = {666,   // EYELID_RIGHT
                                     582,   // HEAD_TILT
                                     768    //696   // HEAD_PAN
                                   };
-/*
-// deprecated
-PROGMEM prog_uint16_t neutral_servo_pos[] = {SERVOCOUNT,  // first number is # of servos
-                                                                            525,   // EYELID_RIGHT
-                                                                            500,   // EYELID_LEFT
-                                                                            DEFAULT_POS,   // EYE_PAN
-                                                                            DEFAULT_POS,   // EYE_TILT
-                                                                            DEFAULT_POS,   //490,  // HEAD_TILT
-                                                                            DEFAULT_POS   // HEAD_PAN
-                                                                            };  
-*/                                                                          
-
-// see also fmorgner post on 6/3/2012 at forum.arduino.cc/index.php?topic=92364.0
-// Added to top of /usr/share/arduino/hardware/arbotix/cores/arbotix/Arduino.h
-// #define __ARV_LIBC_DEPRECATED_ENABLE__ 1
-
-// see github.com/arduino/Arduino/wiki/1.6-Frequently-Asked-Questions
-const int16_t neutral_servo_pos[] PROGMEM = {SERVOCOUNT,  // first number is # of servos
+int neutral_servo_pos[] = {SERVOCOUNT,  // first number is # of servos
                                                                             525,   // EYELID_RIGHT
                                                                             500,   // EYELID_LEFT
                                                                             DEFAULT_POS,   // EYE_PAN
@@ -74,3 +57,4 @@ int default_goal_speed[] = {100,  // EYELID_RIGHT
                                           };
 
 #endif
+
