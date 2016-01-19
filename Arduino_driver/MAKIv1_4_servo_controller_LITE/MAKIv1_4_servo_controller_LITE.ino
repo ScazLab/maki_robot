@@ -503,11 +503,11 @@ int getServoPos(int nServo, boolean print_flag) {
 }
 
 int getServoPos(int nServo) {     
-  getServoPos(nServo, false);     
+  return getServoPos(nServo, false);     
 }                                
 
 int printServoPos(int nServo)  {  
-  getServoPos(nServo, true);      
+  return getServoPos(nServo, true);      
 }  
 
 /* ----------------------------- */ 
