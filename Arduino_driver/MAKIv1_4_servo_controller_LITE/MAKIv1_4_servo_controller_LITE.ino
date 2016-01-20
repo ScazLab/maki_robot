@@ -1,9 +1,9 @@
 /* ========================================================================== */
 /*  MAKIv1.4 Controller
-/*  v 0.1
+/*  v 0.2
 /*  
 /*  Listens for serial port input in the following forms:
-/*       F{MX|MN|PP|PS|PT|PL|ER}Z
+/*       F{MX|MN|PP|PS|PT|PL|ER|DP|DS}Z
 /*       FMXZ            // get FEEDBACK of all servo MAXIMUM POSITION
 /*       FMNZ           // get FEEDBACK of all servo MINIMUM POSITION
 /*       FPPZ              // get FEEDBACK of all servo PRESENT POSITION
@@ -11,8 +11,8 @@
 /*       FPTZ              // get FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)
 /*       FPLZ              // get FEEDBACK of all servo PRESENT LOAD
 /*       FERZ              // get FEEDBACK of all servo ERROR (AX_ALARM_LED)
-/*       FDPZ              // return default position values
-/*       FDSZ              // return default speed values         
+/*       FDPZ              // get FEEDBACK of all servo default position values
+/*       FDSZ              // get FEEDBACK of all servo default speed values         
 /*
 /*       mm{GP|GS}xxx{IPT}yyyyyZ
 /*  where mm = {LR, LL, EP, ET, HT, HP} means eyelid right, eyelid left, eye pan, eye  tilt, head tilt, and head pan, respectively,
@@ -24,9 +24,9 @@
 /*                                                        // locally adjust each servo's GOAL SPEED such that both movements take 2.5 seconds
 /*
 /*  Authors:
-/*    Kate Tsui
+/*    Kate Tsui, Drew O'Donnell
 /*
-/*  Updated: 2015-07-22
+/*  Updated: 2015-12-18
 /*
 /*  Acknowledgements:
 /*  * Andre Pereira (FullServoKeeponNewBop.ino)
@@ -101,16 +101,16 @@ void setup()
 
   if (my_verbose_debug)  printServoInfoHeader();
   for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
-    makiServoPos[nServo-1] = getServoPos(nServo, false);
+    makiServoPos[nServo-1] = getServoPos(nServo);
     makiGoalPos[nServo-1] = makiServoPos[nServo-1];
     if (my_verbose_debug)  printServoInfo(nServo);
   }
 
   if (my_verbose_debug)  {  
     printMainHelp();
+    Serial.println("-- READY FOR COMMANDS --");
   } else  {
-     Serial.println("-- READY FOR COMMANDS --");
-     readMotorValues(String(SC_GET_PP)); 
+    readMotorValues(String(SC_GET_PP)); 
   }
 }
 
@@ -444,7 +444,7 @@ void readMotorValues(String feedbackType)  {
   
   for (int nServo=1; nServo<=SERVOCOUNT; nServo++)   {
     if (feedbackType.equalsIgnoreCase(SC_GET_PP))  {
-      read_val = getServoPos(nServo, false);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
+      read_val = getServoPos(nServo);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
       makiServoPos[nServo-1] = read_val;   
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PS))  {
@@ -515,11 +515,11 @@ int getServoPos(int nServo, boolean print_flag) {
 }
 
 int getServoPos(int nServo) {     
-  getServoPos(nServo, false);     
+  return getServoPos(nServo, false);     
 }                                
 
 int printServoPos(int nServo)  {  
-  getServoPos(nServo, true);      
+  return getServoPos(nServo, true);      
 }  
 
 /* ----------------------------- */ 
