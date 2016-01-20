@@ -6,6 +6,9 @@ from std_msgs.msg import String
 import serial
 from serial.tools import list_ports
 
+from time import sleep
+import signal
+
 # --------------------------------------------------------------------	
 maki_port = "/dev/ttyUSB0" # default port for the MAKI Arbotix Board
 maki_serial = serial.Serial(maki_port, 9600, timeout=None) # no timeout  timeout=None
@@ -15,10 +18,39 @@ resetPositions = ""
 resetSpeeds = ""
 # --------------------------------------------------------------------
 def main():
+	global ALIVE
+
+	# ENSURE SERIAL COMMUNICATION WITH THE ROBOT
+	if maki_serial.isOpen():
+		maki_serial.flushInput();	# clear the input buffer
+		maki_serial.flushOutput();	# clear the output buffer
+	else:
+		print "ERROR: Unable to connect to MAKI on " + maki_port
+		exit	# Goodbye
+
+	i = 0
+	n = maki_serial.inWaiting()
+	print str(i) + ") maki_serial.inWaiting() = " + str(n)
+	while n <= 0:
+		if not ALIVE:
+			print "THE END"
+			return
+		sleep(1)	# 1s
+		i += 1
+		try:
+			if maki_serial.isOpen():
+				n = maki_serial.inWaiting()
+		except ValueError:
+			print "VALUE ERROR"
+			return
+		print str(i) + ") maki_serial.inWaiting() = " + str(n)
+	maki_serial.flushInput();	# clear the input buffer; we don't actually care about the contents
+
 	# Reset MAKI to default position and speed
 	defReset()
 	print "resetPositions: " + resetPositions
 	print "resetSpeeds: " + resetSpeeds
+
 	# Initialize ROS node
 	rospy.init_node('maki_listener')
 	# Subscribe to the maki_command stream
@@ -153,6 +185,22 @@ def token(header):
 		
 			
 # --------------------------------------------------------------------
+def signal_handler(signal, frame):
+	global ALIVE
+
+	if maki_serial.isOpen():
+		print 'Closing the Arduino port...'
+		maki_serial.close()
+	ALIVE = False
+	sleep(1)	# give a chance for everything else to shutdown nicely
+	exit
 
 if __name__ == '__main__':
+	global ALIVE
+
+	# allow closing the program using CTRL+C
+	signal.signal(signal.SIGINT, signal_handler)
+
+	ALIVE = True
+
 	main()
