@@ -16,6 +16,18 @@ print maki_serial
 
 resetPositions = ""
 resetSpeeds = ""
+
+FEEDBACK_SC = [ "MX", "MN", "PP", "PS", "PT", "PL", "ER", "DP", "DS" ]
+FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
+			"maki_feedback_min_pos",
+			"maki_feedback_pres_pos",
+			"maki_feedback_pres_speed",
+			"maki_feedback_pres_temp",
+			"maki_feedback_pres_load",
+			"maki_feedback_error",
+			"maki_feedback_default_pos",
+			"maki_feedback_default_speed" ]
+#FEEDBACK_PUB_DICT
 # --------------------------------------------------------------------
 def main():
 	global ALIVE
@@ -55,6 +67,8 @@ def main():
 	rospy.init_node('maki_listener')
 	# Subscribe to the maki_command stream
 	rospy.Subscriber("maki_command", String, sendToMAKI)
+	# Publisher setup
+	initPubFeedback()
 	rospy.spin()	
 
 def sendToMAKI (message): 
@@ -93,6 +107,61 @@ def sendToMAKI (message):
 	#if 'GP' in message.data:
 		#feedback("FPPZ")
 
+def initPubFeedback():
+	global FEEDBACK_PUB_DICT, FEEDBACK_SC, FEEDBACK_TOPIC
+	print "setup rostopic publishers to give feedback"
+			
+	tmp_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
+	print tmp_dict
+	FEEDBACK_PUB_DICT = { }		# init as empty dictionary
+	for sc_dict_key, feedbackTopic in tmp_dict.iteritems():
+		pub = rospy.Publisher(feedbackTopic, String, queue_size = 26)
+		FEEDBACK_PUB_DICT[sc_dict_key] = pub
+	return
+
+def feedback(feedbackString):
+	print "about to give feedback"
+	startLetter = ''
+	feedbackTopic = ''
+	if (feedbackString == "FMXZ"):
+		startLetter = 'M'
+		feedbackTopic = 'maki_max_feedback'
+	if (feedbackString == "FMNZ"):
+		startLetter = 'M'
+		feedbackTopic = 'maki_min_feedback'
+	if (feedbackString == "FPPZ"):
+		startLetter = 'P'
+		feedbackTopic = 'maki_position_feedback'
+	if (feedbackString == "FPSZ"):
+		startLetter = 'P'
+		feedbackTopic = 'maki_speed_feedback'
+	if (feedbackString == "FPTZ"):
+		startLetter = 'M'
+		feedbackTopic = 'maki_temp_feedback'
+	if (feedbackString == "FPLZ"):
+		startLetter = 'P'
+		feedbackTopic = 'maki_load_feedback'
+	if (feedbackString == "FERZ"):
+		startLetter = 'E'
+		feedbackTopic = 'maki_error_feedback'
+	if (feedbackString == "FDPZ"):
+		startLetter = 'D'
+		feedbackTopic = 'maki_default_position'
+	if (feedbackString == "FDSZ"):
+		startLetter = 'D'
+		feedbackTopic = 'maki_default_speed'
+
+	maki_serial.write(feedbackString)
+	line = ""
+	c = maki_serial.read()
+	while (c != startLetter):
+		c = maki_serial.read()
+	while (c != ';'):
+		line += c
+		c = maki_serial.read()
+	print "feedback: " + line
+	pub = rospy.Publisher(feedbackTopic, String, queue_size = 26)
+	pub.publish(line)	
 def feedback(feedbackString):
 	print "about to give feedback"
 	startLetter = ''
