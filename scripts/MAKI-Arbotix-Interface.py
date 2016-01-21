@@ -68,19 +68,21 @@ maki_serial = "" 	## init as empty string
 feedback_req_template = ""	## init as empty string; dynamically populated as compiled regular expression
 feedback_resp_template = ""	## init as empty string; dynamically populated as compiled regular expression
 feedback_pub_dict = { }	## init as empty dictionary; dynamically populated
+feedback_topic_name_dict = { }	## init as empty dictionary; dynamically populated
 resetPositions = ""	## init as empty string; dynamically populated
 resetSpeeds = ""	## init as empty string; dynamically populated
 
 # --------------------------------------------------------------------
 ## ------------------------------
 def recvFromArduino():
+	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
 	print "recvFromArduino: BEGIN"
 
 	_recv_msg = ''
 	_RECEIVING = True
-	while _RECEIVING:
+	while _RECEIVING and ALIVE:
 		if maki_serial.inWaiting() > 0:
 			_m_char = maki_serial.read(1)	# read 1 byte from Arduino
 			_recv_msg += _m_char
@@ -134,13 +136,14 @@ def sendToMAKI (message):
 ##	keys come from the FEEDBACK_SC list; servo control infix for type of feedback
 ## ------------------------------
 def initPubFeedback():
-	global feedback_pub_dict, FEEDBACK_SC, FEEDBACK_TOPIC
+	global feedback_pub_dict, feedback_topic_name_dict
+	global FEEDBACK_SC, FEEDBACK_TOPIC
 	print "setup rostopic publishers to give feedback"
 			
-	_tmp_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
-	print _tmp_dict
+	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
+	print feedback_topic_name_dict
 	feedback_pub_dict = { }		# init as empty dictionary
-	for _sc_dict_key, _feedbackTopic in _tmp_dict.iteritems():
+	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
 		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26)
 		feedback_pub_dict[_sc_dict_key] = _pub
 	return
@@ -162,8 +165,9 @@ def initFeedbackFormat():
 
 def feedback(feedbackString):
 	_feedback_type = requestFeedback(feedbackString)
-	if _feedback_type != '':
-		publishFeedback(_feedback_type)
+	## ktsui : Intentionally commented out; only want the main loop to read from the serial port
+	#if _feedback_type != '':
+	#	publishFeedback(_feedback_type)
 	return
 
 def requestFeedback(feedbackString):
@@ -195,7 +199,9 @@ def publishFeedback(feedbackType):
 		print "Validated: prefix='" + _prefix + "' and feedback_values='" + _feedback_values + "'"
 		if feedback_pub_dict.has_key(_prefix):
 			feedback_pub_dict[_prefix].publish(_recv_msg)
-			print "published std_msgs/String '" + _recv_msg + "' on rostopic " + "FOO" 
+			print "published std_msgs/String '" + _recv_msg + "' on rostopic " + feedback_topic_name_dict[_prefix] 
+	else:
+		print "publishFeedback: INVALID MESSAGE RECEIVED; '" + _recv_msg + "'"
 
 	print "feedback: " + _recv_msg
 	return
@@ -332,9 +338,13 @@ if __name__ == '__main__':
 	## ------------------------------
 	
 
-
+	## main loop will process messages received from the Arbotix-M board
 	# And now... go!
-	rospy.spin()	
+	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
+	while ALIVE and not rospy.is_shutdown():
+		publishFeedback("")	## calls recvFromArduino()
+		sleep(0.5)	# 500ms
+
 	print "I am here now"
 	print "Bye bye"
 
