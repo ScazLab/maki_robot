@@ -14,9 +14,10 @@ maki_port = "/dev/ttyUSB0" # default port for the MAKI Arbotix Board
 maki_serial = serial.Serial(maki_port, 9600, timeout=None) # no timeout  timeout=None
 print maki_serial
 
-resetPositions = ""
-resetSpeeds = ""
+resetPositions = ""	## init as empty string; dynamically populated
+resetSpeeds = ""	## init as empty string; dynamically populated
 
+## servo control infix for type of feedback
 FEEDBACK_SC = [ "MX", "MN", "PP", "PS", "PT", "PL", "ER", "DP", "DS" ]
 FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
 			"maki_feedback_min_pos",
@@ -27,7 +28,16 @@ FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
 			"maki_feedback_error",
 			"maki_feedback_default_pos",
 			"maki_feedback_default_speed" ]
-#FEEDBACK_PUB_DICT
+FEEDBACK_PUB_DICT = { }	## init as empty dictionary; dynamically populated
+
+## NOTE: These globals are #define at the top of the Arduino servo driver
+## MAKIv1_4_servo_controller_LITE.ino
+INVALID_INT = 9999
+SERVOCOUNT = 6
+DELIMITER_RECV = ':'	## syntax for FEEDBACK delimiter
+TERM_CHAR_RECV = ';'	## syntax for end of FEEDBACK
+TERM_CHAR_SEND = 'Z'	## syntax for end of servo command
+
 # --------------------------------------------------------------------
 def main():
 	global ALIVE
@@ -69,7 +79,32 @@ def main():
 	rospy.Subscriber("maki_command", String, sendToMAKI)
 	# Publisher setup
 	initPubFeedback()
+	# Setup regular expression templates for parsing feedback messages
+	initFeedbackFormat()
+
+	# And now... go!
 	rospy.spin()	
+
+## ------------------------------
+def recvFromArduino():
+	global maki_serial
+	global TERM_CHAR_RECV
+	print "recvFromArduino: BEGIN"
+
+	_recv_msg = ''
+	_RECEIVING = True
+	while _RECEIVING:
+		if maki_serial.inWaiting() > 0:
+			_m_char = maki_serial.read(1)	# read 1 byte from Arduino
+			_recv_msg += _m_char
+			if _m_char==TERM_CHAR_RECV:
+				_RECEIVING = False
+
+	if _recv_msg != '' and maki_serial.isOpen():
+		maki_serial.flushInput();	# clear the input buffer
+
+	print "recvFromArduino: END"
+	return _recv_msg
 
 def sendToMAKI (message): 
 	global maki_serial
@@ -107,106 +142,78 @@ def sendToMAKI (message):
 	#if 'GP' in message.data:
 		#feedback("FPPZ")
 
+## ------------------------------
+##	ros publishers are stored as the contents of a dictionary
+##	keys come from the FEEDBACK_SC list; servo control infix for type of feedback
+## ------------------------------
 def initPubFeedback():
 	global FEEDBACK_PUB_DICT, FEEDBACK_SC, FEEDBACK_TOPIC
 	print "setup rostopic publishers to give feedback"
 			
-	tmp_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
-	print tmp_dict
+	_tmp_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
+	print _tmp_dict
 	FEEDBACK_PUB_DICT = { }		# init as empty dictionary
-	for sc_dict_key, feedbackTopic in tmp_dict.iteritems():
-		pub = rospy.Publisher(feedbackTopic, String, queue_size = 26)
-		FEEDBACK_PUB_DICT[sc_dict_key] = pub
+	for _sc_dict_key, _feedbackTopic in _tmp_dict.iteritems():
+		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26)
+		FEEDBACK_PUB_DICT[_sc_dict_key] = _pub
+	return
+
+def initFeedbackFormat():
+	global TERM_CHAR_SEND, TERM_CHAR_RECV, DELIMITER_RECV
+	global FEEDBACK_REQ_TEMPLATE, FEEDBACK_RESP_TEMPLATE
+
+	_feedback_request_format = "\AF"	## F is the FEEDBACK request prefix
+	_feedback_request_format += "([A-Z]{2})"	
+	_feedback_request_format += TERM_CHAR_SEND + "\Z"	## ends in Z (capital zed)
+	FEEDBACK_REQ_TEMPLATE = re.compile(_feedback_request_format)
+
+	_feedback_response_format = "\A([A-Z]{2})"	## 2 alphabetic char prefix
+	_feedback_response_format += "(([0-9]+" + DELIMITER_RECV + "){" + str(SERVOCOUNT-1) + "}[0-9]+)"
+	_feedback_response_format += TERM_CHAR_RECV + "\Z"	## ends in ;
+	FEEDBACK_RESP_TEMPLATE = re.compile(_feedback_response_format)
 	return
 
 def feedback(feedbackString):
-	print "about to give feedback"
-	startLetter = ''
-	feedbackTopic = ''
-	if (feedbackString == "FMXZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_max_feedback'
-	if (feedbackString == "FMNZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_min_feedback'
-	if (feedbackString == "FPPZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_position_feedback'
-	if (feedbackString == "FPSZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_speed_feedback'
-	if (feedbackString == "FPTZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_temp_feedback'
-	if (feedbackString == "FPLZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_load_feedback'
-	if (feedbackString == "FERZ"):
-		startLetter = 'E'
-		feedbackTopic = 'maki_error_feedback'
-	if (feedbackString == "FDPZ"):
-		startLetter = 'D'
-		feedbackTopic = 'maki_default_position'
-	if (feedbackString == "FDSZ"):
-		startLetter = 'D'
-		feedbackTopic = 'maki_default_speed'
-
-	maki_serial.write(feedbackString)
-	line = ""
-	c = maki_serial.read()
-	while (c != startLetter):
-		c = maki_serial.read()
-	while (c != ';'):
-		line += c
-		c = maki_serial.read()
-	print "feedback: " + line
-	pub = rospy.Publisher(feedbackTopic, String, queue_size = 26)
-	pub.publish(line)	
-def feedback(feedbackString):
-	print "about to give feedback"
-	startLetter = ''
-	feedbackTopic = ''
-	if (feedbackString == "FMXZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_max_feedback'
-	if (feedbackString == "FMNZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_min_feedback'
-	if (feedbackString == "FPPZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_position_feedback'
-	if (feedbackString == "FPSZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_speed_feedback'
-	if (feedbackString == "FPTZ"):
-		startLetter = 'M'
-		feedbackTopic = 'maki_temp_feedback'
-	if (feedbackString == "FPLZ"):
-		startLetter = 'P'
-		feedbackTopic = 'maki_load_feedback'
-	if (feedbackString == "FERZ"):
-		startLetter = 'E'
-		feedbackTopic = 'maki_error_feedback'
-	if (feedbackString == "FDPZ"):
-		startLetter = 'D'
-		feedbackTopic = 'maki_default_position'
-	if (feedbackString == "FDSZ"):
-		startLetter = 'D'
-		feedbackTopic = 'maki_default_speed'
-
-	maki_serial.write(feedbackString)
-	line = ""
-	c = maki_serial.read()
-	while (c != startLetter):
-		c = maki_serial.read()
-	while (c != ';'):
-		line += c
-		c = maki_serial.read()
-	print "feedback: " + line
-	pub = rospy.Publisher(feedbackTopic, String, queue_size = 26)
-	pub.publish(line)	
+	_feedback_type = requestFeedback(feedbackString)
+	if _feedback_type != '':
+		publishFeedback(_feedback_type)
 	return
 
+def requestFeedback(feedbackString):
+	global FEEDBACK_REQ_TEMPLATE
+
+	print "about to request feedback"
+	_tmp = FEEDBACK_REQ_TEMPLATE.search(feedbackString)
+	## Yes, feedbackString has the expected format
+	if _tmp != None:
+		_feedback_type = _tmp.group(1)
+		maki_serial.write(feedbackString)
+		return _feedback_type
+	else:
+		print "INVALID SYNTAX for feedback request: " + feedbackString
+		return ''
+	return
+
+def publishFeedback(feedbackType):
+	## TODO: currently feedbackType is ignored
+
+	global FEEDBACK_RESP_TEMPLATE
+	global FEEDBACK_PUB_DICT
+
+	_recv_msg = recvFromArduino()
+	_tmp = FEEDBACK_RESP_TEMPLATE.search(_recv_msg)
+	if _tmp != None:
+		_prefix = _tmp.group(1)
+		_feedback_values = _tmp.group(2)
+		print "Validated: prefix='" + _prefix + "' and feedback_values='" + _feedback_values + "'"
+		if FEEDBACK_PUB_DICT.has_key(_prefix):
+			FEEDBACK_PUB_DICT[_prefix].publish(_recv_msg)
+			print "published std_msgs/String '" + _recv_msg + "' on rostopic " + "FOO" 
+
+	print "feedback: " + _recv_msg
+	return
+
+## ------------------------------
 def defReset():
 	print "defining reset strings"
 	maki_serial.write("FDPZ")
@@ -253,7 +260,7 @@ def token(header):
 	return subCommand		
 		
 			
-# --------------------------------------------------------------------
+## ------------------------------
 def signal_handler(signal, frame):
 	global ALIVE
 
@@ -264,6 +271,7 @@ def signal_handler(signal, frame):
 	sleep(1)	# give a chance for everything else to shutdown nicely
 	exit
 
+## ------------------------------
 if __name__ == '__main__':
 	global ALIVE
 
