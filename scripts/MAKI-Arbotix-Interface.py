@@ -332,11 +332,14 @@ if __name__ == '__main__':
 
 	## STEP 3: ESTABLISH SERIAL COMMUNICATION WITH THE ROBOT
 	## STEP 3A: INSTANTIATE THE CONNECTION
-	_argc = len(sys.argv)
+	#print "SYS: " + str( len(sys.argv) ) + ", " + str(sys.argv)
+	#print "ROS: " + str( len(rospy.myargv()) ) + ", " + str(rospy.myargv())
+	## NOTE: rospy.myargv() strips __name:=FOO __log:=BAR command line args run from roslaunch file
+	_argc = len(rospy.myargv())
 	if ( _argc > 1 ):
-		TTY_PORT = str(sys.argv[1])
+		TTY_PORT = str(rospy.myargv()[1])
 	if ( _argc > 2 ):
-		usage(sys.argv[1:])	## call sys.exit()
+		usage(rospy.myargv()[1:])	## call sys.exit()
 	_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
 	try:
 		maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
