@@ -10,6 +10,8 @@ from serial.tools import list_ports
 
 from time import sleep
 import signal
+import sys
+from timeit import default_timer as timer
 
 # --------------------------------------------------------------------	
 ## ---- USER DEFINED GLOBALS ----
@@ -40,6 +42,7 @@ SC_GET_ER = "ER"        ## servo command syntax for feedback with error returned
 SC_GET_DP = "DP"	## servo command syntax for default positions
 SC_GET_DS = "DS"	## servo command syntax for default speed
 BAUD_RATE = 9600
+EC_TIMER_DURATION = 30	## 30s, or 30000ms
 
 ## from MAKIv14.h
 SERVOCOUNT = 6  ## MAKIv1.4 has 6 servos
@@ -64,7 +67,7 @@ FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
 
 ## ---- DYNAMIC GLOBALS ---- modified programatically ----
 ALIVE = False
-maki_serial = "" 	## init as empty string
+maki_serial = None 	## init as Python's null object
 feedback_req_template = ""	## init as empty string; dynamically populated as compiled regular expression
 feedback_resp_template = ""	## init as empty string; dynamically populated as compiled regular expression
 feedback_pub_dict = { }	## init as empty dictionary; dynamically populated
@@ -80,14 +83,30 @@ def recvFromArduino():
 	global TERM_CHAR_RECV
 	print "recvFromArduino: BEGIN"
 
+
 	_recv_msg = ''
 	_RECEIVING = True
+	_exit_flag = False
 	while _RECEIVING and ALIVE:
-		if maki_serial.inWaiting() > 0:
-			_m_char = maki_serial.read(1)	# read 1 byte from Arduino
-			_recv_msg += _m_char
-			if _m_char==TERM_CHAR_RECV:
-				_RECEIVING = False
+		try:
+			if maki_serial.isOpen() and maki_serial.inWaiting() > 0:
+				_m_char = maki_serial.read(1)	# read 1 byte from Arduino
+				_recv_msg += _m_char
+				if _m_char==TERM_CHAR_RECV:
+					_RECEIVING = False
+		except ValueError as e1:
+			print "recvFromArduino: VALUE ERROR: Serial connection closed while reading: " + str(e1)
+			_exit_flag = True
+		except IOError as e2:
+			print "recvFromArduino: IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2)
+			_exit_flag = True
+
+		if _exit_flag:
+			print "ERROR: Reading from serial port disturbed..."
+			print "####################################################\n"
+			print "(Is the robot's Arbotix-M board plugged in?)"
+			print "\n####################################################"
+			sys.exit()	## use this instead of exit (which is meant for interactive shells)
 
 	if _recv_msg != '' and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
@@ -141,7 +160,7 @@ def initPubFeedback():
 	print "setup rostopic publishers to give feedback"
 			
 	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
-	print feedback_topic_name_dict
+	#print feedback_topic_name_dict
 	feedback_pub_dict = { }		# init as empty dictionary
 	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
 		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26)
@@ -255,15 +274,26 @@ def token(header):
 			
 ## ------------------------------
 def signal_handler(signal, frame):
+	print "signal_handler: CTRL+C"
+	makiExit()
+	print "signal_handler: CTRL+C says goodnight"
+	sys.exit()	## use this instead of exit (which is meant for interactive shells)
+
+def makiExit():
 	global ALIVE
 	global maki_serial
 
-	if maki_serial.isOpen():
-		print 'Closing the Arduino port...'
-		maki_serial.close()
-	ALIVE = False
-	sleep(1)	# give a chance for everything else to shutdown nicely
-	exit
+	if ALIVE:
+		try:
+			if maki_serial != None and maki_serial.isOpen():
+				print 'Closing the Arduino port...'
+				maki_serial.close()
+		except AttributeError:
+			pass
+		ALIVE = False
+		sleep(1)	# give a chance for everything else to shutdown nicely
+		print "makiExit: And MAKI lived happily ever after..."
+	exit	## meant for interactive interpreter shell; unlikely this actually exits
 
 ## ------------------------------
 if __name__ == '__main__':
@@ -285,6 +315,8 @@ if __name__ == '__main__':
 	## STEP 2: ROS SETUP
 	# Initialize ROS node
 	rospy.init_node('maki_listener')
+	# Register shutdown hook
+	rospy.on_shutdown(makiExit)
 	# Subscribe to the maki_command stream
 	rospy.Subscriber("maki_command", String, sendToMAKI)
 	# Publisher setup
@@ -295,36 +327,66 @@ if __name__ == '__main__':
 	## STEP 3: ESTABLISH SERIAL COMMUNICATION WITH THE ROBOT
 	## STEP 3A: INSTANTIATE THE CONNECTION
 	_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
-	maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
-	print maki_serial
+	try:
+		maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
+		print maki_serial
+	except serial.serialutil.SerialException as e0:
+		print "ERROR: " + str(e0)
 
 	## STEP 3B: ENSURE SERIAL COMMUNICATION WITH THE ROBOT
-	if maki_serial.isOpen():
+	if maki_serial != None and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 		maki_serial.flushOutput();	# clear the output buffer
+		print "SUCCESS: Opened serial connection to MAKI on " + _maki_port 
 	else:
-		print "ERROR: Unable to connect to MAKI on " + _maki_port
-		print "Exiting..."
-		exit	# Goodbye
+		print "ERROR: Unable to connect to MAKI on " + _maki_port + ". Exiting..."
+		sys.exit()	## use this instead of exit (which is meant for interactive shells)
 
 	## wait until Arbotix-M board transmits before continuing 
-	## THIS IS BLOCKING
-	i = 0
-	n = maki_serial.inWaiting()
-	print str(i) + ") maki_serial.inWaiting() = " + str(n)
-	while n <= 0:
-		if not ALIVE:
-			print "THE END"
-			exit
-		sleep(1)	# 1s
-		i += 1
+	## THIS WHILE LOOP IS BLOCKING
+	_exit_flag = False
+	_auto_feedback_ER_timer_start = timer()
+	#print "Start time: " + str(_auto_feedback_ER_timer_start)
+	_i = 0
+	_n = maki_serial.inWaiting()
+	while _n <= 0:
+		print str(_i) + ") maki_serial.inWaiting() = " + str(_n)
+
+		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )
+		if ( int(timer() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
+			print "WARNING: Nothing received from serial port..."
+			print "####################################################\n"
+			print "(Does the robot have power? Is the power switch on?)"
+			print "\n####################################################"
+			## reset the warning timer
+			_auto_feedback_ER_timer_start = timer()
+			
+		if _exit_flag:
+			if ( int(timer() - _auto_feedback_ER_timer_start) > 10 ):
+				print "ERROR: Nothing received from serial port. Exiting..."
+				print "####################################################\n"
+				print "(Does the robot have power? Is the power switch on?)"
+				print "\n####################################################"
+			sys.exit()	## use this instead of exit (which is meant for interactive shells)
+		else:
+			sleep(1)	# 1s
+			_i += 1
+
 		try:
 			if maki_serial.isOpen():
-				n = maki_serial.inWaiting()
-		except ValueError:
-			print "VALUE ERROR"
-			exit
-		print str(i) + ") maki_serial.inWaiting() = " + str(n)
+				_n = maki_serial.inWaiting()
+		except ValueError as e1:
+			print "VALUE ERROR: Serial connection closed while establishing communication: " + str(e1)
+			_exit_flag = True
+		except IOError as e2:
+			print "IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2)
+			_exit_flag = True
+
+		if not ALIVE:
+			_exit_flag = True
+
+		
+
 	# clear the input buffer; we don't actually care about the contents
 	maki_serial.flushInput();
 
@@ -345,6 +407,5 @@ if __name__ == '__main__':
 		publishFeedback("")	## calls recvFromArduino()
 		sleep(0.5)	# 500ms
 
-	print "I am here now"
-	print "Bye bye"
+	print "main: Bye bye"
 
