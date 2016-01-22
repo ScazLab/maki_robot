@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-#RUN AS:	python MAKI-Arbotix-Interface.py <PORT, default=USB0>
+#RUN AS:	rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>
 
 import rospy
 import re
@@ -76,6 +76,12 @@ resetPositions = ""	## init as empty string; dynamically populated
 resetSpeeds = ""	## init as empty string; dynamically populated
 
 # --------------------------------------------------------------------
+def usage(cmd_line_args):
+	print "Usage:	rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>"
+	if cmd_line_args != None and cmd_line_args != "":
+		print "Given command line args: " + str(cmd_line_args)
+		sys.exit()
+
 ## ------------------------------
 def recvFromArduino():
 	global ALIVE
@@ -326,6 +332,11 @@ if __name__ == '__main__':
 
 	## STEP 3: ESTABLISH SERIAL COMMUNICATION WITH THE ROBOT
 	## STEP 3A: INSTANTIATE THE CONNECTION
+	_argc = len(sys.argv)
+	if ( _argc > 1 ):
+		TTY_PORT = str(sys.argv[1])
+	if ( _argc > 2 ):
+		usage(sys.argv[1:])	## call sys.exit()
 	_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
 	try:
 		maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
