@@ -16,10 +16,11 @@ from timeit import default_timer as timer
 # --------------------------------------------------------------------	
 ## ---- USER DEFINED GLOBALS ----
 
-VERBOSE_DEBUG = False
+VERBOSE_DEBUG = True	#False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
 TTY_PORT = "USB0"	## default port for the MAKI Arbotix-M board
 
 ## ---- CONSTANTS ----
+FILENAME = "MAKI-Arbotix-Interface.py"	## used for logging
 
 ## NOTE: These globals are #define at the top of the Arduino servo driver
 ## MAKIv1_4_servo_controller_LITE.ino
@@ -161,9 +162,14 @@ def sendToMAKI (message):
 ##	keys come from the FEEDBACK_SC list; servo control infix for type of feedback
 ## ------------------------------
 def initPubFeedback():
+	## get function name for logging purposes
+	_fname = sys._getframe().f_code.co_name	## see http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback
+	#_fname = initPubFeedback.__name__	## same as above but less modular
+
 	global feedback_pub_dict, feedback_topic_name_dict
 	global FEEDBACK_SC, FEEDBACK_TOPIC
-	print "setup rostopic publishers to give feedback"
+	#print "setup rostopic publishers to give feedback"
+	my_ros_log(_fname, "setup rostopic publishers to give feedback", rospy.DEBUG)
 			
 	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
 	#print feedback_topic_name_dict
@@ -279,10 +285,37 @@ def token(header):
 		
 			
 ## ------------------------------
+## NOTE: ktsui: turns out that this is superfluous with rospy
+## decided to use just straight rospy.log* since /rosout provides file, function, and line in addition to the message itself
+def my_ros_log(function_name, log_msg, log_level=rospy.INFO):
+	global FILENAME
+	_new_log_msg = "[" + str(FILENAME) + "]"
+	_new_log_msg += " [" + str(function_name) + "] "
+	_new_log_msg += str(log_msg)
+
+	if VERBOSE_DEBUG:
+		print _new_log_msg
+
+	## for ROS verbosity levels, see http://wiki.ros.org/Verbosity%20Levels
+	if log_level==rospy.DEBUG:
+		rospy.logdebug(_new_log_msg)
+	elif log_level==rospy.INFO:
+		rospy.loginfo(_new_log_msg)
+	elif log_level==rospy.WARN:
+		rospy.logwarn(_new_log_msg)
+	elif log_level==rospy.ERROR:
+		rospy.logerr(_new_log_msg)
+	elif log_level==rospy.FATAL:
+		rospy.logfatal(_new_log_msg)
+	else:
+		print "Unknown log_level for log_msg: '" + _new_log_msg + "'"
+	return
+
+## ------------------------------
 def signal_handler(signal, frame):
-	print "signal_handler: CTRL+C"
+	rospy.loginfo( "signal_handler: CTRL+C" )
 	makiExit()
-	print "signal_handler: CTRL+C says goodnight"
+	rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
 	sys.exit()	## use this instead of exit (which is meant for interactive shells)
 
 def makiExit():
@@ -292,19 +325,20 @@ def makiExit():
 	if ALIVE:
 		try:
 			if maki_serial != None and maki_serial.isOpen():
-				print 'Closing the Arduino port...'
+				rospy.loginfo( "Closing the Arduino port..." )
 				maki_serial.close()
 		except AttributeError:
 			pass
 		ALIVE = False
 		sleep(1)	# give a chance for everything else to shutdown nicely
-		print "makiExit: And MAKI lived happily ever after..."
+		rospy.logdebug( "makiExit: And MAKI lived happily ever after..." )
 	exit	## meant for interactive interpreter shell; unlikely this actually exits
 
 ## ------------------------------
 if __name__ == '__main__':
 
 	global VERBOSE_DEBUG
+	global FILENAME
 	global ALIVE
 	global TTY_PORT, BAUD_RATE, maki_serial
 
@@ -320,7 +354,11 @@ if __name__ == '__main__':
 
 	## STEP 2: ROS SETUP
 	# Initialize ROS node
-	rospy.init_node('maki_listener')
+	# see http://wiki.ros.org/rospy/Overview/Logging
+	if VERBOSE_DEBUG:
+		rospy.init_node('maki_arbotix_interface', log_level=rospy.DEBUG)
+	else:
+		rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
 	# Register shutdown hook
 	rospy.on_shutdown(makiExit)
 	# Subscribe to the maki_command stream
@@ -343,17 +381,17 @@ if __name__ == '__main__':
 	_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
 	try:
 		maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
-		print maki_serial
+		rospy.loginfo( str(maki_serial) )
 	except serial.serialutil.SerialException as e0:
-		print "ERROR: " + str(e0)
+		rospy.logerr( "ERROR: " + str(e0) )
 
 	## STEP 3B: ENSURE SERIAL COMMUNICATION WITH THE ROBOT
 	if maki_serial != None and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 		maki_serial.flushOutput();	# clear the output buffer
-		print "SUCCESS: Opened serial connection to MAKI on " + _maki_port 
+		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(_maki_port) ) 
 	else:
-		print "ERROR: Unable to connect to MAKI on " + _maki_port + ". Exiting..."
+		rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(_maki_port) + ". Exiting..." )
 		sys.exit()	## use this instead of exit (which is meant for interactive shells)
 
 	## wait until Arbotix-M board transmits before continuing 
@@ -364,10 +402,11 @@ if __name__ == '__main__':
 	_i = 0
 	_n = maki_serial.inWaiting()
 	while _n <= 0:
-		print str(_i) + ") maki_serial.inWaiting() = " + str(_n)
+		rospy.logdebug( str(_i) + ") maki_serial.inWaiting() = " + str(_n) )
 
 		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )
 		if ( int(timer() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
+			rospy.logwarn( "WARNING: Nothing received from serial port..." )
 			print "WARNING: Nothing received from serial port..."
 			print "####################################################\n"
 			print "(Does the robot have power? Is the power switch on?)"
@@ -377,6 +416,7 @@ if __name__ == '__main__':
 			
 		if _exit_flag:
 			if ( int(timer() - _auto_feedback_ER_timer_start) > 10 ):
+				rospy.logerr( "ERROR: Nothing received from serial port. Exiting..." )
 				print "ERROR: Nothing received from serial port. Exiting..."
 				print "####################################################\n"
 				print "(Does the robot have power? Is the power switch on?)"
@@ -390,10 +430,10 @@ if __name__ == '__main__':
 			if maki_serial.isOpen():
 				_n = maki_serial.inWaiting()
 		except ValueError as e1:
-			print "VALUE ERROR: Serial connection closed while establishing communication: " + str(e1)
+			rospy.logerr( "VALUE ERROR: Serial connection closed while establishing communication: " + str(e1) )
 			_exit_flag = True
 		except IOError as e2:
-			print "IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2)
+			rospy.logerr( "IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2) )
 			_exit_flag = True
 
 		if not ALIVE:
@@ -407,8 +447,8 @@ if __name__ == '__main__':
 	## STEP 4: INIT ROBOT STATE
 	# Reset MAKI to default position and speed
 	defReset()
-	print "resetPositions: " + resetPositions
-	print "resetSpeeds: " + resetSpeeds
+	rospy.logdebug( "resetPositions: " + str(resetPositions) )
+	rospy.logdebug( "resetSpeeds: " + str(resetSpeeds) )
 	## ------------------------------
 	## END OF INITIALIZATION
 	## ------------------------------
@@ -421,5 +461,5 @@ if __name__ == '__main__':
 		publishFeedback("")	## calls recvFromArduino()
 		sleep(0.5)	# 500ms
 
-	print "main: Bye bye"
+	print str(FILENAME) + " __main__: Bye bye"
 
