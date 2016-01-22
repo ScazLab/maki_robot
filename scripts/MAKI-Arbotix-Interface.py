@@ -163,7 +163,7 @@ def initPubFeedback():
 	#print feedback_topic_name_dict
 	feedback_pub_dict = { }		# init as empty dictionary
 	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
-		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26)
+		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26, latch = True)	## any new subscribers will see the most recent message published
 		feedback_pub_dict[_sc_dict_key] = _pub
 	return
 
