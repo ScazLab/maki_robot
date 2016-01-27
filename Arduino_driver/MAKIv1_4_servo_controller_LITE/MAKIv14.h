@@ -1,6 +1,10 @@
 #ifndef MAKIv14_h
 #define MAKIv14_h
 
+// see also fmorgner post on 6/3/2012 at http://forum.arduino.cc/index.php?PHPSESSID=fdkah6kc1g780cbr463mea4am5&topic=92364.msg814661#msg814661
+// Added to top of /usr/share/arduino/hardware/arbotix/cores/arbotix/Arduino.h
+// #define __AVR_LIBC_DEPRECATED_ENABLE__ 1
+
 #define SERVOCOUNT  6  // MAKIv1.4 has 6 servos
 /* Dynamixel AX-12 enumerations corresponding to MAKIv1.4 assembly instructions  */
 #define LR  1    // EYELID_RIGHT

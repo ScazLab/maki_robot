@@ -1,0 +1,38 @@
+Installation procedure for Arbotix-M support in the Arduino IDE
+---------------------------------------------------------------
+Author: Kate Tsui
+Date:	2016-01-27
+Arduino IDE version:	1:1.0.5+dfsg2-2
+---------------------------------------------------------------
+
+1) Download https://github.com/trossenrobotics/arbotix/archive/master.zip
+or from https://github.com/Interbotix/arbotix.git
+
+2) Locate your user's Arduino IDE sketchbook folder; e.g., /home/ktsui/sketchbook for Ubuntu
+
+3) From the downloaded files, move the 'ArbotiX Sketches' folder to your sketchbook folder:
+	mv ArbotiX\ Sketches/ /home/ktsui/sketchbook/
+
+4) From the downloaded files, move the contents of the 'libraries' folder to the 'libraries' folder within your sketchbook folder
+	mv libraries/* /home/ktsui/sketchbook/libraries
+
+5) From the downloaded files, move the contents of the 'hardware' folder to /usr/share/arduino/hardware/ as root
+	sudo mv hardware/* /usr/share/arduino/hardware/
+
+6) see http://forum.arduino.cc/index.php?PHPSESSID=fdkah6kc1g780cbr463mea4am5&topic=92364.msg814661#msg814661
+6a)	As root, edit /usr/share/arduino/hardware/arbotix/cores/arbotix/Arduino.h
+6b)	On line 3, add a newline
+6c)	On line 4, insert '#define __AVR_LIBC_DEPRECATED_ENABLE__ 1'
+6d)	Save the file
+6e)	The top of the file should look like:
+#ifndef Arduino_h
+#define Arduino_h
+
+#define __AVR_LIBC_DEPRECATED_ENABLE__ 1
+
+#include <stdlib.h>
+
+7) Open your Arduino IDE.
+7a)	Check under File > Sketchbook > ArbotiX Sketches
+7b)	Check under Tools > Board; select the 'Arbotix' option
+7c)	Check under Tools > Programmer; select the 'AVRISP mkll (serial)' option 
