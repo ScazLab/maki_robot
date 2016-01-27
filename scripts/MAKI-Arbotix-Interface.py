@@ -78,9 +78,9 @@ resetSpeeds = ""	## init as empty string; dynamically populated
 
 # --------------------------------------------------------------------
 def usage(cmd_line_args):
-	print "Usage:	rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>"
+	rospy.loginfo( "Usage:	rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>" )
 	if cmd_line_args != None and cmd_line_args != "":
-		print "Given command line args: " + str(cmd_line_args)
+		rospy.loginfo( "Given command line args: " + str(cmd_line_args) )
 		sys.exit()
 
 ## ------------------------------
@@ -88,7 +88,7 @@ def recvFromArduino():
 	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
-	print "recvFromArduino: BEGIN"
+	rospy.logdebug( "recvFromArduino: BEGIN" )
 
 
 	_recv_msg = ''
@@ -102,13 +102,14 @@ def recvFromArduino():
 				if _m_char==TERM_CHAR_RECV:
 					_RECEIVING = False
 		except ValueError as e1:
-			print "recvFromArduino: VALUE ERROR: Serial connection closed while reading: " + str(e1)
+			rospy.logerr( "recvFromArduino: VALUE ERROR: Serial connection closed while reading: " + str(e1) )
 			_exit_flag = True
 		except IOError as e2:
-			print "recvFromArduino: IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2)
+			rospy.logerr( "recvFromArduino: IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2) )
 			_exit_flag = True
 
 		if _exit_flag:
+			rospy.logerr( "ERROR: Reading from serial port disturbed..." )
 			print "ERROR: Reading from serial port disturbed..."
 			print "####################################################\n"
 			print "(Is the robot's Arbotix-M board plugged in?)"
@@ -118,13 +119,13 @@ def recvFromArduino():
 	if _recv_msg != '' and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 
-	print "recvFromArduino: END"
+	rospy.logdebug( "recvFromArduino: END" )
 	return _recv_msg
 
 def sendToMAKI (message): 
 	global maki_serial
 	maki_serial.flushOutput()
-	print "message received"
+	rospy.logdebug( "message received" + str(message) )
 	
 	#handle feedback commands
 	feedback_strings = {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
@@ -134,24 +135,24 @@ def sendToMAKI (message):
 
 	#reset positions (need to query them on start)
 	if (message.data == "reset"):
-		print "resetting speeds: " + resetSpeeds
+		rospy.logdebug( "resetting speeds: " + str(resetSpeeds) )
 		maki_serial.write(resetSpeeds)
-		print "speeds reset"
+		rospy.logdebug( "speeds reset DONE" )
 
-		print "resetting positions: " + resetPositions
+		rospy.logdebug( "resetting positions: " + str(resetPositions) )
 		maki_serial.write(resetPositions)
-		print "positions reset"
+		rospy.logdebug( "positions reset DONE" )
 		
 	#check for valid command formatting (regex)
 	else:
 		regex2 = re.compile('(((((HP)|(HT)|(LL)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
 		match = regex2.match(message.data)
 		if (match):
-			print "sending command: " + message.data
+			rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
 			maki_serial.write(message.data)
-			print "command sent"
+			rospy.logdebug( "command sent" )
 		else:
-			print "invalid format" 
+			rospy.logerr( "invalid format: " + str(message.data) )
 			return
 	#if position command, ask for present position
 	#if 'GP' in message.data:
@@ -163,16 +164,15 @@ def sendToMAKI (message):
 ## ------------------------------
 def initPubFeedback():
 	## get function name for logging purposes
-	_fname = sys._getframe().f_code.co_name	## see http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback
+	#_fname = sys._getframe().f_code.co_name	## see http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-traceback
 	#_fname = initPubFeedback.__name__	## same as above but less modular
 
 	global feedback_pub_dict, feedback_topic_name_dict
 	global FEEDBACK_SC, FEEDBACK_TOPIC
-	#print "setup rostopic publishers to give feedback"
-	my_ros_log(_fname, "setup rostopic publishers to give feedback", rospy.DEBUG)
+	rospy.logdebug( "setup rostopic publishers to give feedback" )
 			
 	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
-	#print feedback_topic_name_dict
+	#print feedback_topic_name_dict	## debugging
 	feedback_pub_dict = { }		# init as empty dictionary
 	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
 		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26, latch = True)	## any new subscribers will see the most recent message published
@@ -204,7 +204,7 @@ def feedback(feedbackString):
 def requestFeedback(feedbackString):
 	global feedback_req_template
 
-	print "about to request feedback"
+	rospy.logdebug( "about to request feedback; feedbackString=" + str(feedbackString) )
 	_tmp = feedback_req_template.search(feedbackString)
 	## Yes, feedbackString has the expected format
 	if _tmp != None:
@@ -212,7 +212,7 @@ def requestFeedback(feedbackString):
 		maki_serial.write(feedbackString)
 		return _feedback_type
 	else:
-		print "INVALID SYNTAX for feedback request: " + feedbackString
+		rospy.logerr( "INVALID SYNTAX for feedback request: " + str(feedbackString) )
 		return ''
 	return
 
@@ -227,19 +227,19 @@ def publishFeedback(feedbackType=""):
 	if _tmp != None:
 		_prefix = _tmp.group(1)
 		_feedback_values = _tmp.group(2)
-		print "Validated: prefix='" + _prefix + "' and feedback_values='" + _feedback_values + "'"
+		rospy.logdebug( "Validated: prefix='" + str(_prefix) + "' and feedback_values='" + str(_feedback_values) + "'" )
 		if feedback_pub_dict.has_key(_prefix):
 			feedback_pub_dict[_prefix].publish(_recv_msg)
-			print "published std_msgs/String '" + _recv_msg + "' on rostopic " + feedback_topic_name_dict[_prefix] 
+			rospy.loginfo( "published std_msgs/String '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
 	else:
-		print "publishFeedback: INVALID MESSAGE RECEIVED; '" + _recv_msg + "'"
+		rospy.logerr( "publishFeedback: INVALID MESSAGE RECEIVED; '" + str(_recv_msg) + "'" )
 
-	print "feedback: " + _recv_msg
+	rospy.logdebug( "feedback: " + str(_recv_msg) )
 	return
 
 ## ------------------------------
 def defReset():
-	print "defining reset strings"
+	rospy.logdebug( "defining reset strings" )
 	maki_serial.write("FDPZ")
 	resetCommand = ""
 	c = maki_serial.read()
@@ -274,6 +274,8 @@ def defReset():
 	global resetSpeeds
 	resetSpeeds = resetCommand
 		
+	rospy.logdebug( "resetPositions: " + str(resetPositions) )
+	rospy.logdebug( "resetSpeeds: " + str(resetSpeeds) )
 
 def token(header):
 	subCommand = header
@@ -370,8 +372,8 @@ if __name__ == '__main__':
 
 	## STEP 3: ESTABLISH SERIAL COMMUNICATION WITH THE ROBOT
 	## STEP 3A: INSTANTIATE THE CONNECTION
-	#print "SYS: " + str( len(sys.argv) ) + ", " + str(sys.argv)
-	#print "ROS: " + str( len(rospy.myargv()) ) + ", " + str(rospy.myargv())
+	#print "SYS: " + str( len(sys.argv) ) + ", " + str(sys.argv)	## debug
+	#print "ROS: " + str( len(rospy.myargv()) ) + ", " + str(rospy.myargv())	## debug
 	## NOTE: rospy.myargv() strips __name:=FOO __log:=BAR command line args run from roslaunch file
 	_argc = len(rospy.myargv())
 	if ( _argc > 1 ):
@@ -398,13 +400,13 @@ if __name__ == '__main__':
 	## THIS WHILE LOOP IS BLOCKING
 	_exit_flag = False
 	_auto_feedback_ER_timer_start = timer()
-	#print "Start time: " + str(_auto_feedback_ER_timer_start)
+	#print "Start time: " + str(_auto_feedback_ER_timer_start)	## debugging
 	_i = 0
 	_n = maki_serial.inWaiting()
 	while _n <= 0:
 		rospy.logdebug( str(_i) + ") maki_serial.inWaiting() = " + str(_n) )
 
-		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )
+		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )	## debugging
 		if ( int(timer() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
 			rospy.logwarn( "WARNING: Nothing received from serial port..." )
 			print "WARNING: Nothing received from serial port..."
@@ -447,8 +449,6 @@ if __name__ == '__main__':
 	## STEP 4: INIT ROBOT STATE
 	# Reset MAKI to default position and speed
 	defReset()
-	rospy.logdebug( "resetPositions: " + str(resetPositions) )
-	rospy.logdebug( "resetSpeeds: " + str(resetSpeeds) )
 	## ------------------------------
 	## END OF INITIALIZATION
 	## ------------------------------
@@ -461,5 +461,5 @@ if __name__ == '__main__':
 		publishFeedback()	## calls recvFromArduino()
 		sleep(0.5)	# 500ms
 
-	print str(FILENAME) + " __main__: Bye bye"
+	print str(FILENAME) + " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
 
