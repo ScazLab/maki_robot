@@ -216,7 +216,7 @@ def requestFeedback(feedbackString):
 		return ''
 	return
 
-def publishFeedback(feedbackType):
+def publishFeedback(feedbackType=""):
 	## TODO: currently feedbackType is ignored
 
 	global feedback_resp_template
@@ -458,7 +458,7 @@ if __name__ == '__main__':
 	# And now... go!
 	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
 	while ALIVE and not rospy.is_shutdown():
-		publishFeedback("")	## calls recvFromArduino()
+		publishFeedback()	## calls recvFromArduino()
 		sleep(0.5)	# 500ms
 
 	print str(FILENAME) + " __main__: Bye bye"
