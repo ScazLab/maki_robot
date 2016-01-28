@@ -3,13 +3,16 @@
 /*  v 0.2
 /*  
 /*  Listens for serial port input in the following forms:
-/*       F{MX|MN|PP|PS|PT|PL|ER|DP|DS}Z
-/*       FMXZ            // get FEEDBACK of all servo MAXIMUM POSITION
-/*       FMNZ           // get FEEDBACK of all servo MINIMUM POSITION
+/*       F{MX|MN|PP|GP|PS|GS|PT|PL|ER|DP|DS}Z
+/*       FMXZ              // get FEEDBACK of all servo MAXIMUM POSITION
+/*       FMNZ              // get FEEDBACK of all servo MINIMUM POSITION
 /*       FPPZ              // get FEEDBACK of all servo PRESENT POSITION
+/*       FGPZ              // get FEEDBACK of all servo GOAL POSITION
 /*       FPSZ              // get FEEDBACK of all servo PRESENT SPEED
+/*       FGSZ              // get FEEDBACK of all servo GOAL SPEED
 /*       FPTZ              // get FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)
 /*       FPLZ              // get FEEDBACK of all servo PRESENT LOAD
+/*       FTLZ              // get FEEDBACK of all servo TORQUE LIMIT (percentage of MAX TORQUE)
 /*       FERZ              // get FEEDBACK of all servo ERROR (AX_ALARM_LED)
 /*       FDPZ              // get FEEDBACK of all servo default position values
 /*       FDSZ              // get FEEDBACK of all servo default speed values         
@@ -23,15 +26,23 @@
 /*       HPGP512HTGP512IPT2500Z    // set HEAD_PAN servo to the GOAL POSITION of 512, HEAD_TILT servo to 512, and 
 /*                                                        // locally adjust each servo's GOAL SPEED such that both movements take 2.5 seconds
 /*
+/*       mmTLxxxxZ
+/*  where xxx = [0, 1023]  default 1023; 0 is 0% and 1023 is 100%
+/*       HTTL1023Z  // set HEAD_TILT servo to TORQUE LIMIT 1023, rather 100% of MAX TORQUE
+/*                  // NOTE: Use this if FTLZ indicates that a servo is at 0%; this will re-enable the servo
+/*                  // WARNING: Before re-enabling, make sure that the servo's GOAL POSITION and PRESENT POSITION are the same;
+/*                  // otherwise, servo will rapidly snap into place upon executing this servo command
+/*
 /*  Authors:
 /*    Kate Tsui, Drew O'Donnell
 /*
-/*  Updated: 2015-12-18
+/*  Updated: 2016-01-28
 /*
 /*  Acknowledgements:
 /*  * Andre Pereira (FullServoKeeponNewBop.ino)
 /*  * AXTurretTest.ino
 /*  * http://forums.trossenrobotics.com/showthread.php?4434-Controlling-AX-or-RX-servos-using-arbotix&p=44430#post44430
+/*  * http://support.robotis.com/en/techsupport_eng.htm#product/dynamixel/ax_series/dxl_ax_actuator.htm
 /* ========================================================================== */
 
 #include <ax12.h>  //import ax12 library to send DYNAMIXEL commands; download from https://code.google.com/p/arbotix/source/browse/trunk/arbotix/libraries/#libraries%2FBioloid
@@ -47,9 +58,14 @@
 #define INVALID_INT 9999
 
 #define TERM_CHAR  'Z'    // syntax for end of servo command
+
 #define SC_SET_GP "GP"    // servo command syntax for setting a specified servo's GOAL POSITION
-#define SC_SET_GS  "GS"  // servo command syntax for setting a specified servo's GOAL SPEED
 #define SC_SET_IPT  "IPT"  // servo command syntax for setting the INTERPOLATION POSE TIME
+#define SC_SET_GS  "GS"  // servo command syntax for setting a specified servo's GOAL SPEED
+#define SC_SET_TM  "TM"  // servo command syntax for setting a specified servo's MAX TORQUE. Note: This value exists in EEPROM and persists when power is removed; default 1023
+#define SC_SET_TL  "TL"  // servo command syntax for setting a specified servo's TORQUE LIMIT. Note: If set to 0 by ALARM SHUTDOWN, servo won't move until set to another value[1,1023]; default MAX TORQUE
+#define SC_SET_TS  "TS"  // servo command syntax for setting a specified servo's TORQUE ENABLE. Note: Boolean [0, 1]; default 1. Doesn't appear to disable servo's movement when set to 0
+
 #define SC_FEEDBACK "F"    // servo command synatx for FEEDBACK or status of all servos
 #define SC_GET_MX  "MX"  // servo command syntax for FEEDBACK of all servo MAXIMUM POSITION
 #define SC_GET_MN  "MN"  // servo command syntax for FEEDBACK of all servo MINIMUM POSITION
@@ -59,6 +75,9 @@
 #define SC_GET_GS  "GS"    // servo command syntax for feedback with GOAL SPEED
 #define SC_GET_PT  "PT"    // servo command syntax for feedback with PRESENT TEMPERATURE (in Celsius)
 #define SC_GET_PL  "PL"    // servo command syntax for feedback with PRESENT LOAD
+#define SC_GET_TM  "TM"  // servo command syntax for feedback with MAX TORQUE
+#define SC_GET_TL  "TL"  // servo command syntax for feedback with TORQUE LIMIT
+#define SC_GET_TS  "TS"  // servo command syntax for feedback with TORQUE ENABLE
 #define SC_GET_ER  "ER"  // servo command syntax for feedback with error returned from AX_ALARM_LED
 #define SC_GET_DP  "DP"  // servo command syntax for default positions
 #define SC_GET_DS  "DS"  // servo command syntax for default speed
@@ -199,31 +218,51 @@ void loop() {
 //  UTILITY FUNCTIONS
 /* --------------------------------------------------------------- */
 void printMainHelp()  {
+  if (!my_verbose_debug)  return;
+  
   Serial.println("[SERVO DRIVER] Default command syntax:");
   Serial.println("NOTE: Z (capital zed)\tTerminal character for servo driver commands");
   Serial.println("");
   Serial.println("FMXZ\tget FEEDBACK of all servo MAXIMUM POSITION");
   Serial.println("FMNZ\tget FEEDBACK of all servo MINIMUM POSITION");
   Serial.println("FPPZ\tget FEEDBACK of all servo PRESENT POSITION");
+  Serial.println("FGPZ\tget FEEDBACK of all servo GOAL POSITION");
   Serial.println("FPSZ\tget FEEDBACK of all servo PRESENT SPEED");
+  Serial.println("FGSZ\tget FEEDBACK of all servo GOAL SPEED");
   Serial.println("FPTZ\tget FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)");
   Serial.println("FPLZ\tget FEEDBACK of all servo PRESENT LOAD");
+  Serial.println("FTLZ\tget FEEDBACK of all servo TORQUE LIMIT (percentage of MAX TORQUE)");
   Serial.println("FERZ\tget FEEDBACK of all servo ERROR STATE (AX_ALARM_LED)");
-  Serial.println("FDPZ\tget default position values");
-  Serial.println("FDSZ\tget default speed values");
+  Serial.println("FDPZ\tget FEEDBACK of all servo DEFAULT POSITION");
+  Serial.println("FDSZ\tget FEEDBACK of all servo DEFAULT SPEED");
   Serial.println("");
+  Serial.flush();
+  
   Serial.println("mm{GP|GS}xxxIPTyyyyZ\tset GOAL POSITION or GOAL SPEED"); 
   Serial.println("\twhere xxx = [0, 1023], yyyy is INTERPOLATION TIME in milliseconds, and");
   Serial.println("\twhere mm = {LR, LL, EP, ET, HT, HP} means eyelid right, eyelid left, ");
   Serial.println("\teye pan, eye  tilt, head tilt, and head pan, respectively.");
   Serial.println("");
+  Serial.flush();
+  
+  Serial.println("mmTLxxxxZ\tset TORQUE LIMIT (percentage of MAX TORQUE");
+  Serial.println("\twhere xxx = [0, 1023]  default 1023; 0 is 0% and 1023 is 100%");
+  Serial.println("\tNOTE: Use this if FTLZ indicates that a servo is at 0%; this will re-enable the servo.");
+  Serial.println("\tWARNING: Before re-enabling, make sure that the servo's GOAL POSITION and PRESENT POSITION are the same;");
+  Serial.println("\totherwise, servo will rapidly snap into place upon executing this servo command.");
+  Serial.println("");
+  Serial.flush();
+  
 }  // end printMainHelp
+
 
 /* ----------------------------- */
 void parseServoDriverCommand(String servoCommand) {
   if (my_verbose_debug)  {
-    Serial.println("parseServoDriverCommand: ");
-    Serial.println(servoCommand);
+    Serial.print("\nparseServoDriverCommand: ");
+    Serial.print(servoCommand);
+    Serial.print("\n");
+    Serial.flush();
   }
   
   servoCommand.trim();    // remove whitespace at the end
@@ -245,7 +284,7 @@ void parseServoDriverCommand(String servoCommand) {
       index += 1;
       tmp_string = String(servoCommand.substring(index));
      
-     // servo command format: Fxx, where xx = {PP, GP, MX, MN, PS, GS, PT, PL, ER, DP, DS} 
+     // servo command format: Fxx, where xx = {PP, GP, MX, MN, PS, GS, PT, PL, TM, TL, TS, ER, DP, DS} 
      if (tmp_string.startsWith(SC_GET_PP)  ||
          tmp_string.startsWith(SC_GET_GP)  ||
          tmp_string.startsWith(SC_GET_MX)  ||
@@ -254,6 +293,9 @@ void parseServoDriverCommand(String servoCommand) {
          tmp_string.startsWith(SC_GET_GS)  || 
          tmp_string.startsWith(SC_GET_PT)  ||
          tmp_string.startsWith(SC_GET_PL)  ||
+         tmp_string.startsWith(SC_GET_TM)  ||
+         tmp_string.startsWith(SC_GET_TL)  ||
+         tmp_string.startsWith(SC_GET_TS)  ||
          tmp_string.startsWith(SC_GET_ER)  ||
          tmp_string.startsWith(SC_GET_DP)  ||
          tmp_string.startsWith(SC_GET_DS)
@@ -315,7 +357,32 @@ void parseServoDriverCommand(String servoCommand) {
       ipt = (tmp_string.substring(3,3+tmp_i+1)).toInt();    // milliseconds
       //Serial.println(ipt);    // debugging
       index += tmp_i;      
-    
+
+    } else if (tmp_string.startsWith(SC_SET_TM) ||
+                tmp_string.startsWith(SC_SET_TL) ||
+                tmp_string.startsWith(SC_SET_TS)
+                )  {
+      index += 2;
+      // servo command format: mmTMxxxx, mmTLxxxx, or mmTSx
+      // deal smartly with string length and incrementing index
+      unsigned int tmp_i = parseSCDIntIndex(tmp_string.substring(2));
+      parsed_int = (tmp_string.substring(2,2+tmp_i+1)).toInt();
+      //Serial.println(parsed_int);    //debugging
+      index += tmp_i;              
+      
+      if (tmp_string.startsWith(SC_SET_TM))  {
+        // Note: This value MAX TORQUE exists in EEPROM and persists when power is removed; default 1023
+        setServoMaxTorque(target_motor, parsed_int);
+      } else if (tmp_string.startsWith(SC_SET_TL))  {
+        // Note: If set to 0 by ALARM SHUTDOWN, servo won't move until TORQUE LIMIT set to another value[1,1023]; default MAX TORQUE
+        setServoTorqueLimit(target_motor, parsed_int);
+      } else if (tmp_string.startsWith(SC_SET_TS))  {
+        // TORQUE ENABLE. Note: Boolean [0, 1]; default 1. Doesn't appear to disable servo's movement when set to 0
+        setServoTorqueState(target_motor, parsed_int);
+      } else {
+        // shouldn't get here
+      }
+      
     } else {
       if (my_verbose_debug)  {
         Serial.println("!!!!! Can't parse remaining servoCommand: ");
@@ -446,6 +513,8 @@ void readMotorValues(String feedbackType)  {
   String state = String(feedbackType);
   
   for (int nServo=1; nServo<=SERVOCOUNT; nServo++)   {
+    read_val = INVALID_INT;  // reset
+    
     if (feedbackType.equalsIgnoreCase(SC_GET_PP))  {
       read_val = getServoPos(nServo);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
       makiServoPos[nServo-1] = read_val;   
@@ -465,6 +534,15 @@ void readMotorValues(String feedbackType)  {
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PL))  {
       read_val = ax12GetRegister(nServo, AX_PRESENT_LOAD_L, 2);
+ 
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TM))  {    
+      read_val = ax12GetRegister(nServo, AX_MAX_TORQUE_L, 2);
+
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TL))  {    
+      read_val = ax12GetRegister(nServo, AX_TORQUE_LIMIT_L, 2);
+      
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TS))  {    
+      read_val = ax12GetRegister(nServo, AX_TORQUE_ENABLE, 1);
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_MX))  {
       read_val = max_servo_pos[nServo-1];
@@ -475,13 +553,23 @@ void readMotorValues(String feedbackType)  {
     } else if (feedbackType.equalsIgnoreCase(SC_GET_ER))  {
       read_val = errorCheckMotor(nServo, false);    // surpress printing the error string
       errorCheck_timer = millis();                             // reset timer
+
+      if (my_verbose_debug)  {
+        Serial.print("\nreadMotorValues: ");
+        Serial.print(read_val, BIN);
+        Serial.print("\n");
+        Serial.flush();
+      } 
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_DP))  {
         read_val = neutral_servo_pos[nServo];
+        
     } else if (feedbackType.equalsIgnoreCase(SC_GET_DS))  {
-          read_val = default_goal_speed[nServo - 1];
+        read_val = default_goal_speed[nServo - 1];
+          
     } else  {
       // shouldn't get here
+      read_val = INVALID_INT;
     }
     
     if ((read_val >= 0) && (read_val != INVALID_INT))  {
@@ -628,6 +716,103 @@ boolean setServoGoalSpeed(int nServo, int v)  {
     return false;
   }
 }  // end setServoSpeed
+
+/* ----------------------------- */
+// TODO: Refactor the repeated code in this section
+
+// Note: This value MAX TORQUE exists in EEPROM and persists when power is removed; default 1023
+boolean setServoMaxTorque(int nServo, int v)  {
+  if (validServo(nServo))  {
+    if (my_verbose_debug)  {
+      Serial.print("BEFORE: ");
+      readMotorValues(String(SC_GET_TM));  // debugging
+      Serial.flush();
+    }
+    
+    ax12SetRegister2(nServo, AX_MAX_TORQUE_L, v);
+    delay(100);  // needs time to write to value to register
+    
+    if (my_verbose_debug)  {
+      Serial.print("AFTER: ");
+      Serial.print("Servo ");
+      Serial.print(nServo);
+      Serial.print(" changed to ");
+      Serial.print( ax12GetRegister(nServo, AX_MAX_TORQUE_L, 2) );
+      Serial.print("; desired ");
+      Serial.print(v);
+      
+      readMotorValues(String(SC_GET_TM));  // debugging
+      Serial.flush();
+    }
+    
+    return true;
+  } else {
+    return false;
+  }
+}  // end  setServoMaxTorque
+
+// Note: If set to 0 by ALARM SHUTDOWN, servo won't move until TORQUE LIMIT set to another value[1,1023]; default MAX TORQUE
+boolean setServoTorqueLimit(int nServo, int v)  {
+  if (validServo(nServo))  {
+    if (my_verbose_debug)  {
+      Serial.print("BEFORE: ");
+      readMotorValues(String(SC_GET_TL));  // debugging
+      Serial.flush();
+    }
+    
+    ax12SetRegister2(nServo, AX_TORQUE_LIMIT_L, v);
+    delay(100);  // needs time to write to value to register
+    
+    if (my_verbose_debug)  {
+      Serial.print("AFTER: ");
+      Serial.print("Servo ");
+      Serial.print(nServo);
+      Serial.print(" changed to ");
+      Serial.print( ax12GetRegister(nServo, AX_TORQUE_LIMIT_L, 2) );
+      Serial.print("; desired ");
+      Serial.print(v);
+      
+      readMotorValues(String(SC_GET_TL));  // debugging
+      Serial.flush();
+    }
+    
+    return true;
+  } else {
+    return false;
+  }
+}  // end  setServoTorqueLimit
+
+// both enable and disable a specific motor's torque
+// TORQUE ENABLE. Note: Boolean [0, 1]; default 1. Doesn't appear to disable servo's movement when set to 0
+boolean setServoTorqueState(int nServo, int v)  {
+  if (validServo(nServo))  {
+    if (my_verbose_debug)  {
+      Serial.print("BEFORE: ");
+      readMotorValues(String(SC_GET_TS));  // debugging
+      Serial.flush();
+    }
+      
+    ax12SetRegister(nServo, AX_TORQUE_ENABLE, v);
+    delay(100);  // needs time to write to value to register
+
+    if (my_verbose_debug)  {
+      Serial.print("AFTER: ");
+      Serial.print("Servo ");
+      Serial.print(nServo);
+      Serial.print(" changed to ");
+      Serial.print( ax12GetRegister(nServo, AX_TORQUE_ENABLE, 1) );
+      Serial.print("; desired ");
+      Serial.print(v);
+      
+      readMotorValues(String(SC_GET_TS));  // debugging
+      Serial.flush();
+    }
+
+    return true;
+  } else {
+    return false;
+  }
+}  // end  setServoTorqueState
 
 /* ----------------------------- */
 // how many servos are currently moving?
@@ -777,7 +962,12 @@ int errorCheckMotor(int nServo, boolean PE)  {
   }
   
   // ax12GetLastError();  // doesn't retain which motor yielded error
-  int my_error = ax12GetRegister(nServo, AX_ALARM_LED, 1);
+  int my_error = (int)INVALID_INT;	// default value is 36
+  if (ax12GetRegister(nServo, AX_LED, 1) == 1)  {
+    my_error = ax12GetRegister(nServo, AX_ALARM_LED, 1);
+  } else  {
+    my_error = ax12GetRegister(nServo, AX_ALARM_SHUTDOWN, 1);
+  }
 
   if (my_error == ERR_NONE) {
     return ERR_NONE;
