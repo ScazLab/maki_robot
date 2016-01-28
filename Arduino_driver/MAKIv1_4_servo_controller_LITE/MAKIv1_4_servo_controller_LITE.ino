@@ -53,6 +53,7 @@
 #define SC_FEEDBACK "F"    // servo command synatx for FEEDBACK or status of all servos
 #define SC_GET_MX  "MX"  // servo command syntax for FEEDBACK of all servo MAXIMUM POSITION
 #define SC_GET_MN  "MN"  // servo command syntax for FEEDBACK of all servo MINIMUM POSITION
+#define SC_GET_GP "GP"      // servo command synatx for feedback with GOAL POSITION
 #define SC_GET_PP "PP"      // servo command synatx for feedback with PRESENT POSITION
 #define SC_GET_PS "PS"      // servo command syntax for feedback with PRESENT SPEED
 #define SC_GET_GS  "GS"    // servo command syntax for feedback with GOAL SPEED
@@ -244,8 +245,9 @@ void parseServoDriverCommand(String servoCommand) {
       index += 1;
       tmp_string = String(servoCommand.substring(index));
      
-     // servo command format: Fxx, where xx = {PP, MX, MN, PS, GS, PT, PL, ER} 
+     // servo command format: Fxx, where xx = {PP, GP, MX, MN, PS, GS, PT, PL, ER, DP, DS} 
      if (tmp_string.startsWith(SC_GET_PP)  ||
+         tmp_string.startsWith(SC_GET_GP)  ||
          tmp_string.startsWith(SC_GET_MX)  ||
          tmp_string.startsWith(SC_GET_MN)  ||
          tmp_string.startsWith(SC_GET_PS)  ||
@@ -254,7 +256,8 @@ void parseServoDriverCommand(String servoCommand) {
          tmp_string.startsWith(SC_GET_PL)  ||
          tmp_string.startsWith(SC_GET_ER)  ||
          tmp_string.startsWith(SC_GET_DP)  ||
-         tmp_string.startsWith(SC_GET_DS)) {
+         tmp_string.startsWith(SC_GET_DS)
+         ) {
         index += 2;
         String feedbackType = String(tmp_string.substring(0,2));
         readMotorValues(feedbackType);    // print current servo information to serial port output
@@ -446,6 +449,9 @@ void readMotorValues(String feedbackType)  {
     if (feedbackType.equalsIgnoreCase(SC_GET_PP))  {
       read_val = getServoPos(nServo);        // ax12GetRegister(nServo, AX_PRESENT_POSITION_L, 2)
       makiServoPos[nServo-1] = read_val;   
+
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_GP))  {
+      read_val = ax12GetRegister(nServo, AX_GOAL_POSITION_L, 2);   
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PS))  {
       read_val = ax12GetRegister(nServo, AX_PRESENT_SPEED_L, 2);    // getServoSpeed
