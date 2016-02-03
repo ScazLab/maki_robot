@@ -97,6 +97,7 @@ int makiGoalSpeed[SERVOCOUNT];
 boolean pp_flag = false;
 boolean ipt_flag = false;
 unsigned long errorCheck_timer;
+//boolean ht_flag = true;  // KATE debugging
                                                                             
 /* ------------------------------------------------------------------------------------------------------------ */
 void setup()
@@ -126,6 +127,59 @@ void setup()
     if (my_verbose_debug)  printServoInfo(nServo);
   }
 
+  if (my_verbose_debug)  {
+    Serial.print("\nError levels\n");
+    Serial.print("\nERR_NONE = ");
+    Serial.print(ERR_NONE);
+    Serial.print(", ");
+    Serial.print(ERR_NONE, BIN);
+    Serial.print("\nERR_VOLTAGE = ");
+    Serial.print(ERR_VOLTAGE);
+    Serial.print(", ");
+    Serial.print(ERR_VOLTAGE, BIN);
+    Serial.print("\nERR_ANGLE_LIMIT = ");
+    Serial.print(ERR_ANGLE_LIMIT);
+    Serial.print(", ");
+    Serial.print(ERR_ANGLE_LIMIT, BIN);    
+    Serial.print("\nERR_OVERHEATING = ");
+    Serial.print(ERR_OVERHEATING);
+    Serial.print(", ");
+    Serial.print(ERR_OVERHEATING, BIN);    
+    Serial.print("\nERR_RANGE = ");
+    Serial.print(ERR_RANGE);
+    Serial.print(", ");
+    Serial.print(ERR_RANGE, BIN);
+    Serial.print("\nERR_CHECKSUM = ");
+    Serial.print(ERR_CHECKSUM);
+    Serial.print(", ");
+    Serial.print(ERR_CHECKSUM, BIN);
+    Serial.print("\nERR_OVERLOAD = ");
+    Serial.print(ERR_OVERLOAD);
+    Serial.print(", ");
+    Serial.print(ERR_OVERLOAD, BIN);
+    Serial.print("\nERR_INSTRUCTION = ");
+    Serial.print(ERR_INSTRUCTION);
+    Serial.print(", ");
+    Serial.print(ERR_INSTRUCTION, BIN);
+    
+    Serial.print("\nStatus return level: (default 2; return for all commands) "); 
+     for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
+       Serial.print( ax12GetRegister(nServo, AX_RETURN_LEVEL, 1) );
+       Serial.print(", ");
+     }
+     Serial.print("\n");
+     Serial.flush();
+
+    Serial.print("\nTemperature limit: (default 70) "); 
+     for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
+       Serial.print( ax12GetRegister(nServo, AX_LIMIT_TEMPERATURE, 1) );
+       Serial.print(", ");
+     }
+     Serial.print("\n");
+     Serial.flush();
+
+  }
+
   if (my_verbose_debug)  {  
     printMainHelp();
     Serial.println("-- READY FOR COMMANDS --");
@@ -146,7 +200,32 @@ void loop() {
   if ((millis() - errorCheck_timer) > EC_timer_duration)  {
     readMotorValues(String(SC_GET_ER));
     errorCheck_timer = millis();
+    
+    //KATE debugging
+    /*
+    if (my_verbose_debug)  {
+      printServoInfoHeader();
+      for (int nServo=1; nServo <= SERVOCOUNT; nServo++)  {
+        printServoInfo(nServo);
+      }
+    }
+    */
   }
+  
+  //KATE debugging
+  /*
+  if (my_verbose_debug)  {
+    int HT_torque_limit = ax12GetRegister(HT, AX_TORQUE_LIMIT_L, 2);
+    if (ht_flag &&
+        (HT_torque_limit == 0))  {
+      Serial.print("\n***********************");
+      printServoInfo(HT);
+      Serial.print("***********************\n");
+      Serial.flush();
+      ht_flag = false;
+    }
+  }
+  */
   
   if (Serial.available() <= 0)  {
     digitalWrite(USER_LED, LOW);   // turn the LED off by making the voltage LOW
@@ -370,6 +449,7 @@ void parseServoDriverCommand(String servoCommand) {
       //Serial.println(parsed_int);    //debugging
       index += tmp_i;              
       
+      // KATE
       if (tmp_string.startsWith(SC_SET_TM))  {
         // Note: This value MAX TORQUE exists in EEPROM and persists when power is removed; default 1023
         setServoMaxTorque(target_motor, parsed_int);
@@ -377,7 +457,7 @@ void parseServoDriverCommand(String servoCommand) {
         // Note: If set to 0 by ALARM SHUTDOWN, servo won't move until TORQUE LIMIT set to another value[1,1023]; default MAX TORQUE
         setServoTorqueLimit(target_motor, parsed_int);
       } else if (tmp_string.startsWith(SC_SET_TS))  {
-        // TORQUE ENABLE. Note: Boolean [0, 1]; default 1. Doesn't appear to disable servo's movement when set to 0
+      // TORQUE ENABLE. Note: Boolean [0, 1]; default 1. Doesn't appear to disable servo's movement when set to 0
         setServoTorqueState(target_motor, parsed_int);
       } else {
         // shouldn't get here
@@ -458,31 +538,34 @@ unsigned int parseSCDIntIndex(String servoCommand) {
 }  // end parseSCDIntIndex
 
 /* ----------------------------- */
-// write to all servos at the same time with the goal position
+// write to all servos at the same time with the goal position (BROADCAST)
 // returns immediately; does not block and wait for completion of movement
 void writeGPSync()  {
   // based on BioloidController::writePose()
+  // For communication 1.0 protocol, see http://support.robotis.com/en/product/dynamixel/communication/dxl_packet.htm
+  
   int temp;
-    int length = 4 + (SERVOCOUNT * 3);   // 3 = id + pos(2byte)
-    int checksum = 254 + length + AX_SYNC_WRITE + 2 + AX_GOAL_POSITION_L;
-    setTXall();
-    ax12write(0xFF);
-    ax12write(0xFF);
-    ax12write(0xFE);
-    ax12write(length);
-    ax12write(AX_SYNC_WRITE);
-    ax12write(AX_GOAL_POSITION_L);
-    ax12write(2);
-    for (int nServo=1; nServo<=SERVOCOUNT; nServo++)
-    {
-        temp = makiGoalPos[nServo-1];  
-        checksum += (temp&0xff) + (temp>>8) + nServo;
-        ax12write(nServo);
-        ax12write(temp&0xff);
-        ax12write(temp>>8);
-    } 
-    ax12write(0xff - (checksum % 256));
-    setRX(0);
+  int length = 4 + (SERVOCOUNT * 3);   // 3 = id + pos(2byte)
+  int checksum = 254 + length + AX_SYNC_WRITE + 2 + AX_GOAL_POSITION_L;
+  setTXall();       // declare transmission to all servos
+  ax12write(0xFF);
+  ax12write(0xFF);  // header
+  ax12write(0xFE);  // 0xfe is 254 in decimal, thus this is a broadcast message and not status packet in return
+  ax12write(length);  // length
+  ax12write(AX_SYNC_WRITE);    //0x83  // instruction
+  // parameters
+  ax12write(AX_GOAL_POSITION_L);
+  ax12write(2);
+  for (int nServo=1; nServo<=SERVOCOUNT; nServo++)
+  {
+      temp = makiGoalPos[nServo-1];  
+      checksum += (temp&0xff) + (temp>>8) + nServo;
+      ax12write(nServo);     // servo id
+      ax12write(temp&0xff);  // GP
+      ax12write(temp>>8);    // GP
+  } 
+  ax12write(0xff - (checksum % 256));  // checksum
+  setRX(0);  // declare transmission to specific servo complete
 }  // end  writeGPSync
 
 void writeGPSyncBlocking()  {
@@ -535,13 +618,13 @@ void readMotorValues(String feedbackType)  {
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PL))  {
       read_val = ax12GetRegister(nServo, AX_PRESENT_LOAD_L, 2);
  
-    } else if (feedbackType.equalsIgnoreCase(SC_GET_TM))  {    
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TM))  {    //KATE
       read_val = ax12GetRegister(nServo, AX_MAX_TORQUE_L, 2);
 
-    } else if (feedbackType.equalsIgnoreCase(SC_GET_TL))  {    
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TL))  {    //KATE
       read_val = ax12GetRegister(nServo, AX_TORQUE_LIMIT_L, 2);
       
-    } else if (feedbackType.equalsIgnoreCase(SC_GET_TS))  {    
+    } else if (feedbackType.equalsIgnoreCase(SC_GET_TS))  {    //KATE
       read_val = ax12GetRegister(nServo, AX_TORQUE_ENABLE, 1);
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_MX))  {
@@ -719,7 +802,7 @@ boolean setServoGoalSpeed(int nServo, int v)  {
 
 /* ----------------------------- */
 // TODO: Refactor the repeated code in this section
-
+// KATE
 // Note: This value MAX TORQUE exists in EEPROM and persists when power is removed; default 1023
 boolean setServoMaxTorque(int nServo, int v)  {
   if (validServo(nServo))  {
@@ -960,14 +1043,82 @@ int errorCheckMotor(int nServo, boolean PE)  {
   if (ax12GetRegister(nServo, AX_ID, 1) != nServo)  {
     return (int)INVALID_INT;
   }
-  
+    
   // ax12GetLastError();  // doesn't retain which motor yielded error
-  int my_error = (int)INVALID_INT;	// default value is 36
+                          // value is only populated after calling ax12GetRegister()
+                          
+  int my_error = (int)INVALID_INT;
   if (ax12GetRegister(nServo, AX_LED, 1) == 1)  {
     my_error = ax12GetRegister(nServo, AX_ALARM_LED, 1);
   } else  {
     my_error = ax12GetRegister(nServo, AX_ALARM_SHUTDOWN, 1);
   }
+
+  // 2016-01-29, ktsui: Currently unsure if the Dynamixel AX-12 servos actually update the
+  // values for the AX_ALARM_LED and AX_ALARM_SHUTDOWN registers
+
+  // KATE: debugging
+  if (my_verbose_debug)  {
+    Serial.print("** Servo ");
+    Serial.print(nServo);
+    Serial.print("; AX_LED: ");
+    Serial.print(ax12GetRegister(nServo, AX_LED, 1));
+    Serial.print("; AX_ALARM_LED: ");
+    Serial.print(ax12GetRegister(nServo, AX_ALARM_LED, 1), BIN);
+    Serial.print("\tAX_ALARM_SHUTDOWN: ");
+    Serial.print(ax12GetRegister(nServo, AX_ALARM_SHUTDOWN, 1), BIN);
+    Serial.print(" **\n");
+    Serial.flush();
+  }
+
+  // explicitly check to see if the TORQUE LIMIT is 0 as a result of AX_ALARM_SHUTDOWN
+  // see section TORQUE LIMIT at http://support.robotis.com/en/techsupport_eng.htm#product/dynamixel/ax_series/dxl_ax_actuator.htm
+  if ( (ax12GetRegister(nServo, AX_PRESENT_LOAD_L, 2) == 0) &&
+      (ax12GetRegister(nServo, AX_TORQUE_LIMIT_L, 2) == 0) )  {
+    if (my_error == (int)INVALID_INT)  {
+      my_error = ERR_OVERLOAD;
+    } else  {
+      my_error = my_error | ERR_OVERLOAD;  // bitwise OR
+    }
+    if (my_verbose_debug)  {
+      Serial.print("AFTER TORQUE LIMIT check: my_error = ");
+      Serial.print(my_error);
+      Serial.flush();
+    }
+  }
+
+  // explicitly check TEMPERATURE
+  // When the internal temperature is out of the range of operating temperature set in the Control Table
+  /*
+  if ( ax12GetRegister(nServo, AX_PRESENT_TEMPERATURE, 1) >=
+        ax12GetRegister(nServo, AX_LIMIT_TEMPERATURE, 1) )  {  
+  */
+  int max_temp = ax12GetRegister(nServo, AX_LIMIT_TEMPERATURE, 1);
+  int my_temp = ax12GetRegister(nServo, AX_PRESENT_TEMPERATURE, 1);
+      
+  if (my_temp >= max_temp)  {
+    // KATE debugging
+    if (my_verbose_debug)  {
+      Serial.print("\nTEMP: my_temp=");
+      Serial.print(my_temp);
+      Serial.print("\tmax_temp=");
+      Serial.print(max_temp);
+      Serial.print("\n");
+      Serial.flush();
+    }
+    
+    if (my_error == (int)INVALID_INT)  {
+      my_error = ERR_OVERHEATING;
+    } else  {
+      my_error = my_error | ERR_OVERHEATING;
+    }
+    if (my_verbose_debug)  {
+      Serial.print("AFTER TEMPERATURE check: my_error = ");
+      Serial.print(my_error);
+      Serial.flush();
+    }
+  }
+
 
   if (my_error == ERR_NONE) {
     return ERR_NONE;
@@ -977,8 +1128,10 @@ int errorCheckMotor(int nServo, boolean PE)  {
     String errorString = String("ERROR! ");
     errorString += "ServoID " + String(nServo) + ": ";
   
+    // TODO: REWRITE THESE AS BITSHIFT FOR FASTER COMPUTATION
     if ((my_error & ERR_OVERLOAD) == ERR_OVERLOAD)  {
-      // When the current load cannot be controlled with the set maximum torque
+      /*
+      // When the current load cannot be controlled with the set maximum torque according to documentation
       if (ax12GetRegister(nServo, AX_TORQUE_LIMIT_L, 2) == 0)  {
         errorString += "ERR_OVERLOAD ";
         print_errorString = true;
@@ -988,13 +1141,19 @@ int errorCheckMotor(int nServo, boolean PE)  {
         //Serial.println(my_error, BIN);    // debugging
         ax12SetRegister(nServo, AX_ALARM_LED, my_error);
       }
+      */
+      errorString += "ERR_OVERLOAD ";
+      print_errorString = true;
     }
+
     if ((my_error & ERR_ANGLE_LIMIT) == ERR_ANGLE_LIMIT) {
       // When Goal Position is written with the value that is not between CW Angle Limit and CCW Angle Limit
       errorString += "ERR_ANGLE_LIMIT ";
       print_errorString = true;
     }
+
     if ((my_error & ERR_OVERHEATING) == ERR_OVERHEATING) {
+      /*
       // When the internal temperature is out of the range of operating temperature set in the Control Table
       int max_temp = ax12GetRegister(nServo, AX_LIMIT_TEMPERATURE, 1);
       int my_temp = ax12GetRegister(nServo, AX_PRESENT_TEMPERATURE, 1);
@@ -1008,22 +1167,29 @@ int errorCheckMotor(int nServo, boolean PE)  {
         //Serial.println(my_error, BIN);    // debugging
         ax12SetRegister(nServo, AX_ALARM_LED, my_error);
       }
+      */
+      errorString += "ERR_OVERHEATING";
+      print_errorString = true;
     }
+    
     if ((my_error & ERR_VOLTAGE) == ERR_VOLTAGE) {
       // When the applied voltage is out of the range of operating voltage set in the Control Table
       errorString += "ERR_VOLTAGE ";
       print_errorString = true;
     }
+    
     if ((my_error & ERR_RANGE) == ERR_RANGE) {
       // When the command is given beyond the range of usage
       errorString += "ERR_RANGE ";
       print_errorString = true;
     }
+    
     if ((my_error & ERR_CHECKSUM) == ERR_CHECKSUM) {
       // When the Checksum of the transmitted Instruction Packet is invalid
       errorString += "ERR_CHECKSUM ";
       print_errorString = true;
     }
+    
     if ((my_error & ERR_INSTRUCTION) == ERR_INSTRUCTION) {
       // When undefined Instruction is transmitted or the Action command is delivered without the reg_write command
       errorString += "ERR_INSTRUCTION ";
