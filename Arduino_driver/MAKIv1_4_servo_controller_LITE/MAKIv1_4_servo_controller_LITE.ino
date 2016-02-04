@@ -109,10 +109,17 @@ void setup()
   Serial.begin(baud_rate);
   delay(100);  // wait to make sure serial connection established 
   
-   // set reasonable speed limits for MAKI's servo motors
    for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
+     // set reasonable speed limits for MAKI's servo motors
      setServoGoalSpeed(nServo, default_goal_speed[nServo-1]);
      makiGoalSpeed[nServo-1] = default_goal_speed[nServo-1];
+     
+     /*
+     // KATE debugging
+     // reset AX_ALARM_*
+     ax12SetRegister(nServo, AX_ALARM_LED, 0);
+     ax12SetRegister(nServo, AX_ALARM_SHUTDOWN, 0);
+     */
    }
    
   commandString = String(" ");    // initalize
