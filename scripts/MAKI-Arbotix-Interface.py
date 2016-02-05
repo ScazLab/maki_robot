@@ -169,7 +169,7 @@ def sendToMAKI (message):
 		
 	#check for valid command formatting (regex)
 	else:
-		regex2 = re.compile('(((((HP)|(HT)|(LL)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
+		regex2 = re.compile('(((((HP)|(HT)|(LL)|(LR)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
 		match = regex2.match(message.data)
 		if (match):
 			rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
