@@ -130,11 +130,13 @@ def recvFromArduino():
 
 def sendToMAKI (message): 
 	global maki_serial
+	global feedback_strings
+
 	maki_serial.flushOutput()
 	rospy.logdebug( "message received" + str(message) )
 	
 	#handle feedback commands
-	feedback_strings = {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
+	#feedback_strings = {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
 	if message.data in feedback_strings:
 		feedback(message.data);
 		return
@@ -174,15 +176,22 @@ def initPubFeedback():
 	#_fname = initPubFeedback.__name__	## same as above but less modular
 
 	global feedback_pub_dict, feedback_topic_name_dict
+	global feedback_strings
 	global FEEDBACK_SC, FEEDBACK_TOPIC
 	rospy.logdebug( "setup rostopic publishers to give feedback" )
 			
 	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
 	#print feedback_topic_name_dict	## debugging
 	feedback_pub_dict = { }		# init as empty dictionary
+	feedback_strings = [ ]		# init as empty list
 	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
 		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26, latch = True)	## any new subscribers will see the most recent message published
 		feedback_pub_dict[_sc_dict_key] = _pub
+	
+		# dynamically populate feedback strings based on FEEDBACK_SC; more scalable
+		# {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
+		feedback_strings.append( str(SC_FEEDBACK + _sc_dict_key + TERM_CHAR_SEND) )
+	#print feedback_strings
 	return
 
 def initFeedbackFormat():
