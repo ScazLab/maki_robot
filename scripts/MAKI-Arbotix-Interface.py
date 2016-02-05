@@ -61,16 +61,32 @@ HT = 5  ## HEAD_TILT
 HP = 6  ## HEAD_PAN
 
 ## servo control infix for type of feedback
-FEEDBACK_SC = [ SC_GET_MX, SC_GET_MN, SC_GET_PP, SC_GET_PS, SC_GET_PT, SC_GET_PL, SC_GET_ER, SC_GET_DP, SC_GET_DS ]
+FEEDBACK_SC = [ SC_GET_MX,
+                SC_GET_MN,
+                SC_GET_PP,
+                SC_GET_PS,
+                SC_GET_PT,
+                SC_GET_PL,
+                SC_GET_ER,
+                SC_GET_DP,
+                SC_GET_DS,
+                SC_GET_TM,
+                SC_GET_TL,
+                SC_GET_TS
+                 ]
 FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
-			"maki_feedback_min_pos",
-			"maki_feedback_pres_pos",
-			"maki_feedback_pres_speed",
-			"maki_feedback_pres_temp",
-			"maki_feedback_pres_load",
-			"maki_feedback_error",
-			"maki_feedback_default_pos",
-			"maki_feedback_default_speed" ]
+                        "maki_feedback_min_pos",
+                        "maki_feedback_pres_pos",
+                        "maki_feedback_pres_speed",
+                        "maki_feedback_pres_temp",
+                        "maki_feedback_pres_load",
+                        "maki_feedback_error",
+                        "maki_feedback_default_pos",
+                        "maki_feedback_default_speed"#,
+                        "maki_feedback_torque_max",
+                        "maki_feedback_torque_limit",
+                        "maki_feedback_torque_enable"
+                        ]
 
 ## ---- DYNAMIC GLOBALS ---- modified programatically ----
 ALIVE = False
