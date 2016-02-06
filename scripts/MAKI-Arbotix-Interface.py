@@ -13,9 +13,12 @@ import signal
 import sys
 from timeit import default_timer as timer
 
+import random
+
 # --------------------------------------------------------------------	
 ## ---- USER DEFINED GLOBALS ----
 
+SIM = False	## default is False
 VERBOSE_DEBUG = True	#False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
 TTY_PORT = "USB0"	## default port for the MAKI Arbotix-M board
 
@@ -59,6 +62,7 @@ EP = 3  ## EYE_PAN
 ET = 4  ## EYE_TILT
 HT = 5  ## HEAD_TILT
 HP = 6  ## HEAD_PAN
+F_VAL_SEQ = [ "LR", "LL", "EP", "ET", "HT", "HP" ]
 
 ## servo control infix for type of feedback
 FEEDBACK_SC = [ SC_GET_MX,
@@ -82,7 +86,7 @@ FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
                         "maki_feedback_pres_load",
                         "maki_feedback_error",
                         "maki_feedback_default_pos",
-                        "maki_feedback_default_speed"#,
+                        "maki_feedback_default_speed",
                         "maki_feedback_torque_max",
                         "maki_feedback_torque_limit",
                         "maki_feedback_torque_enable"
@@ -97,6 +101,7 @@ feedback_pub_dict = { }	## init as empty dictionary; dynamically populated
 feedback_topic_name_dict = { }	## init as empty dictionary; dynamically populated
 resetPositions = ""	## init as empty string; dynamically populated
 resetSpeeds = ""	## init as empty string; dynamically populated
+SIM_feedback_type = None
 
 # --------------------------------------------------------------------
 def usage(cmd_line_args):
@@ -107,11 +112,16 @@ def usage(cmd_line_args):
 
 ## ------------------------------
 def recvFromArduino():
+	global SIM
 	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
 	rospy.logdebug( "recvFromArduino: BEGIN" )
 
+	if SIM:
+		## shouldn't get here since publishFeedback will generate a SIM feedback message
+		rospy.logwarn( "SIM = " + str(SIM) + "; nothing to receive" )
+		return ''
 
 	_recv_msg = ''
 	_RECEIVING = True
@@ -145,10 +155,11 @@ def recvFromArduino():
 	return _recv_msg
 
 def sendToMAKI (message): 
+	global SIM
 	global maki_serial
 	global feedback_strings
 
-	maki_serial.flushOutput()
+	if not SIM:	maki_serial.flushOutput()
 	rospy.logdebug( "message received" + str(message) )
 	
 	#handle feedback commands
@@ -159,22 +170,26 @@ def sendToMAKI (message):
 
 	#reset positions (need to query them on start)
 	if (message.data == "reset"):
-		rospy.logdebug( "resetting speeds: " + str(resetSpeeds) )
-		maki_serial.write(resetSpeeds)
-		rospy.logdebug( "speeds reset DONE" )
+		if not SIM:
+			rospy.logdebug( "resetting speeds: " + str(resetSpeeds) )
+			maki_serial.write(resetSpeeds)
+			rospy.logdebug( "speeds reset DONE" )
 
-		rospy.logdebug( "resetting positions: " + str(resetPositions) )
-		maki_serial.write(resetPositions)
-		rospy.logdebug( "positions reset DONE" )
+			rospy.logdebug( "resetting positions: " + str(resetPositions) )
+			maki_serial.write(resetPositions)
+			rospy.logdebug( "positions reset DONE" )
 		
 	#check for valid command formatting (regex)
 	else:
 		regex2 = re.compile('(((((HP)|(HT)|(LL)|(LR)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
 		match = regex2.match(message.data)
 		if (match):
-			rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
-			maki_serial.write(message.data)
-			rospy.logdebug( "command sent" )
+			if SIM:
+				rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to send message " + str(message) )
+			else:
+				rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
+				maki_serial.write(message.data)
+				rospy.logdebug( "command sent" )
 		else:
 			rospy.logerr( "invalid format: " + str(message.data) )
 			return
@@ -234,13 +249,19 @@ def feedback(feedbackString):
 
 def requestFeedback(feedbackString):
 	global feedback_req_template
+	global SIM, SIM_feedback_type
+	global maki_serial
 
 	rospy.logdebug( "about to request feedback; feedbackString=" + str(feedbackString) )
 	_tmp = feedback_req_template.search(feedbackString)
 	## Yes, feedbackString has the expected format
 	if _tmp != None:
 		_feedback_type = _tmp.group(1)
-		maki_serial.write(feedbackString)
+		if not SIM:
+			maki_serial.write(feedbackString)
+		else:
+			rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to request feedback " + str(feedbackString) )
+			SIM_feedback_type = _feedback_type
 		return _feedback_type
 	else:
 		rospy.logerr( "INVALID SYNTAX for feedback request: " + str(feedbackString) )
@@ -252,8 +273,18 @@ def publishFeedback(feedbackType=""):
 
 	global feedback_resp_template
 	global feedback_pub_dict
+	global SIM, SIM_feedback_type
 
-	_recv_msg = recvFromArduino()
+	_recv_msg = ''		## Init to empty string
+	if not SIM:
+		_recv_msg = recvFromArduino()
+	else:
+		## otherwise, generate placeholder messages
+		if (SIM_feedback_type != None) and (SIM_feedback_type != ''):
+			_recv_msg = generateSIMFeedback(SIM_feedback_type)
+		else:
+			return
+
 	_tmp = feedback_resp_template.search(_recv_msg)
 	if _tmp != None:
 		_prefix = _tmp.group(1)
@@ -262,14 +293,41 @@ def publishFeedback(feedbackType=""):
 		if feedback_pub_dict.has_key(_prefix):
 			feedback_pub_dict[_prefix].publish(_recv_msg)
 			rospy.loginfo( "published std_msgs/String '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
+		
+			## reset after publishing to appropriate rostopic
+			if SIM:	SIM_feedback_type = None
 	else:
 		rospy.logerr( "publishFeedback: INVALID MESSAGE RECEIVED; '" + str(_recv_msg) + "'" )
 
 	rospy.logdebug( "feedback: " + str(_recv_msg) )
 	return
 
+def generateSIMFeedback(feedback_type):
+	global F_VAL_SEQ
+
+	## otherwise, generate placeholder messages
+	_gen_msg = str(feedback_type)
+	_i = 0
+	while (_i < len(F_VAL_SEQ) ):
+		_i += 1
+		_gen_msg += str( random.randint(0,1023) )
+		if (_i == len(F_VAL_SEQ)):
+			_gen_msg += str(TERM_CHAR_RECV) 	## semicolon is syntax for end of FEEDBACK
+			break
+		else:
+			_gen_msg += str(DELIMITER_RECV) 	## colon is syntax for FEEDBACK delimiter
+	print _gen_msg
+	return _gen_msg
+
 ## ------------------------------
 def defReset():
+	global SIM
+	global maki_serial
+
+	if SIM:
+		rospy.logwarn( "SIM = " + str(SIM) + "; can't request or receive Default Position and Default Speed" )
+		return
+
 	rospy.logdebug( "defining reset strings" )
 	maki_serial.write("FDPZ")
 	resetCommand = ""
@@ -308,6 +366,7 @@ def defReset():
 	rospy.logdebug( "resetPositions: " + str(resetPositions) )
 	rospy.logdebug( "resetSpeeds: " + str(resetSpeeds) )
 
+## helper function for defReset()
 def token(header):
 	subCommand = header
 	c = maki_serial.read()
@@ -370,6 +429,7 @@ def makiExit():
 ## ------------------------------
 if __name__ == '__main__':
 
+	global SIM
 	global VERBOSE_DEBUG
 	global FILENAME
 	global ALIVE
@@ -424,8 +484,11 @@ if __name__ == '__main__':
 		maki_serial.flushOutput();	# clear the output buffer
 		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(_maki_port) ) 
 	else:
-		rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(_maki_port) + ". Exiting..." )
-		sys.exit()	## use this instead of exit (which is meant for interactive shells)
+		if not SIM:
+			rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(_maki_port) + ". Exiting..." )
+			sys.exit()	## use this instead of exit (which is meant for interactive shells)
+		else:
+			rospy.logwarn( "SIM = " + str(SIM) + "; continuing..." )
 
 	## wait until Arbotix-M board transmits before continuing 
 	## THIS WHILE LOOP IS BLOCKING
@@ -433,8 +496,9 @@ if __name__ == '__main__':
 	_auto_feedback_ER_timer_start = timer()
 	#print "Start time: " + str(_auto_feedback_ER_timer_start)	## debugging
 	_i = 0
-	_n = maki_serial.inWaiting()
-	while _n <= 0:
+	_n = 0
+	if not SIM:	_n = maki_serial.inWaiting()
+	while (_n <= 0) and (not SIM):
 		rospy.logdebug( str(_i) + ") maki_serial.inWaiting() = " + str(_n) )
 
 		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )	## debugging
@@ -475,7 +539,7 @@ if __name__ == '__main__':
 		
 
 	# clear the input buffer; we don't actually care about the contents
-	maki_serial.flushInput();
+	if not SIM: maki_serial.flushInput();
 
 	## STEP 4: INIT ROBOT STATE
 	# Reset MAKI to default position and speed
@@ -489,7 +553,7 @@ if __name__ == '__main__':
 	# And now... go!
 	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
 	while ALIVE and not rospy.is_shutdown():
-		publishFeedback()	## calls recvFromArduino()
+		publishFeedback()	## calls recvFromArduino() and generateSIMFeedback() if SIM=True
 		sleep(0.5)	# 500ms
 
 	print str(FILENAME) + " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
