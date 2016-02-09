@@ -158,6 +158,7 @@ def sendToMAKI (message):
 	global SIM
 	global maki_serial
 	global feedback_strings
+	global maki_cmd_template
 
 	if not SIM:	maki_serial.flushOutput()
 	rospy.logdebug( "message received" + str(message) )
@@ -181,8 +182,10 @@ def sendToMAKI (message):
 		
 	#check for valid command formatting (regex)
 	else:
-		regex2 = re.compile('(((((HP)|(HT)|(LL)|(LR)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
-		match = regex2.match(message.data)
+		#regex2 = re.compile('(((((HP)|(HT)|(LL)|(LR)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
+		#match = regex2.match(message.data)
+
+		match = maki_cmd_template.match( message.data )
 		if (match):
 			if SIM:
 				rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to send message " + str(message) )
@@ -225,9 +228,10 @@ def initPubFeedback():
 	#print feedback_strings
 	return
 
-def initFeedbackFormat():
+def initRegexFormat():
 	global TERM_CHAR_SEND, TERM_CHAR_RECV, DELIMITER_RECV
 	global feedback_req_template, feedback_resp_template
+	global maki_cmd_template
 
 	_feedback_request_format = "\A" + str(SC_FEEDBACK)	## F is the FEEDBACK request prefix
 	_feedback_request_format += "([A-Z]{2})"	
@@ -238,6 +242,21 @@ def initFeedbackFormat():
 	_feedback_response_format += "(([0-9]+" + str(DELIMITER_RECV) + "){" + str(SERVOCOUNT-1) + "}[0-9]+)"
 	_feedback_response_format += str(TERM_CHAR_RECV) + "\Z"	## ends in ;
 	feedback_resp_template = re.compile(_feedback_response_format)
+
+	## this replaces regex2
+	_motor_prefix = '((HP)|(HT)|(LL)|(LR)|(EP)|(ET))'
+	_goal_cmd = '(((GP)|(GS))[0-9]+)'
+	_goal_cmd_ipt = '((IPT)[0-9]+)'
+	_torque_cmd = '(((TM)|(TL)|(TS))[0-9]+)'
+	_maki_cmd_format_p1 = '((' + _motor_prefix 
+	_maki_cmd_format_p1 += _goal_cmd  + ')+'
+	_maki_cmd_format_p1 += _goal_cmd_ipt + '?)'
+	_maki_cmd_format_p2 = '(' + _motor_prefix 
+	_maki_cmd_format_p2 += _torque_cmd + ')+'
+	_maki_cmd = '(' + _maki_cmd_format_p1 + ')|(' + _maki_cmd_format_p2 + ')'
+	maki_cmd_template = re.compile( _maki_cmd )
+	print _maki_cmd
+
 	return
 
 def feedback(feedbackString):
@@ -435,6 +454,7 @@ if __name__ == '__main__':
 	global ALIVE
 	global TTY_PORT, BAUD_RATE, maki_serial
 
+
 	## ------------------------------
 	## BEGIN INITIALIZATION
 	## ------------------------------
@@ -454,12 +474,12 @@ if __name__ == '__main__':
 		rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
 	# Register shutdown hook
 	rospy.on_shutdown(makiExit)
+	# Setup regular expression templates for parsing feedback messages and ROS messages from maki_command rostopic
+	initRegexFormat()
 	# Subscribe to the maki_command stream
 	rospy.Subscriber("maki_command", String, sendToMAKI)
 	# Publisher setup
 	initPubFeedback()
-	# Setup regular expression templates for parsing feedback messages
-	initFeedbackFormat()
 
 	## STEP 3: ESTABLISH SERIAL COMMUNICATION WITH THE ROBOT
 	## STEP 3A: INSTANTIATE THE CONNECTION
