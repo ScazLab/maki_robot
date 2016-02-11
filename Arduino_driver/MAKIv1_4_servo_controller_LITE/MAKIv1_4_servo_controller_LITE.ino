@@ -36,7 +36,7 @@
 /*  Authors:
 /*    Kate Tsui, Drew O'Donnell
 /*
-/*  Updated: 2016-01-28
+/*  Updated: 2016-02-12
 /*
 /*  Acknowledgements:
 /*  * Andre Pereira (FullServoKeeponNewBop.ino)
@@ -51,7 +51,7 @@
 #include <math.h>
 #include "MAKIv14.h"
 
-#define DEBUG  false    //true
+#define DEBUG  false    // default is false
 
 /* ---- CONSTANTS ---- */
 #define USER_LED  0    // Pin 0 maps to the USER LED on the ArbotiX Robocontroller.
@@ -97,6 +97,8 @@ int makiGoalSpeed[SERVOCOUNT];
 boolean pp_flag = false;
 boolean ipt_flag = false;
 unsigned long errorCheck_timer;
+unsigned int ipt_duration;    // ms
+unsigned long ipt_reset_timer;
 //boolean ht_flag = true;  // KATE debugging
                                                                             
 /* ------------------------------------------------------------------------------------------------------------ */
@@ -111,8 +113,8 @@ void setup()
   
    // set reasonable speed limits for MAKI's servo motors
    for (nServo=1; nServo <= SERVOCOUNT; nServo++)  {
-     setServoGoalSpeed(nServo, default_goal_speed[nServo-1]);
-     makiGoalSpeed[nServo-1] = default_goal_speed[nServo-1];
+     setServoGoalSpeed(nServo, default_goal_speed[nServo-1], true);
+     //makiGoalSpeed[nServo-1] = default_goal_speed[nServo-1];  // fix for GS setting bug
    }
    
   commandString = String(" ");    // initalize
@@ -194,6 +196,20 @@ void loop() {
       (countAllMovingServos() == 0))  {
     pp_flag = false;
     readMotorValues(String(SC_GET_PP));
+  }
+  
+  // fix for GS setting bug
+  if (ipt_flag)  {
+    // need to reset GS to makiGoalSpeed after the IPT movement has finished
+    if ((millis() - ipt_reset_timer) > ipt_duration)  {
+      if (my_verbose_debug)  Serial.println("**** IPT goal speed reset ****");
+      for (int index=1; index<=SERVOCOUNT; index++)  {
+         boolean ssgs_ret = setServoGoalSpeed(index, makiGoalSpeed[index-1], false);
+         if (my_verbose_debug)  Serial.print(ssgs_ret);
+      }
+      ipt_flag = false;
+      pp_flag = true;
+    }
   }
   
   // make sure that periodically we're checking the error state of the motors
@@ -351,7 +367,8 @@ void parseServoDriverCommand(String servoCommand) {
   String tmp_string = String(servoCommand);
   int index = 0;
   int target_motor = 0;
-  boolean interpolation_flag = false;  
+  boolean movement_flag = false;  
+  boolean speed_flag = false;
   unsigned int parsed_int = INVALID_INT;    // expected input [0, 1023]
   unsigned int ipt = INVALID_INT;    // milliseconds
 
@@ -420,11 +437,11 @@ void parseServoDriverCommand(String servoCommand) {
 
       if (tmp_string.startsWith(SC_SET_GP))  {
         if (setServoGoalPos(target_motor, parsed_int))    // setServoGoalPos error checks motor and position
-          interpolation_flag = true;
+          movement_flag = true;
       } else if (tmp_string.startsWith(SC_SET_GS)) {
-        setServoGoalSpeed(target_motor, parsed_int);    // setServoGoalSpeed error checks motors and speed
-        makiGoalSpeed[target_motor-1] = getServoGoalSpeed(target_motor);
-      } else {
+        speed_flag = true;
+        setServoGoalSpeed(target_motor, parsed_int, true);    // setServoGoalSpeed error checks motors and speed
+        //makiGoalSpeed[target_motor-1] = getServoGoalSpeed(target_motor);    // fix for GS setting bug      } else {
         // shouldn't get here
       }
                  
@@ -475,8 +492,13 @@ void parseServoDriverCommand(String servoCommand) {
     tmp_string = String(servoCommand.substring(index));
   }  // end while
   
-  if (interpolation_flag)  {
-    interpolation_flag = false;
+  if (speed_flag)  {
+    speed_flag = false;
+    readMotorValues(String(SC_GET_GS));
+  }
+  
+  if (movement_flag)  {
+    movement_flag = false;
     pp_flag = true;
     
     if (my_verbose_debug)  {
@@ -512,21 +534,32 @@ void parseServoDriverCommand(String servoCommand) {
           c = (abs(delta)) / (((float)ipt/1000) * 2);
           c += 0.5;      // round implicitly
           //Serial.println(c);    // debugging
-          setServoGoalSpeed(index, (int)c);    // need to reset GS to makiGoalSpeed after the movement has finished
+          //setServoGoalSpeed(index, (int)c);    // need to reset GS to makiGoalSpeed after the movement has finished
+          setServoGoalSpeed(index, (int)c, false);
         }
       }  // end  for (index=1; index<=SERVOCOUNT; index++)
       writeGPSync();    // TODO: should this be a blocking action instead??
+
+      // need to reset GS to makiGoalSpeed after the IPT movement has finished
+      ipt_duration = ipt;
+      ipt_reset_timer = millis();
+      
     } else  {
       writeGPSync();    // write makiGoalPos to all servos at the same time, but don't wait for resulting movement
+
     }
-     // need to reset GS to makiGoalSpeed after the movement has finished
-  
+    
+    // fix for GS setting bug
+    /*    
+    // need to reset GS to makiGoalSpeed after the IPTmovement has finished  
     for (index=1; index<=SERVOCOUNT; index++)  {
+      Serial.println("**** KATE");
        setServoGoalSpeed(index, default_goal_speed[index-1]);
     }
     ipt_flag = false;
+    */
     
-  } 
+  }  // if (movement_flag) 
 }  // end parseServoDriverCommand
 
 unsigned int parseSCDIntIndex(String servoCommand) {
@@ -566,6 +599,9 @@ void writeGPSync()  {
   } 
   ax12write(0xff - (checksum % 256));  // checksum
   setRX(0);  // declare transmission to specific servo complete
+  
+  delay(100);  // needs time to write to value to register
+  readMotorValues(String(SC_GET_GP));
 }  // end  writeGPSync
 
 void writeGPSyncBlocking()  {
@@ -610,7 +646,7 @@ void readMotorValues(String feedbackType)  {
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_GS))  {
       read_val = getServoGoalSpeed(nServo);
-      makiGoalSpeed[nServo-1] = read_val;
+      //makiGoalSpeed[nServo-1] = read_val;  // fix for GS setting bug
       
     } else if (feedbackType.equalsIgnoreCase(SC_GET_PT))  {
       read_val = ax12GetRegister(nServo, AX_PRESENT_TEMPERATURE, 1);
@@ -745,18 +781,36 @@ int getServoGoalSpeed(int nServo)  {
   int ret = ax12GetRegister(nServo, AX_GOAL_SPEED_L, 2);
   int c = makiGoalSpeed[nServo-1];
   
+  if (my_verbose_debug)  {
+    Serial.print("\ngetServoGoalSpeed [nServo: ");
+    Serial.print(nServo);
+    Serial.print("] AX_GOAL_SPEED=");
+    Serial.print(ret);
+    Serial.print(", makiGoalSpeed=");
+    Serial.print(c);
+    Serial.print("\n");
+    Serial.flush();
+  }
+  
   if (ret == c)  {
     return ret;
   } else if (ret > 0)  {
+    if (my_verbose_debug)  Serial.print("IPT side effect; returned makiGoalSpeed");
     return c;    // THIS CONDITION IS A SIDE EFFECT OF SERVO COMMAND WITH IPT VALUE
   } else  {
     return ret;  // ret = -1
   }
 }  // getServoGoalSpeed
 
+// fix for GS setting bug
 boolean setServoGoalSpeed(int nServo, int v)  {
+  return setServoGoalSpeed(nServo, v, true);
+}
+
+boolean setServoGoalSpeed(int nServo, int v, boolean parsed_gs_cmd)  {
   if (validServo(nServo))  {
-    int goal_v = getServoGoalSpeed(nServo);
+    //int goal_v = getServoGoalSpeed(nServo);    // fix for GS setting bug
+    int goal_v = ax12GetRegister(nServo, AX_GOAL_SPEED_L, 2);
     if (goal_v == v)  return false;
   
     if (my_verbose_debug)  {
@@ -771,8 +825,9 @@ boolean setServoGoalSpeed(int nServo, int v)  {
     if ((v >= 0) && (v <= 1023)) {   
       ax12SetRegister2(nServo, AX_GOAL_SPEED_L, v);
       //makiGoalSpeed[nServo-1] = v;     // COMMENTED OUT INTENTIONALLY; ktsui 2015-07-21
+      if (parsed_gs_cmd)  makiGoalSpeed[nServo-1] = v;  // fix for GS setting bug
       delay(100);  // needs time to write to value to register
-      return true;
+      //return true;    // fix for GS setting bug
     } else  {
       if (my_verbose_debug)  {
         Serial.println("[setServoGoalSpeed()] Invalid speed; range = [0=max, 1,..., 1023]"); 
@@ -795,7 +850,11 @@ boolean setServoGoalSpeed(int nServo, int v)  {
       }
     }  // end if (my_verbose_debug)
     
+    //readMotorValues(String(SC_GET_GS));
+    return true;
+    
   } else  {    // not valid servo
+    //readMotorValues(String(SC_GET_GS));
     return false;
   }
 }  // end setServoSpeed
@@ -828,6 +887,7 @@ boolean setServoMaxTorque(int nServo, int v)  {
       Serial.flush();
     }
     
+    readMotorValues(String(SC_GET_TM));
     return true;
   } else {
     return false;
@@ -858,7 +918,7 @@ boolean setServoTorqueLimit(int nServo, int v)  {
       readMotorValues(String(SC_GET_TL));  // debugging
       Serial.flush();
     }
-    
+    readMotorValues(String(SC_GET_TL));
     return true;
   } else {
     return false;
@@ -890,7 +950,7 @@ boolean setServoTorqueState(int nServo, int v)  {
       readMotorValues(String(SC_GET_TS));  // debugging
       Serial.flush();
     }
-
+    readMotorValues(String(SC_GET_TS));
     return true;
   } else {
     return false;
