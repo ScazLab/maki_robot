@@ -41,6 +41,7 @@ SC_FEEDBACK = "F"       ## servo command syntax for FEEDBACK or status of all se
 SC_GET_MX = "MX"        ## servo command syntax for FEEDBACK of all servo MAXIMUM POSITION
 SC_GET_MN = "MN"        ## servo command syntax for FEEDBACK of all servo MINIMUM POSITION
 SC_GET_PP = "PP"        ## servo command syntax for feedback with PRESENT POSITION
+SC_GET_GP = "GP"        ## servo command syntax for feedback with GOAL POSITION
 SC_GET_PS = "PS"        ## servo command syntax for feedback with PRESENT SPEED
 SC_GET_GS = "GS"        ## servo command syntax for feedback with GOAL SPEED
 SC_GET_PT = "PT"        ## servo command syntax for feedback with PRESENT TEMPERATURE (in Celsius)
@@ -68,7 +69,9 @@ F_VAL_SEQ = [ "LR", "LL", "EP", "ET", "HT", "HP" ]
 FEEDBACK_SC = [ SC_GET_MX,
                 SC_GET_MN,
                 SC_GET_PP,
+		SC_GET_GP,
                 SC_GET_PS,
+		SC_GET_GS,
                 SC_GET_PT,
                 SC_GET_PL,
                 SC_GET_ER,
@@ -81,7 +84,9 @@ FEEDBACK_SC = [ SC_GET_MX,
 FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
                         "maki_feedback_min_pos",
                         "maki_feedback_pres_pos",
+                        "maki_feedback_goal_pos",
                         "maki_feedback_pres_speed",
+                        "maki_feedback_goal_speed",
                         "maki_feedback_pres_temp",
                         "maki_feedback_pres_load",
                         "maki_feedback_error",
