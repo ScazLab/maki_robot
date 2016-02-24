@@ -334,7 +334,12 @@ def generateSIMFeedback(feedback_type):
 	_i = 0
 	while (_i < len(F_VAL_SEQ) ):
 		_i += 1
-		_gen_msg += str( random.randint(0,1023) )
+		if (feedback_type == "PT"):
+			_gen_msg += str( random.randint(0,65) )
+		elif (feedback_type == "TS"):
+			_gen_msg += str( random.randint(0,1) )
+		else:
+			_gen_msg += str( random.randint(0,1023) )
 		if (_i == len(F_VAL_SEQ)):
 			_gen_msg += str(TERM_CHAR_RECV) 	## semicolon is syntax for end of FEEDBACK
 			break
