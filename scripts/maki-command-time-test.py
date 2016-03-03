@@ -63,35 +63,54 @@ F_VAL_SEQ = [ "LR", "LL", "EP", "ET", "HT", "HP" ]
 ## from MAKI-Arbotix-Interface.py
 ## servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
-                #SC_GET_MN,
-                SC_GET_PP,
-                SC_GET_GP	#,
-                #SC_GET_PS,
-                #SC_GET_GS,
-                #SC_GET_PT,
-                #SC_GET_PL,
-                #SC_GET_ER,
-                #SC_GET_DP,
-                #SC_GET_DS,
-                #SC_GET_TM,
-                #SC_GET_TL,
-                #SC_GET_TS
-                 ]
+		#SC_GET_MN,
+		SC_GET_PP,
+		SC_GET_GP	#,
+		#SC_GET_PS,
+		#SC_GET_GS,
+		#SC_GET_PT,
+		#SC_GET_PL,
+		#SC_GET_ER,
+		#SC_GET_DP,
+		#SC_GET_DS,
+		#SC_GET_TM,
+		#SC_GET_TL,
+		#SC_GET_TS
+		 ]
 FEEDBACK_TOPIC = [ #"maki_feedback_max_pos",
-                   #     "maki_feedback_min_pos",
-                        "maki_feedback_pres_pos",
-                        "maki_feedback_goal_pos"	#,
-                   #     "maki_feedback_pres_speed",
-                   #     "maki_feedback_goal_speed",
-                   #     "maki_feedback_pres_temp",
-                   #     "maki_feedback_pres_load",
-                   #     "maki_feedback_error",
-                   #     "maki_feedback_default_pos",
-                   #     "maki_feedback_default_speed",
-                   #     "maki_feedback_torque_max",
-                   #     "maki_feedback_torque_limit",
-                   #     "maki_feedback_torque_enable"
-                        ]
+		#     "maki_feedback_min_pos",
+			"maki_feedback_pres_pos",
+			"maki_feedback_goal_pos"	#,
+		#     "maki_feedback_pres_speed",
+		#     "maki_feedback_goal_speed",
+		#     "maki_feedback_pres_temp",
+		#     "maki_feedback_pres_load",
+		#     "maki_feedback_error",
+		#     "maki_feedback_default_pos",
+		#     "maki_feedback_default_speed",
+	 	#     "maki_feedback_torque_max",
+	 	#     "maki_feedback_torque_limit",
+		#     "maki_feedback_torque_enable"
+		]
+
+IPT_FACE = 1000	#ms
+IPT_NOD = 1750	#ms
+
+HP_LEFT = 312
+HP_FRONT = 512
+HP_RIGHT = 712
+
+HT_UP = 540
+HT_MIDDLE = 505
+HT_DOWN = 460
+#
+#EP_LEFT #= 486
+#EP_FRONT #= 512
+#EP_RIGHT #= 556
+#
+#ET_UP #= 626
+#ET_MIDDLE #= 512
+#ET_DOWN #= 338
 
 ## More MAKI related global variables from _2015_05_14_KECK_MAKIv1_4_teleop.ino
 blink_time = 75	#100	## 100ms... 75ms looks even more realistic
@@ -121,6 +140,136 @@ ARBOTIX_SIM = True
 #last_blink_time = 0
 #last_movement_time = 0
 
+def macroHeadNod():
+	global mHN_INTERUPT
+	global ALIVE
+	global makiPP
+
+	## different versions of head nodding
+	_v1 = False
+	_v2 = True
+
+	rospy.logdebug("macroHeadNod: BEGIN")
+
+	_start_headnod_time = None
+	_start_headnod_up_time = None
+	_start_headnod_down_time = None
+	_finish_headnod_up_time = None
+	_finish_headnod_down_time = None
+	_finish_headnod_time = None
+
+	_headnod_max_min_dist = float( abs( HT_UP - HT_DOWN ) )
+	_headnod_middle_down_dist = float( abs( HT_MIDDLE - HT_DOWN ) )
+	_headnod_middle_up_dist = float( abs( HT_MIDDLE - HT_UP ) )
+	## debugging
+	#print "_headnod_max_min_dist = " 
+	#print _headnod_max_min_dist 
+	#print "str(" + str(_headnod_max_min_dist) + ")"
+	##
+	#print "_headnod_middle_down_dist = " 
+	#print _headnod_middle_down_dist 
+	#print "str(" + str(_headnod_middle_down_dist) + ")"
+	##
+	#print "_headnod_middle_up_dist = " 
+	#print _headnod_middle_up_dist 
+	#print "str(" + str(_headnod_middle_up_dist) + ")"
+	##
+	#print _headnod_middle_down_dist / _headnod_max_min_dist
+	#print _headnod_middle_up_dist / _headnod_max_min_dist
+	_ipt_nod_middle_down = float( (_headnod_middle_down_dist / _headnod_max_min_dist) * IPT_NOD ) 
+	_ipt_nod_middle_up = float( (_headnod_middle_up_dist / _headnod_max_min_dist) * IPT_NOD ) 
+	_ipt_nod_middle_down = int(_ipt_nod_middle_down + 0.5)	## implicit rounding
+	_ipt_nod_middle_up = int(_ipt_nod_middle_up + 0.5)	## implicit rounding
+	rospy.logdebug( "(full)\tIPT_NOD = " + str(IPT_NOD) + "ms" )
+	rospy.logdebug( "(partial)\t_ipt_nod_middle_down = " + str(_ipt_nod_middle_down) + "ms" )
+	rospy.logdebug( "(partial)\t_ipt_nod_middle_up = " + str(_ipt_nod_middle_up) + "ms" )
+	rospy.logdebug( "(summed partial)\t_ipt_nod_middle_* = " + str( _ipt_nod_middle_down + _ipt_nod_middle_up ) + "ms" )
+
+	## maki_command prefix
+	_m_cmd_prefix = "HT" + SC_SET_GP
+	## nod macros
+	_nod_up_down = _m_cmd_prefix + str(HT_DOWN) + SC_SET_IPT + str(IPT_NOD) + TERM_CHAR_SEND
+	_nod_down_up = _m_cmd_prefix + str(HT_UP) + SC_SET_IPT + str(IPT_NOD) + TERM_CHAR_SEND
+	_nod_middle_up = _m_cmd_prefix + str(HT_UP) + SC_SET_IPT + str(_ipt_nod_middle_up) + TERM_CHAR_SEND 
+	_nod_middle_down = _m_cmd_prefix + str(HT_DOWN) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
+	_nod_up_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_up) + TERM_CHAR_SEND 
+	_nod_down_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
+	
+	## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
+	_ht_pp = makiPP["HT"]
+	_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
+	_ht_macro_pose = HT_MIDDLE
+	if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
+		_delta_ht_pp = abs( _ht_pp - HT_UP )
+		_ht_macro_pose = HT_UP
+	if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
+		_delta_ht_pp = abs( _ht_pp - HT_DOWN )
+		_ht_macro_pose = HT_DOWN
+	## publish GP of _ht_macro_pose in case in between poses
+	pubTo_maki_command( "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND )
+
+	_print_once = True
+	while ALIVE and not rospy.is_shutdown():
+		if _print_once:
+			rospy.logdebug("Entering macroHeadNod outer while loop")
+			_print_once = False
+
+		if mHN_INTERUPT:	
+			#print "start sleep 5"
+			sleep(5)	# 5 seconds
+			#print "end sleep 5"
+			continue	## begin loop again from the beginning skipping below
+			#print "shouldn't get here"
+
+		if (_ht_macro_pose == HT_MIDDLE):	
+			## looking up first has strongest nodding cue
+			pubTo_maki_command( str(_nod_middle_up) )
+			sleepWhileWaitingMS( _ipt_nod_middle_up )
+
+		rospy.logdebug("Entering macroHeadNod inner while loop")
+		_nod_count = 0
+		while not mHN_INTERUPT:
+#	_start_headnod_time = None
+#	_start_headnod_up_time = None
+#	_start_headnod_down_time = None
+#	_finish_headnod_up_time = None
+#	_finish_headnod_down_time = None
+#	_finish_headnod_time = None
+			## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
+			if _v1:
+				pubTo_maki_command( str(_nod_up_middle) )
+				sleepWhileWaitingMS( _ipt_nod_middle_up )
+
+				pubTo_maki_command( str(_nod_middle_down) )
+				sleepWhileWaitingMS( _ipt_nod_middle_down )
+
+				pubTo_maki_command( str(_nod_middle_down) )
+				sleepWhileWaitingMS( _ipt_nod_middle_down )
+
+				pubTo_maki_command( str(_nod_down_middle) )
+				sleepWhileWaitingMS( _ipt_nod_middle_down )
+		
+				pubTo_maki_command( str(_nod_middle_up) )
+				sleepWhileWaitingMS( _ipt_nod_middle_up )
+
+			## VERSION 2: UP --> DOWN --> UP
+			if _v2:
+				pubTo_maki_command( str(_nod_up_down) )
+				sleepWhileWaitingMS( IPT_NOD )
+
+				pubTo_maki_command( str(_nod_down_up) )
+				sleepWhileWaitingMS( IPT_NOD )
+
+			_nod_count += 1
+			rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )
+
+	rospy.logdebug("macroHeadNod: END")
+
+
+def macroHeadTurn():
+	_face_right = "HP" + SC_SET_GP + str(HP_RIGHT) + SC_SET_IPT + str(IPT_FACE) + TERM_CHAR_SEND
+	_face_left = "HP" + SC_SET_GP + str(HP_LEFT) + SC_SET_IPT + str(IPT_FACE) + TERM_CHAR_SEND
+	_face_front = "HP" + SC_SET_GP + str(HP_FRONT) + SC_SET_IPT + str(IPT_FACE) + TERM_CHAR_SEND
 
 #####################
 def parseRecvMsg ( recv_msg ):
@@ -175,6 +324,7 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def updateMAKICommand( msg ):
 	global maki_command
+	global mHN_INTERUPT
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -184,8 +334,13 @@ def updateMAKICommand( msg ):
 	if _tmp != None:
 		pass
 	else:
-		maki_command = msg.data 
-		parseMAKICommand( maki_command )
+		if (msg.data == "reset"):
+			mHN_INTERUPT = True
+		elif (msg.data == "nod"):
+			mHN_INTERUPT = False
+		else:
+			maki_command = msg.data 
+			parseMAKICommand( maki_command )
 
 	return
 
@@ -196,13 +351,22 @@ def parseMAKICommand( m_cmd ):
 
 	_emd_print = ""
 
-	_tmp = re.search("^([A-Y]+GP[0-9]+)([A-Y]+[0-9]+)*(IPT([0-9]))*Z$", m_cmd)
+	_tmp = re.search("^([A-Y]+GP[0-9]+)+(IPT([0-9]+))*Z$", m_cmd)
 	if _tmp != None:
+		## if the start_movement_timer already exists
+		if start_movement_time != None:
+			finish_movement_time = timer()
+			reportMovementDuration()
+
 		start_movement_time = timer()
 		rospy.logdebug( "----- start_movement_time = " + str(start_movement_time) )
-		if _tmp.group(4) != None:
+		#print _tmp.group(1)
+		#print _tmp.group(2)
+		#print _tmp.group(3)
+
+		if _tmp.group(3) != None:
 			## convert milliseconds to float seconds
-			expected_movement_duration = float(_tmp.group(4)) / 1000.0
+			expected_movement_duration = float(_tmp.group(3)) / 1000.0
 			_emd_print = "expected_movement_duration = " + str(expected_movement_duration) 
 		else:
 			expected_movement_duration = None
@@ -212,25 +376,22 @@ def parseMAKICommand( m_cmd ):
 		rospy.logdebug( "maki_command #" + str(mc_count) + " : " + str(m_cmd) )
 		rospy.logdebug( str(_emd_print) )
 
-#def updateStatus( ):
-#	global FEEDBACK_SC
-#	global ALIVE
-#	_rate = 1.5	## emperically determined; 2016-02-22
-#
-#	while ALIVE and not rospy.is_shutdown():
-#		for _servo_command in FEEDBACK_SC:
-#			#print _servo_command
-#			sendToMAKI( str(SC_FEEDBACK + _servo_command + TERM_CHAR_SEND) )
-#			sleep(_rate)	# seconds
-#	# end	while ALIVE
 
+#####################
+def sleepWhileWaitingMS( ms_sleep_time, increment=0.25 ):
+	## convert from IPT in milliseconds to sleep in seconds
+	#sleepWhileWaiting( float(ms_sleep_time)/1000.0, increment )
 
-def sleepWhileWaiting( sleep_time, increment ):
+	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 - float(increment)
+	sleepWhileWaiting( _new_ms_sleep_time, increment )
+
+def sleepWhileWaiting( sleep_time, increment=1 ):
 	global PIC_INTERUPT
 	global ALIVE
 
-	if VERBOSE_DEBUG: print "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds"
-	increment = max(1, increment)
+	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
+	#increment = max(1, increment)
+	increment = max(0.25, increment)
 	_start_sleep_time = timer()
 	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
 	while ( ALIVE and
@@ -239,7 +400,33 @@ def sleepWhileWaiting( sleep_time, increment ):
 		((timer() - _start_sleep_time) < sleep_time) ):
 		sleep(increment)
 
-	if VERBOSE_DEBUG: print "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds"
+	if VERBOSE_DEBUG: rospy.logdebug( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
+
+#####################
+def pubTo_maki_command( commandOut ):
+	global VERBOSE_DEBUG
+	global pub_cmd
+	global maki_msg_format
+	_pub_flag = False
+
+	## make sure that commandOut ends in only one TERM_CHAR_SEND
+	_tmp = re.search( maki_msg_format, commandOut )
+	if _tmp != None:
+		## Yes, commandOut ends in only one TERM_CHAR_SEND
+		_pub_flag = True
+		#if VERBOSE_DEBUG:       rospy.logdebug( str(commandOut) + " matched maki_msg_format" )
+	elif not commandOut.endswith( str(TERM_CHAR_SEND) ):
+		## append the missing TERM_CHAR_SEND
+		commandOut += str(TERM_CHAR_SEND)
+		_pub_flag = True
+		if VERBOSE_DEBUG:       rospy.logdebug( str(commandOut) + " added TERM_CHAR_SEND" )
+	else:
+		rospy.logerr( "Incorrect message format" + str(commandOut) )
+
+	if VERBOSE_DEBUG: rospy.logdebug( str(commandOut) )
+
+	if _pub_flag and not rospy.is_shutdown():
+		pub_cmd.publish( commandOut )
 
 #####################
 def signal_handler(signal, frame):
@@ -319,6 +506,18 @@ def initSubFeedback():
 
 
 #####################
+def reportMovementDuration():
+	global start_movement_time, finish_movement_time
+	global expected_movement_duration
+
+	if (start_movement_time != None) and (finish_movement_time != None):
+		rospy.loginfo( "maki_command #" + str(mc_count) + " : elapsed time = "
+			+ str( abs(finish_movement_time - start_movement_time) ) 
+			+ "; expected time = " + str(expected_movement_duration) )
+		## reset
+		resetTimer()
+
+
 def resetTimer():
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
@@ -339,6 +538,8 @@ if __name__ == '__main__':
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 	global mc_count
+	global mHN_INTERUPT
+	global PIC_INTERUPT
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -355,6 +556,8 @@ if __name__ == '__main__':
 	maki_command = ""
 	mc_count = 0
 	resetTimer()
+	mHN_INTERUPT = True
+	PIC_INTERUPT = False
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
@@ -373,8 +576,7 @@ if __name__ == '__main__':
 			my_init = my_init and init_dict[ _servo_command ]
 			#print my_init
 			sleep(0.5)	#0.5s
-			#sendToMAKI( str(SC_FEEDBACK + _servo_command + TERM_CHAR_SEND) )
-			pub_cmd.publish( str(SC_FEEDBACK + _servo_command + TERM_CHAR_SEND) )
+			pubTo_maki_command( str(SC_FEEDBACK + _servo_command + TERM_CHAR_SEND) )
 
 		if not my_init:
 			sleep(1.0)
@@ -382,11 +584,11 @@ if __name__ == '__main__':
 			INIT = False
 			rospy.loginfo( "Init MAKI state -- DONE" )
 
-	### STEP 4: START POLLING ROBOT FOR STATUS
-	#ALIVE = True
-	#thread_updateStatus = threading.Thread(target=updateStatus, args=())
-	#thread_updateStatus.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	#thread_updateStatus.start()
+	## STEP 4: START THREAD FOR TESTING HEAD NODDING TIMING
+	ALIVE = True
+	thread_macroHeadNod = threading.Thread(target=macroHeadNod, args=())
+	thread_macroHeadNod.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	thread_macroHeadNod.start()
 
 	## ---------------------------------
 	## END OF INITIALIZATION
@@ -395,13 +597,7 @@ if __name__ == '__main__':
 	resetTimer()
 	ALIVE = True
 	while ALIVE and not rospy.is_shutdown():
-		if (start_movement_time != None) and (finish_movement_time != None):
-			rospy.loginfo( "maki_command #" + str(mc_count) + " : elapsed time = "
-				+ str( abs(finish_movement_time - start_movement_time) ) 
-				+ "; expected time = " + str(expected_movement_duration) )
-			## reset
-			resetTimer()
-
+		reportMovementDuration()
 		pass	## nop to allow stdin to pass through
 
 	#rospy.spin()	## keeps python from exiting until this node is stopped
