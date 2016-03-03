@@ -298,7 +298,7 @@ def pubTo_maki_command( commandOut ):
 
 	#if VERBOSE_DEBUG: rospy.logdebug( str(commandOut) )
 	
-	if _pub_flag:
+	if _pub_flag and not rospy.is_shutdown():
 		rospy.loginfo( str(commandOut) )
 		pub_cmd.publish( commandOut )
 
