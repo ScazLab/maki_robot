@@ -36,7 +36,7 @@
 /*  Authors:
 /*    Kate Tsui, Drew O'Donnell
 /*
-/*  Updated: 2016-02-12
+/*  Updated: 2016-03-02
 /*
 /*  Acknowledgements:
 /*  * Andre Pereira (FullServoKeeponNewBop.ino)
@@ -83,7 +83,7 @@
 #define SC_GET_DS  "DS"  // servo command syntax for default speed
 
 /* ---- USER DEFINED GLOBALS ---- */
-unsigned int baud_rate = 9600;    // NOTE: Make sure to set the serial monitor to this baud_rate
+unsigned int baud_rate = 19200;	//9600;    // NOTE: Make sure to set the serial monitor to this baud_rate
 unsigned int interpolation_time = 500; // setup for interpolation from current->next over 1/2 second
 boolean my_verbose_debug = DEBUG;
 unsigned int EC_timer_duration = 30000;  // ms, or 30s

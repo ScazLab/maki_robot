@@ -53,7 +53,7 @@ SC_GET_TS = "TS" 	## servo command syntax for feedback with TORQUE ENABLE
 SC_GET_ER = "ER"        ## servo command syntax for feedback with error returned from AX_ALARM_LED
 SC_GET_DP = "DP"	## servo command syntax for default positions
 SC_GET_DS = "DS"	## servo command syntax for default speed
-BAUD_RATE = 9600
+BAUD_RATE = 19200	#9600
 EC_TIMER_DURATION = 30	## 30s, or 30000ms
 
 ## from MAKIv14.h
