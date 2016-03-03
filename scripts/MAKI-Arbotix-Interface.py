@@ -166,8 +166,13 @@ def sendToMAKI (message):
 	global feedback_strings
 	global maki_cmd_template
 
-	if not SIM:	maki_serial.flushOutput()
 	rospy.logdebug( "message received" + str(message) )
+
+	try:
+		if not SIM and maki_serial.isOpen:
+			maki_serial.flushOutput()
+	except portNotOpenError as _e1:
+		rospy.logerr( "Unable to flush serial output: " + str(_e1) )
 	
 	#handle feedback commands
 	#feedback_strings = {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
@@ -179,12 +184,16 @@ def sendToMAKI (message):
 	if (message.data == "reset"):
 		if not SIM:
 			rospy.logdebug( "resetting speeds: " + str(resetSpeeds) )
-			maki_serial.write(resetSpeeds)
-			rospy.logdebug( "speeds reset DONE" )
+			try:
+				if maki_serial.isOpen:
+					maki_serial.write(resetSpeeds)
+					rospy.logdebug( "speeds reset DONE" )
 
-			rospy.logdebug( "resetting positions: " + str(resetPositions) )
-			maki_serial.write(resetPositions)
-			rospy.logdebug( "positions reset DONE" )
+					rospy.logdebug( "resetting positions: " + str(resetPositions) )
+					maki_serial.write(resetPositions)
+					rospy.logdebug( "positions reset DONE" )
+			except portNotOpenError as _e2:
+				rospy.logerr( "Unable to write serial output: " + str(_e2) )
 		
 	#check for valid command formatting (regex)
 	else:
@@ -196,9 +205,13 @@ def sendToMAKI (message):
 			if SIM:
 				rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to send message " + str(message) )
 			else:
-				rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
-				maki_serial.write(message.data)
-				rospy.logdebug( "command sent" )
+				try:
+					if maki_serial.isOpen:
+						rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
+						maki_serial.write(message.data)
+						rospy.logdebug( "command sent" )
+				except portNotOpenError as _e3:
+					rospy.logerr( "Unable to write serial output: " + str(_e3) )
 		else:
 			rospy.logerr( "invalid format: " + str(message.data) )
 			return
@@ -218,6 +231,8 @@ def initPubFeedback():
 	global feedback_pub_dict, feedback_topic_name_dict
 	global feedback_strings
 	global FEEDBACK_SC, FEEDBACK_TOPIC
+	global LATCH
+
 	rospy.logdebug( "setup rostopic publishers to give feedback" )
 			
 	feedback_topic_name_dict = dict( zip(FEEDBACK_SC, FEEDBACK_TOPIC) )
@@ -283,7 +298,11 @@ def requestFeedback(feedbackString):
 	if _tmp != None:
 		_feedback_type = _tmp.group(1)
 		if not SIM:
-			maki_serial.write(feedbackString)
+			try:
+				if maki_serial._isOpen:
+					maki_serial.write(feedbackString)
+			except portNotOpenError as _e4:
+				rospy.logerr("Unable to write serial output: " + str(_e4) )
 		else:
 			rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to request feedback " + str(feedbackString) )
 			SIM_feedback_type = _feedback_type
@@ -449,6 +468,8 @@ def makiExit():
 			if maki_serial != None and maki_serial.isOpen():
 				rospy.loginfo( "Closing the Arduino port..." )
 				maki_serial.close()
+		except portNotOpenError as _e5:
+			rospy.logerr( str(_e5) )
 		except AttributeError:
 			pass
 		ALIVE = False
