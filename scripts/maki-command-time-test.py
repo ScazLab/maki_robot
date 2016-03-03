@@ -130,8 +130,7 @@ resetting_time = 2000
 slow_blink_time = 550
 
 ## GLOBAL VARIABLES FOR PYTHON SCRIPT
-VERBOSE_DEBUG = True	#False	## default is False
-ARBOTIX_SIM = True
+VERBOSE_DEBUG = False	## default is False
 #ALIVE #= False		## make sure that all threads cleanly end
 #INIT #= True		## flag to read first message from MAKI (will contain PP)
 #makiPP
@@ -140,10 +139,21 @@ ARBOTIX_SIM = True
 #last_blink_time = 0
 #last_movement_time = 0
 
+
+#######################
+## To run, publish to /maki_command
+##	reset
+##	HTTL1023Z
+##	nod
+## To stop, publish to /maki_command
+##	reset
+##	HTTL0Z
+#######################
 def macroHeadNod():
 	global mHN_INTERUPT
 	global ALIVE
 	global makiPP
+	global ht_tl_enable, ht_tl_disable
 
 	## different versions of head nodding
 	_v1 = False
@@ -194,20 +204,7 @@ def macroHeadNod():
 	_nod_middle_down = _m_cmd_prefix + str(HT_DOWN) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
 	_nod_up_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_up) + TERM_CHAR_SEND 
 	_nod_down_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
-	
-	## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
-	_ht_pp = makiPP["HT"]
-	_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
-	_ht_macro_pose = HT_MIDDLE
-	if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
-		_delta_ht_pp = abs( _ht_pp - HT_UP )
-		_ht_macro_pose = HT_UP
-	if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
-		_delta_ht_pp = abs( _ht_pp - HT_DOWN )
-		_ht_macro_pose = HT_DOWN
-	## publish GP of _ht_macro_pose in case in between poses
-	pubTo_maki_command( "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND )
-
+	## this is a nested while loop
 	_print_once = True
 	while ALIVE and not rospy.is_shutdown():
 		if _print_once:
@@ -221,6 +218,25 @@ def macroHeadNod():
 			continue	## begin loop again from the beginning skipping below
 			#print "shouldn't get here"
 
+		## try to nicely startup headnod testing without jerking MAKI's head tilt servo
+		pubTo_maki_command( "HT" + SC_SET_GP + str(makiPP["HT"]) + TERM_CHAR_SEND )
+		sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
+		pubTo_maki_command( "HT" + SC_SET_TL + str(ht_tl_enable) + TERM_CHAR_SEND )
+		sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
+
+		## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
+		_ht_pp = makiPP["HT"]
+		_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
+		_ht_macro_pose = HT_MIDDLE
+		if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
+			_delta_ht_pp = abs( _ht_pp - HT_UP )
+			_ht_macro_pose = HT_UP
+		if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
+			_delta_ht_pp = abs( _ht_pp - HT_DOWN )
+			_ht_macro_pose = HT_DOWN
+		## publish GP of _ht_macro_pose in case in between poses
+		pubTo_maki_command( "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND )
+
 		if (_ht_macro_pose == HT_MIDDLE):	
 			## looking up first has strongest nodding cue
 			pubTo_maki_command( str(_nod_middle_up) )
@@ -229,14 +245,10 @@ def macroHeadNod():
 		rospy.logdebug("Entering macroHeadNod inner while loop")
 		_nod_count = 0
 		while not mHN_INTERUPT:
-#	_start_headnod_time = None
-#	_start_headnod_up_time = None
-#	_start_headnod_down_time = None
-#	_finish_headnod_up_time = None
-#	_finish_headnod_down_time = None
-#	_finish_headnod_time = None
 			## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
 			if _v1:
+				_start_headnod_time = timer()
+				_start_headnod_down_time = timer()
 				pubTo_maki_command( str(_nod_up_middle) )
 				sleepWhileWaitingMS( _ipt_nod_middle_up )
 
@@ -245,23 +257,47 @@ def macroHeadNod():
 
 				pubTo_maki_command( str(_nod_middle_down) )
 				sleepWhileWaitingMS( _ipt_nod_middle_down )
+				_finish_headnod_down_time = timer()
 
+				_start_headnod_up_time = timer()
 				pubTo_maki_command( str(_nod_down_middle) )
 				sleepWhileWaitingMS( _ipt_nod_middle_down )
 		
 				pubTo_maki_command( str(_nod_middle_up) )
 				sleepWhileWaitingMS( _ipt_nod_middle_up )
+				_finish_headnod_up_time = timer()
+				_finish_headnod_time = timer()
 
 			## VERSION 2: UP --> DOWN --> UP
 			if _v2:
+				_start_headnod_time = timer()
+				_start_headnod_down_time = timer()
 				pubTo_maki_command( str(_nod_up_down) )
 				sleepWhileWaitingMS( IPT_NOD )
+				_finish_headnod_down_time = timer()
 
+				_start_headnod_up_time = timer()
 				pubTo_maki_command( str(_nod_down_up) )
 				sleepWhileWaitingMS( IPT_NOD )
+				_finish_headnod_up_time = timer()
+				_finish_headnod_time = timer()
 
 			_nod_count += 1
 			rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )
+			rospy.loginfo( "Head nod #" + str(_nod_count) + ": full nod = " 
+				+ str( abs(_finish_headnod_time - _start_headnod_time) )
+				+ "; nod up->down = " + str( abs(_finish_headnod_down_time - _start_headnod_down_time) )
+				+ "; nod down->up = " + str( abs(_finish_headnod_up_time - _start_headnod_up_time) ) )
+			rospy.loginfo("-----------------")
+
+
+			## try to nicely end testing the headnod
+			if mHN_INTERUPT:
+				sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
+				pubTo_maki_command( "reset" )
+				sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
+				pubTo_maki_command( "HT" + SC_SET_TL + str(ht_tl_disable) + TERM_CHAR_SEND )
+		#end	while not mHN_INTERUPT:
 
 	rospy.logdebug("macroHeadNod: END")
 
@@ -415,6 +451,9 @@ def pubTo_maki_command( commandOut ):
 		## Yes, commandOut ends in only one TERM_CHAR_SEND
 		_pub_flag = True
 		#if VERBOSE_DEBUG:       rospy.logdebug( str(commandOut) + " matched maki_msg_format" )
+	elif (commandOut == "reset"):
+		## special case handled by MAKI-Arbotix-Interface.py driver
+		_pub_flag = True
 	elif not commandOut.endswith( str(TERM_CHAR_SEND) ):
 		## append the missing TERM_CHAR_SEND
 		commandOut += str(TERM_CHAR_SEND)
