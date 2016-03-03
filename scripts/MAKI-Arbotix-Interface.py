@@ -20,6 +20,7 @@ import random
 
 SIM = False	## default is False
 VERBOSE_DEBUG = True	#False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
+LATCH = False	## if LATCH==True, any new subscribers will see the most recent message published
 TTY_PORT = "USB0"	## default port for the MAKI Arbotix-M board
 
 ## ---- CONSTANTS ----
@@ -224,7 +225,7 @@ def initPubFeedback():
 	feedback_pub_dict = { }		# init as empty dictionary
 	feedback_strings = [ ]		# init as empty list
 	for _sc_dict_key, _feedbackTopic in feedback_topic_name_dict.iteritems():
-		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26, latch = True)	## any new subscribers will see the most recent message published
+		_pub = rospy.Publisher(_feedbackTopic, String, queue_size = 26, latch = LATCH)	## if LATCH==True, any new subscribers will see the most recent message published
 		feedback_pub_dict[_sc_dict_key] = _pub
 	
 		# dynamically populate feedback strings based on FEEDBACK_SC; more scalable
