@@ -245,6 +245,8 @@ def macroHeadNod():
 		rospy.logdebug("Entering macroHeadNod inner while loop")
 		_nod_count = 0
 		while not mHN_INTERUPT:
+			rospy.loginfo("-----------------")
+
 			## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
 			if _v1:
 				_start_headnod_time = timer()
@@ -283,7 +285,7 @@ def macroHeadNod():
 				_finish_headnod_time = timer()
 
 			_nod_count += 1
-			rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )
+			#rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )
 			rospy.loginfo( "Head nod #" + str(_nod_count) + ": full nod = " 
 				+ str( abs(_finish_headnod_time - _start_headnod_time) )
 				+ "; nod up->down = " + str( abs(_finish_headnod_down_time - _start_headnod_down_time) )
