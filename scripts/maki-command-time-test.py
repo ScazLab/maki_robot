@@ -113,6 +113,11 @@ EP_RIGHT = 556
 #ET_UP #= 626
 #ET_MIDDLE #= 512
 #ET_DOWN #= 338
+#
+LL_OPEN_MAX = 535
+LL_OPEN_DEFAULT = 500
+LL_CLOSE_HALF = 430
+LL_CLOSE_MAX = 361
 
 ## More MAKI related global variables from _2015_05_14_KECK_MAKIv1_4_teleop.ino
 blink_time = 75	#100	## 100ms... 75ms looks even more realistic
@@ -130,7 +135,8 @@ resetting_time = 2000
 
 ## ktsui, INSPIRE 4, pilot3-1
 slow_blink_time = 550	#ms
-eye_saccade_time = [500, 250, 150, 100, 75, 50]	#ms
+#eye_saccade_time = [500, 250, 150, 100, 75, 50]	#ms
+eye_saccade_time = [200, 150, 100, 75]	#ms	## 2016-03-08, ktsui: Scaz thinks somewhere around 150-100ms
 
 ## GLOBAL VARIABLES FOR PYTHON SCRIPT
 VERBOSE_DEBUG = False	## default is False
@@ -182,7 +188,7 @@ def macroEyeSaccade():
 		pubTo_maki_command( "EP" + SC_SET_GP + str(_ep_macro_pose) + TERM_CHAR_SEND )
 
 		## raise LL so that it doesn't impede saccade
-		pubTo_maki_command( "LL" + SC_SET_GP + str(626) + TERM_CHAR_SEND )
+		pubTo_maki_command( "LL" + SC_SET_GP + str(LL_OPEN_MAX) + TERM_CHAR_SEND )
 
 		rospy.logdebug("Entering macroEyeSaccade inner while loop")
 		_saccade_count = 0
