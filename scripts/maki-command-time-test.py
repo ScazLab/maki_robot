@@ -418,9 +418,11 @@ def parseMAKICommand( m_cmd ):
 #####################
 def sleepWhileWaitingMS( ms_sleep_time, increment=0.25 ):
 	## convert from IPT in milliseconds to sleep in seconds
-	#sleepWhileWaiting( float(ms_sleep_time)/1000.0, increment )
 
 	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 - float(increment)
+	#print "ms_sleep_time = " + str( ms_sleep_time )
+	#print "increment = " + str( increment )
+	#print "new_ns_sleep_time = " + str( _new_ms_sleep_time )
 	sleepWhileWaiting( _new_ms_sleep_time, increment )
 
 def sleepWhileWaiting( sleep_time, increment=1 ):
@@ -428,8 +430,7 @@ def sleepWhileWaiting( sleep_time, increment=1 ):
 	global ALIVE
 
 	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
-	#increment = max(1, increment)
-	increment = max(0.25, increment)
+	increment = max(0.01, increment)	## previous max values: 1.0, 0.25	## in seconds
 	_start_sleep_time = timer()
 	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
 	while ( ALIVE and
