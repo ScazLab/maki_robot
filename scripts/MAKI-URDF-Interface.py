@@ -21,6 +21,13 @@ def sendCommand(jointState):
     global curVals
     global defVals
     global headers
+    global INIT
+
+    rospy.loginfo( jointState )
+    if INIT:
+        ## TODO: match headers with JointState
+        ## Below assumed that JointState 0-5 match the headers in order defined above
+        INIT = False
 
     command = ""
     comFlag = 0
@@ -37,4 +44,7 @@ def sendCommand(jointState):
         
 
 if __name__ == '__main__':
+    global INIT
+    INIT = True
+
     listener()

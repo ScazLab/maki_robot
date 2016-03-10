@@ -51,7 +51,10 @@
 </joint>
 <joint name="head_pan" type="revolute">
 	<!-- lower, upper in radians -->
+	<!--
 	<limit effort="1000.0" lower="-1.309" upper="1.308" velocity="0.5"/>	
+	-->
+	<limit effort="1000.0" lower="-1.0" upper="1.0" velocity="0.5"/>	
 	<parent link="base_link"/>
 	<child link="virtual_head"/>
 	<origin xyz="0 0 0"/>
@@ -75,7 +78,10 @@
 	<parent link="head"/>
 	<child link="virtual_eye_right"/>
 	<!-- lower, upper in radians -->
+	<!--
 	<limit effort="1000.0" lower="-0.337" upper="0.266" velocity="0.5"/>
+	-->
+	<limit effort="1000.0" lower="-0.25" upper="0.25" velocity="0.5"/>
 	<!--
 	<origin xyz="0.4 -0.25 0.25"/>
 	-->
@@ -85,7 +91,10 @@
 <joint name="eye_right_tilt" type="revolute">
 	<parent link="virtual_eye_right"/>
 	<child link="eye_right"/>	
+	<!--
 	<limit effort="1000.0" lower="-0.501" upper="0.445" velocity="0.5"/>
+	-->
+	<limit effort="1000.0" lower="-0.65" upper="0.6" velocity="0.5"/>
 	<axis xyz="0 1 0"/>
 </joint>
 
@@ -145,7 +154,10 @@
 	<axis xyz="0 1 0"/>	
 	<parent link="head"/>
 	<child link="eyelid_right"/>	
+	<!--
 	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
+	-->
+	<limit effort="1000.0" lower="-0.785" upper="2.355" velocity="0.5"/>
 </joint>
 <link name="eyelid_left">
 	<visual>
