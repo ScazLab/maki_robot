@@ -38,7 +38,7 @@
 	<origin xyz="0 0 1.6"/>
 	<axis xyz="0 1 0"/>
 </joint>
-<joint name="head_swivel" type="revolute">
+<joint name="head_pan" type="revolute">
 	<limit effort="1000.0" lower="-1.309" upper="1.308" velocity="0.5"/>	
 	<parent link="base_link"/>
 	<child link="virtual_head"/>
@@ -48,7 +48,7 @@
 
 
 
-<link name="eye1">
+<link name="eye_right">
 	<visual>
 		<origin rpy="0 0 0" xyz="0 0 0"/>
 		<geometry>
@@ -58,21 +58,21 @@
 	</visual>	
 </link>
 <link name="virtual_eye"></link>
-<joint name="eye1_swivel" type="revolute">
+<joint name="eye_right_pan" type="revolute">
 	<parent link="head"/>
 	<child link="virtual_eye"/>
 	<limit effort="1000.0" lower="-0.337" upper="0.266" velocity="0.5"/>
 	<origin xyz="0.4 -0.25 0.25"/>
 	<axis xyz="0 0 1"/>
 </joint>
-<joint name="eye1_tilt" type="revolute">
+<joint name="eye_right_tilt" type="revolute">
 	<parent link="virtual_eye"/>
-	<child link="eye1"/>	
+	<child link="eye_right"/>	
 	<limit effort="1000.0" lower="-0.501" upper="0.445" velocity="0.5"/>
 	<axis xyz="0 1 0"/>
 </joint>
 
-<link name="eye2">
+<link name="eye_left">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
@@ -81,9 +81,9 @@
 		<material name="black"/>
 	</visual>
 </link>
-<link name="virtual_eye2"></link>
+<link name="virtual_eye_left"></link>
 
-<link name="eyelid1">
+<link name="eyelid_right">
 	<visual>
 		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
 		<geometry>
@@ -92,14 +92,14 @@
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid1_joint" type="revolute">
+<joint name="eyelid_right_joint" type="revolute">
 	<origin xyz="0.4 -0.25 0.25"/>
 	<axis xyz="0 1 0"/>	
 	<parent link="head"/>
-	<child link="eyelid1"/>	
+	<child link="eyelid_right"/>	
 	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
 </joint>
-<link name="eyelid2">
+<link name="eyelid_left">
 	<visual>
 		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
 		<geometry>
@@ -108,29 +108,29 @@
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid2_joint" type="continuous">
+<joint name="eyelid_left_joint" type="continuous">
 	<parent link="head"/>
-	<child link="eyelid2"/>		
+	<child link="eyelid_left"/>		
 	<origin xyz="0.4 0.25 0.25"/>
 	<axis xyz="0 1 0"/>	
-	<mimic joint="eyelid1_joint"/>
+	<mimic joint="eyelid_right_joint"/>
 </joint>
 
-<joint name="eye2_tilt" type="continuous">
-	<parent link="virtual_eye2"/>
-	<child link="eye2"/>	
+<joint name="eye_left_tilt" type="continuous">
+	<parent link="virtual_eye_left"/>
+	<child link="eye_left"/>	
 	<axis xyz="0 1 0"/>
-	<mimic joint="eye1_tilt"/>		
+	<mimic joint="eye_right_tilt"/>		
 </joint>
-<joint name="eye2_swivel" type="continuous">
+<joint name="eye_left_pan" type="continuous">
 	<parent link="head"/>
-	<child link="virtual_eye2"/>	
+	<child link="virtual_eye_left"/>	
 	<origin xyz="0.4 0.25 0.25"/>
 	<axis xyz="0 0 1"/>
-	<mimic joint="eye1_swivel"/>		
+	<mimic joint="eye_right_pan"/>		
 </joint>
 
-<link name="iris1">
+<link name="iris_right">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
@@ -139,14 +139,14 @@
 		<material name="blue"/>
 	</visual>
 </link>
-<joint name="iris1_joint" type="fixed">
+<joint name="iris_right_joint" type="fixed">
 	<origin xyz="0.12 0 0"/>	
-	<parent link="eye1"/>
-	<child link="iris1"/>
+	<parent link="eye_right"/>
+	<child link="iris_right"/>
 	
 </joint>
 
-<link name="iris2">
+<link name="iris_left">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
@@ -155,10 +155,10 @@
 		<material name="blue"/>
 	</visual>
 </link>
-<joint name="iris2_joint" type="fixed">
+<joint name="iris_left_joint" type="fixed">
 	<origin xyz="0.12 0 0"/>	
-	<parent link="eye2"/>
-	<child link="iris2"/>
+	<parent link="eye_left"/>
+	<child link="iris_left"/>
 	
 </joint>
 
