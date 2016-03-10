@@ -8,24 +8,33 @@
 	<color rgba="0 0 0 1"/>
 </material>
 <material name="white">
-	<color rgba="1 1 1 1"/>
+	<color rgba="1 1 1 0.9"/>
+</material>
+<material name="blackA">
+	<color rgba="0 0 0 0.25"/>
 </material>
 
 
+
+<!-- BODY -->
 <link name="base_link">
 	<visual>
 		<geometry>
-			<cylinder length="1" radius="0.5"/>
+			<cylinder length="0.16142" radius="0.069915"/>
 		</geometry>
-		<origin rpy="0 0 0" xyz="0 0 0.5"/>
+		<!-- z = 0.5 * cylinder length -->
+		<origin rpy="0 0 0" xyz="0 0 0.08071"/>
 		<material name="white"/>
 	</visual>
 </link>
 
+
+
+<!-- HEAD -->
 <link name="head">
 	<visual>
 		<geometry>
-			<sphere radius="0.6"/>
+			<sphere radius="0.0821"/>
 		</geometry>
 		<material name="white"/>
 	</visual>
@@ -33,12 +42,15 @@
 <link name="virtual_head"></link>
 <joint name="head_tilt" type="revolute">
 	<parent link="virtual_head"/>
+	<!-- lower, upper in radians -->
 	<limit effort="1000.0" lower="-0.358" upper="0.394" velocity="0.5"/>
 	<child link="head"/>
-	<origin xyz="0 0 1.6"/>
+	<!-- z = sphere radius + cylinder length -->
+	<origin xyz="0 0 0.243242"/>
 	<axis xyz="0 1 0"/>
 </joint>
 <joint name="head_pan" type="revolute">
+	<!-- lower, upper in radians -->
 	<limit effort="1000.0" lower="-1.309" upper="1.308" velocity="0.5"/>	
 	<parent link="base_link"/>
 	<child link="virtual_head"/>
@@ -48,74 +60,48 @@
 
 
 
+<!-- RIGHT EYE -->
 <link name="eye_right">
 	<visual>
 		<origin rpy="0 0 0" xyz="0 0 0"/>
 		<geometry>
-			<sphere radius="0.15"/>
+			<sphere radius="0.02211"/>
 		</geometry>
-		<material name="black"/>
+		<material name="blackA"/>
 	</visual>	
 </link>
-<link name="virtual_eye"></link>
+<link name="virtual_eye_right"></link>
 <joint name="eye_right_pan" type="revolute">
 	<parent link="head"/>
-	<child link="virtual_eye"/>
+	<child link="virtual_eye_right"/>
+	<!-- lower, upper in radians -->
 	<limit effort="1000.0" lower="-0.337" upper="0.266" velocity="0.5"/>
+	<!--
 	<origin xyz="0.4 -0.25 0.25"/>
+	-->
+	<origin xyz="0.07589 -0.03771 0"/>
 	<axis xyz="0 0 1"/>
 </joint>
 <joint name="eye_right_tilt" type="revolute">
-	<parent link="virtual_eye"/>
+	<parent link="virtual_eye_right"/>
 	<child link="eye_right"/>	
 	<limit effort="1000.0" lower="-0.501" upper="0.445" velocity="0.5"/>
 	<axis xyz="0 1 0"/>
 </joint>
 
+
+
+<!-- LEFT EYE -->
 <link name="eye_left">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
-			<sphere radius="0.15"/>
+			<sphere radius="0.02211"/>
 		</geometry>
-		<material name="black"/>
+		<material name="blackA"/>
 	</visual>
 </link>
 <link name="virtual_eye_left"></link>
-
-<link name="eyelid_right">
-	<visual>
-		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
-		<geometry>
-			<box size="0.3 0.05 0.05"/>
-		</geometry>
-		<material name="white"/>
-	</visual>
-</link>
-<joint name="eyelid_right_joint" type="revolute">
-	<origin xyz="0.4 -0.25 0.25"/>
-	<axis xyz="0 1 0"/>	
-	<parent link="head"/>
-	<child link="eyelid_right"/>	
-	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
-</joint>
-<link name="eyelid_left">
-	<visual>
-		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
-		<geometry>
-			<box size="0.3 0.05 0.05"/>
-		</geometry>
-		<material name="white"/>
-	</visual>
-</link>
-<joint name="eyelid_left_joint" type="continuous">
-	<parent link="head"/>
-	<child link="eyelid_left"/>		
-	<origin xyz="0.4 0.25 0.25"/>
-	<axis xyz="0 1 0"/>	
-	<mimic joint="eyelid_right_joint"/>
-</joint>
-
 <joint name="eye_left_tilt" type="continuous">
 	<parent link="virtual_eye_left"/>
 	<child link="eye_left"/>	
@@ -125,41 +111,156 @@
 <joint name="eye_left_pan" type="continuous">
 	<parent link="head"/>
 	<child link="virtual_eye_left"/>	
-	<origin xyz="0.4 0.25 0.25"/>
+	<!-- same as eye_right_pan with positive y, instead of negative -->
+	<origin xyz="0.07589 0.03771 0"/>
 	<axis xyz="0 0 1"/>
 	<mimic joint="eye_right_pan"/>		
 </joint>
 
+
+
+<!-- EYELIDS -->
+<link name="eyelid_right">
+	<visual>
+		<!--
+		<origin rpy="0 0 1.57" xyz="0 0 0.5"/>
+		-->
+		<!-- z > eye_left sphere radius -->
+		<origin rpy="0 0 1.57" xyz="0 0 0.025"/>
+		<geometry>
+			<!--
+			<box size="0.3 0.05 0.05"/>
+			-->
+			<box size="0.032 0.005 0.005"/>
+		</geometry>
+		<material name="white"/>
+	</visual>
+</link>
+<joint name="eyelid_right_joint" type="revolute">
+	<!--
+	<origin xyz="0.4 -0.25 0.25"/>
+	-->
+	<!-- use origin of eye_right_pan -->
+	<origin xyz="0.07589 -0.03771 0"/>
+	<axis xyz="0 1 0"/>	
+	<parent link="head"/>
+	<child link="eyelid_right"/>	
+	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
+</joint>
+<link name="eyelid_left">
+	<visual>
+		<origin rpy="0 0 1.57" xyz="0 0 0.025"/>
+		<geometry>
+			<box size="0.032 0.005 0.005"/>
+		</geometry>
+		<material name="white"/>
+	</visual>
+</link>
+<joint name="eyelid_left_joint" type="continuous">
+	<parent link="head"/>
+	<child link="eyelid_left"/>		
+	<!-- use origin of eye_left_pan -->
+	<origin xyz="0.07589 0.03771 0"/>
+	<axis xyz="0 1 0"/>	
+	<mimic joint="eyelid_right_joint"/>
+</joint>
+
+
+
+
+<!-- IRISES -->
 <link name="iris_right">
 	<visual>
+		<!--
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
 			<sphere radius="0.05"/>
+		</geometry>
+		-->
+		<origin rpy="0 1.57 0" xyz="0 0 0" />
+		<geometry>
+			<cylinder length="0.005" radius="0.015"/>
 		</geometry>
 		<material name="blue"/>
 	</visual>
 </link>
 <joint name="iris_right_joint" type="fixed">
+	<!--
 	<origin xyz="0.12 0 0"/>	
+	-->
+	<origin xyz="0.015 0 0"/>	
 	<parent link="eye_right"/>
 	<child link="iris_right"/>
-	
 </joint>
 
 <link name="iris_left">
 	<visual>
-		<origin rpy="0 0 1" xyz="0 0 0"/>
+		<origin rpy="0 1.57 0" xyz="0 0 0" />
 		<geometry>
-			<sphere radius="0.05"/>
+			<cylinder length="0.005" radius="0.015"/>
 		</geometry>
 		<material name="blue"/>
 	</visual>
 </link>
 <joint name="iris_left_joint" type="fixed">
-	<origin xyz="0.12 0 0"/>	
+	<origin xyz="0.015 0 0"/>	
 	<parent link="eye_left"/>
 	<child link="iris_left"/>
-	
 </joint>
+
+
+
+<!-- PUPILS -->
+<link name="pupil_right">
+	<visual>
+		<origin rpy="0 1.57 0" xyz="0 0 0"/>
+		<geometry>
+			<cylinder length="0.005" radius="0.00633"/>
+		</geometry>
+		<material name="black"/>
+	</visual>
+</link>
+<joint name="pupil_right_joint" type="fixed">
+	<origin xyz="0.005 0 0"/>
+	<parent link="iris_right"/>
+	<child link="pupil_right"/>
+</joint>
+
+<link name="pupil_left">
+	<visual>
+		<origin rpy="0 1.57 0" xyz="0 0 0"/>
+		<geometry>
+			<cylinder length="0.005" radius="0.00633"/>
+		</geometry>
+		<material name="black"/>
+	</visual>
+</link>
+<joint name="pupil_left_joint" type="fixed">
+	<origin xyz="0.005 0 0"/>
+	<parent link="iris_left"/>
+	<child link="pupil_left"/>
+</joint>
+
+
+
+<!-- MOUTH CAMERA -->
+<link name="mouth_camera">
+	<visual>
+		<origin rpy="0 1.57 0" xyz="0 0 0"/>
+		<geometry>
+			<!--
+			<cylinder length="0.005" radius="0.007"/>
+			-->
+			<cylinder length="0.001" radius="0.001425"/>
+		</geometry>
+		<material name="black"/>
+	</visual>
+</link>
+<joint name="robot_mouth_camera" type="fixed">
+	<origin xyz="0.07 0 -0.044"/>
+	<parent link="head" />
+	<child link="mouth_camera" />
+</joint>
+
 
 </robot>
