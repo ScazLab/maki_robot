@@ -63,8 +63,8 @@
 
 
 
-<!-- RIGHT EYE -->
-<link name="eye_right">
+<!-- LEFT EYE -->
+<link name="eye_left">
 	<visual>
 		<origin rpy="0 0 0" xyz="0 0 0"/>
 		<geometry>
@@ -73,10 +73,10 @@
 		<material name="blackA"/>
 	</visual>	
 </link>
-<link name="virtual_eye_right"></link>
-<joint name="eye_right_pan" type="revolute">
+<link name="virtual_eye_left"></link>
+<joint name="eye_left_pan" type="revolute">
 	<parent link="head"/>
-	<child link="virtual_eye_right"/>
+	<child link="virtual_eye_left"/>
 	<!-- lower, upper in radians -->
 	<!--
 	<limit effort="1000.0" lower="-0.337" upper="0.266" velocity="0.5"/>
@@ -85,12 +85,12 @@
 	<!--
 	<origin xyz="0.4 -0.25 0.25"/>
 	-->
-	<origin xyz="0.07589 -0.03771 0"/>
+	<origin xyz="0.07589 0.03771 0"/>
 	<axis xyz="0 0 1"/>
 </joint>
-<joint name="eye_right_tilt" type="revolute">
-	<parent link="virtual_eye_right"/>
-	<child link="eye_right"/>	
+<joint name="eye_left_tilt" type="revolute">
+	<parent link="virtual_eye_left"/>
+	<child link="eye_left"/>	
 	<!--
 	<limit effort="1000.0" lower="-0.501" upper="0.445" velocity="0.5"/>
 	-->
@@ -100,8 +100,8 @@
 
 
 
-<!-- LEFT EYE -->
-<link name="eye_left">
+<!-- RIGHT EYE -->
+<link name="eye_right">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
@@ -110,32 +110,34 @@
 		<material name="blackA"/>
 	</visual>
 </link>
-<link name="virtual_eye_left"></link>
-<joint name="eye_left_tilt" type="continuous">
-	<parent link="virtual_eye_left"/>
-	<child link="eye_left"/>	
+<link name="virtual_eye_right"></link>
+<joint name="eye_right_tilt" type="continuous">
+	<parent link="virtual_eye_right"/>
+	<child link="eye_right"/>	
 	<axis xyz="0 1 0"/>
-	<mimic joint="eye_right_tilt"/>		
+	<mimic joint="eye_left_tilt"/>		
 </joint>
-<joint name="eye_left_pan" type="continuous">
+<joint name="eye_right_pan" type="continuous">
 	<parent link="head"/>
-	<child link="virtual_eye_left"/>	
-	<!-- same as eye_right_pan with positive y, instead of negative -->
-	<origin xyz="0.07589 0.03771 0"/>
+	<child link="virtual_eye_right"/>	
+	<!-- same as eye_left_pan with negative y, instead of positive -->
+	<origin xyz="0.07589 -0.03771 0"/>
 	<axis xyz="0 0 1"/>
-	<mimic joint="eye_right_pan"/>		
+	<mimic joint="eye_left_pan"/>		
 </joint>
 
 
 
 <!-- EYELIDS -->
-<link name="eyelid_right">
+<!-- eyelid_right motor has been removed and coupled to eyelid_left -->
+<link name="eyelid_left">
 	<visual>
 		<!--
 		<origin rpy="0 0 1.57" xyz="0 0 0.5"/>
 		-->
-		<!-- z > eye_left sphere radius -->
-		<origin rpy="0 0 1.57" xyz="0 0 0.025"/>
+		<!-- 	x = iris origin x + iris cylinder length + pupil cylinder length,
+			z = iris cylinder radius -->
+		<origin rpy="0.785 0 1.57" xyz="0.025 0 0.015"/>
 		<geometry>
 			<!--
 			<box size="0.3 0.05 0.05"/>
@@ -145,36 +147,38 @@
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid_right_joint" type="revolute">
+<joint name="eyelid_left_joint" type="revolute">
 	<!--
 	<origin xyz="0.4 -0.25 0.25"/>
 	-->
-	<!-- use origin of eye_right_pan -->
-	<origin xyz="0.07589 -0.03771 0"/>
+	<!-- use origin of eye_left_pan -->
+	<origin xyz="0.07589 0.03771 0"/>
 	<axis xyz="0 1 0"/>	
 	<parent link="head"/>
-	<child link="eyelid_right"/>	
+	<child link="eyelid_left"/>	
 	<!--
 	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
 	-->
-	<limit effort="1000.0" lower="-0.785" upper="2.355" velocity="0.5"/>
+	<limit effort="1000.0" lower="-0.3" upper="1.0" velocity="0.5"/>
 </joint>
-<link name="eyelid_left">
+<link name="eyelid_right">
 	<visual>
-		<origin rpy="0 0 1.57" xyz="0 0 0.025"/>
+		<!-- 	x = iris origin x + iris cylinder length + pupil cylinder length,
+			z = iris cylinder radius -->
+		<origin rpy="0.785 0 1.57" xyz="0.025 0 0.015"/>
 		<geometry>
 			<box size="0.032 0.005 0.005"/>
 		</geometry>
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid_left_joint" type="continuous">
+<joint name="eyelid_right_joint" type="continuous">
 	<parent link="head"/>
-	<child link="eyelid_left"/>		
-	<!-- use origin of eye_left_pan -->
-	<origin xyz="0.07589 0.03771 0"/>
+	<child link="eyelid_right"/>		
+	<!-- use origin of eye_right_pan -->
+	<origin xyz="0.07589 -0.03771 0"/>
 	<axis xyz="0 1 0"/>	
-	<mimic joint="eyelid_right_joint"/>
+	<mimic joint="eyelid_left_joint"/>
 </joint>
 
 
