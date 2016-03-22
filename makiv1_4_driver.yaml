@@ -1,0 +1,10 @@
+port: /dev/ttyUSB0
+baud: 115200
+rate: 30
+joints: {
+    head_tilt_joint: {id: 5, type: dynamixel, min_angle: -10, max_angle: 10, neutral: 500, ticks: 1024},
+    head_pan_joint: {id: 6, type: dynamixel, min_angle: -75, max_angle: 75, neutral: 512, ticks: 1024}
+}
+controllers: {
+    head_controller: { type: follow_controller, joints: {head_pan_joint, head_tilt_joint} }
+}
