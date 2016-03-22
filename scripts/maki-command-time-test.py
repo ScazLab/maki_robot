@@ -120,7 +120,8 @@ LL_CLOSE_HALF = 430
 LL_CLOSE_MAX = 361
 
 ## More MAKI related global variables from _2015_05_14_KECK_MAKIv1_4_teleop.ino
-blink_time = 75	#100	## 100ms... 75ms looks even more realistic
+#blink_time = [1000, 500, 250, 200, 150]	#, 100, 75]	## ms... 75ms looks even more realistic
+blink_time = [2000]		## ms
 eyelid_offset_blinking = -50	## LL decrement position
 eyelid_offset_open_wide = 30	## LL increment position
 
@@ -152,7 +153,144 @@ VERBOSE_DEBUG = False	## default is False
 #######################
 ## To run, publish to /maki_command
 ##	reset
-##	saccade
+##	blink_test
+## To stop, publish to /maki_command
+##	reset
+#######################
+def macroBlink():
+	global mB_INTERUPT
+	global ALIVE
+
+	## this is a nested while loop
+	_print_once = True
+	while ALIVE and not rospy.is_shutdown():
+		if _print_once:
+			rospy.logdebug("Entering macroBlink outer while loop")
+			_print_once = False
+
+		if mB_INTERUPT:	
+			print "start sleep 5"
+			sleep(5)	# 5 seconds
+			print "end sleep 5"
+			continue	## begin loop again from the beginning skipping below
+			#print "shouldn't get here"
+
+		rospy.logdebug("Entering macroBlink inner while loop")
+		_blink_count = 0
+		while not mB_INTERUPT:
+
+			for _blink_rep in range (1,2):	#range(1,6):	## [1,6)
+				#_blink_count = helper_macroBlink( _blink_count, True, _blink_rep, read_time=2.0 )
+				#_blink_count = helper_macroBlink( _blink_count, False, _blink_rep, read_time=2.0 )
+				_blink_count = helper_macroBlink( _blink_count, True, 3, read_time=0.5 )
+				sleep(2)
+				rospy.logdebug("***************")
+
+				## try to nicely end testing the eye blink
+				if mB_INTERUPT:
+					sleep(1)	## make sure to wait for message to reach Dynamixel servo
+					pubTo_maki_command( "reset" )
+					sleep(1)	## make sure to wait for message to reach Dynamixel servo
+				else:
+					pass
+			# end	for _blink_rep in range()
+
+		# end	while not mB_INTERUPT
+	# end	while ALIVE and not rospy.is_shutdown():
+
+def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
+	global mB_INTERUPT
+	global blink_time		## list of ints
+
+	_start_blink_time = None
+	_start_blink_close_time = None
+	_finish_blink_close_time = None
+	_start_blink_open_time = None
+	_finish_blink_open_time = None
+	_finish_blink_time = None
+	_total_blink_time = 0
+
+	## maki_command prefix
+	_m_cmd_prefix = "LL" + SC_SET_GP
+
+	rospy.loginfo("blink_rep=" + str(blink_rep))
+	rospy.loginfo("-----------------")
+	for _blink_time in blink_time:
+		_half_blink_time = int( float(_blink_time) * 0.5 + 0.5 )
+		rospy.loginfo( "blink_time=" + str(_blink_time) + "; half_blink_time=" + str(_half_blink_time) )
+
+		pubTo_maki_command( "LLGS122Z" )	## should take 0.5 seconds to move 139 ticks
+
+		## maki_command suffix
+		#_m_cmd_suffix = SC_SET_IPT + str( _half_blink_time ) + TERM_CHAR_SEND
+		_m_cmd_suffix = TERM_CHAR_SEND
+		_blink_close = _m_cmd_prefix
+		if full_blink:
+			_blink_close += str(LL_CLOSE_MAX) + _m_cmd_suffix
+		else:
+			_blink_close += str(LL_CLOSE_HALF) + _m_cmd_suffix
+		_blink_open = _m_cmd_prefix + str(LL_OPEN_DEFAULT) + _m_cmd_suffix
+		
+		_start_blink_time = timer()
+		#for blink_rep in range(1, 6):
+		for _flutter_count in range(0, blink_rep):
+			rospy.loginfo( str(_flutter_count) )
+
+			## blink close
+			_start_blink_close_time = timer()
+			rospy.logdebug( "blink close" )
+			pubTo_maki_command( str(_blink_close) )
+			sleepWhileWaitingMS( _half_blink_time, 0.05 )
+			_finish_blink_close_time = timer()
+
+			## blink open
+			_start_blink_open_time = timer()
+			rospy.logdebug( "blink open" )
+			pubTo_maki_command( str(_blink_open) )
+			sleepWhileWaitingMS( _half_blink_time, 0.05 )
+			_finish_blink_open_time = timer()
+			_finish_blink_time = timer()
+
+			if mB_INTERUPT:
+				rospy.logerr("Abort blink_test")
+				break	## break out of inner for loop
+		# end	for _flutter_count in range(1, blink_rep):
+		_finish_blink_time = timer()
+
+		## make it easier to read
+		sleepWhileWaiting( read_time, .5 )
+
+		blink_count += 1
+		_total_blink_time = abs(_finish_blink_time - _start_blink_time)
+		#rospy.loginfo( "Completed " + str(blink_count) + " full eye blinks" )
+		rospy.loginfo( "Eye blink #" + str(blink_count) + ": full eye blink = " 
+			+ str( _total_blink_time )
+			+ "; blink open->close = " + str( abs(_finish_blink_close_time - _start_blink_close_time) )
+			+ "; blink close->open = " + str( abs(_finish_blink_open_time - _start_blink_open_time) ) )
+
+		rospy.loginfo("-----------------")
+
+		## try to nicely end testing the eye blink
+		if mB_INTERUPT:
+			break	## break out of outer for loop
+		else:
+			## reset timers
+			_start_blink_time = None
+			_start_blink_close_time = None
+			_finish_blink_close_time = None
+			_start_blink_open_time = None
+			_finish_blink_open_time = None
+			_finish_blink_time = None
+			_total_blink_time = 0
+
+	# end	for _blink_time in blink_time:
+	return blink_count
+# KATE
+
+#######################
+## To run, publish to /maki_command
+##	reset
+##	saccade_test
 ## To stop, publish to /maki_command
 ##	reset
 #######################
@@ -291,7 +429,7 @@ def helper_macroEyeSaccade( saccade_count, read_time=1.0 ):
 ## To run, publish to /maki_command
 ##	reset
 ##	HTTL1023Z
-##	nod
+##	nod_test
 ## To stop, publish to /maki_command
 ##	reset
 ##	HTTL0Z
@@ -509,7 +647,7 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def updateMAKICommand( msg ):
 	global maki_command
-	global mHN_INTERUPT, mES_INTERUPT
+	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -522,15 +660,20 @@ def updateMAKICommand( msg ):
 		if (msg.data == "reset"):
 			mHN_INTERUPT = True
 			mES_INTERUPT = True
+			mB_INTERUPT = True
 			rospy.logdebug( "msg.data = " + msg.data )
-		elif (msg.data == "nod"):
+		elif (msg.data == "nod_test"):
 			mHN_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
-		elif (msg.data == "saccade"):
+		elif (msg.data == "saccade_test"):
 			mES_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mES_INTERUPT = " + str(mES_INTERUPT) )
+		elif (msg.data == "blink_test"):
+			mB_INTERUPT = False
+			rospy.logdebug( "msg.data = " + msg.data )
+			rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
 		else:
 			maki_command = msg.data 
 			parseMAKICommand( maki_command )
@@ -735,7 +878,7 @@ if __name__ == '__main__':
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 	global mc_count
-	global mHN_INTERUPT, mES_INTERUPT
+	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
 	global PIC_INTERUPT
 
 	## ---------------------------------
@@ -755,6 +898,7 @@ if __name__ == '__main__':
 	resetTimer()
 	mHN_INTERUPT = True
 	mES_INTERUPT = True
+	mB_INTERUPT = True
 	PIC_INTERUPT = False
 
 	## STEP 2: SIGNAL HANDLER
@@ -792,6 +936,11 @@ if __name__ == '__main__':
 	thread_macroEyeSaccade = threading.Thread(target=macroEyeSaccade, args=())
 	thread_macroEyeSaccade.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
 	thread_macroEyeSaccade.start()
+
+	## STEP 6: START THREAD FOR TESTING BLINKING TIMING
+	thread_macroBlink = threading.Thread(target=macroBlink, args=())
+	thread_macroBlink.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	thread_macroBlink.start()
 
 	## ---------------------------------
 	## END OF INITIALIZATION
