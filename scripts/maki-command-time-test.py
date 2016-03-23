@@ -25,6 +25,8 @@ import random
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
 		#SC_GET_MN,
@@ -135,6 +137,7 @@ def macroBlink():
 def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 	global mB_INTERUPT
 	global blink_time		## list of ints
+	global SWW_WI
 
 	_start_blink_time = None
 	_start_blink_close_time = None
@@ -177,16 +180,16 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 			_start_blink_close_time = timer()
 			rospy.logdebug( "blink close" )
 			pubTo_maki_command( str(_blink_close) )
-			sleepWhileWaitingMS( _half_blink_time, 0.01 )
-			#sleepWhileWaitingMS( _close_blink_time, 0.01 )
+			SWW_WI.sleepWhileWaitingMS( _half_blink_time, 0.01 )
+			#SWW_WI.sleepWhileWaitingMS( _close_blink_time, 0.01 )
 			_finish_blink_close_time = timer()
 
 			## blink open
 			_start_blink_open_time = timer()
 			rospy.logdebug( "blink open" )
 			pubTo_maki_command( str(_blink_open) )
-			sleepWhileWaitingMS( _half_blink_time, 0.01 )
-			#sleepWhileWaitingMS( _open_blink_time, 0.01 )
+			SWW_WI.sleepWhileWaitingMS( _half_blink_time, 0.01 )
+			#SWW_WI.sleepWhileWaitingMS( _open_blink_time, 0.01 )
 			_finish_blink_open_time = timer()
 			_finish_blink_time = timer()
 
@@ -197,7 +200,7 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 		_finish_blink_time = timer()
 
 		## make it easier to read
-		sleepWhileWaiting( read_time, .5 )
+		SWW_WI.sleepWhileWaiting( read_time, .5 )
 
 		blink_count += 1
 		_total_blink_time = abs(_finish_blink_time - _start_blink_time)
@@ -286,6 +289,7 @@ def macroEyeSaccade():
 def helper_macroEyeSaccade( saccade_count, read_time=1.0 ):
 	global mES_INTERUPT
 	global eye_saccade_time		## list of ints
+	global SWW_WI
 
 	_start_saccade_time = None
 	_start_saccade_side_time = None
@@ -318,25 +322,25 @@ def helper_macroEyeSaccade( saccade_count, read_time=1.0 ):
 		else:
 			rospy.logdebug( "saccade LEFT" )
 			pubTo_maki_command( str(_saccade_front_left) )
-		sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
+		SWW_WI.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
 		_finish_saccade_side_time = timer()
 		_finish_saccade_time = timer()
 		_total_saccade_time = abs(_finish_saccade_time - _start_saccade_time)
 
 		## make it easier to read
-		sleepWhileWaiting( read_time, 0.5 )
+		SWW_WI.sleepWhileWaiting( read_time, 0.5 )
 
 		_start_saccade_time = timer()
 		## return to eye pan looking front
 		_start_saccade_front_time = timer()
 		pubTo_maki_command( str(_saccade_front) )
-		sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
+		SWW_WI.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
 		_finish_saccade_front_time = timer()
 		_finish_saccade_time = timer()
 		_total_saccade_time += abs(_finish_saccade_time - _start_saccade_time)
 
 		## make it easier to read
-		sleepWhileWaiting( read_time, .5 )
+		SWW_WI.sleepWhileWaiting( read_time, .5 )
 
 		saccade_count += 1
 		#rospy.loginfo( "Completed " + str(saccade_count) + " full eye saccades" )
@@ -377,6 +381,7 @@ def macroHeadNod():
 	global ALIVE
 	global makiPP
 	global ht_tl_enable, ht_tl_disable
+	global SWW_WI
 
 	## different versions of head nodding
 	_v1 = False
@@ -463,7 +468,7 @@ def macroHeadNod():
 		if (_ht_macro_pose == HT_MIDDLE):	
 			## looking up first has strongest nodding cue
 			pubTo_maki_command( str(_nod_middle_up) )
-			sleepWhileWaitingMS( _ipt_nod_middle_up )
+			SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
 
 		rospy.logdebug("Entering macroHeadNod inner while loop")
 		_nod_count = 0
@@ -475,21 +480,21 @@ def macroHeadNod():
 				_start_headnod_time = timer()
 				_start_headnod_down_time = timer()
 				pubTo_maki_command( str(_nod_up_middle) )
-				sleepWhileWaitingMS( _ipt_nod_middle_up )
+				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
 
 				pubTo_maki_command( str(_nod_middle_down) )
-				sleepWhileWaitingMS( _ipt_nod_middle_down )
+				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
 
 				pubTo_maki_command( str(_nod_middle_down) )
-				sleepWhileWaitingMS( _ipt_nod_middle_down )
+				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
 				_finish_headnod_down_time = timer()
 
 				_start_headnod_up_time = timer()
 				pubTo_maki_command( str(_nod_down_middle) )
-				sleepWhileWaitingMS( _ipt_nod_middle_down )
+				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
 		
 				pubTo_maki_command( str(_nod_middle_up) )
-				sleepWhileWaitingMS( _ipt_nod_middle_up )
+				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
 				_finish_headnod_up_time = timer()
 				_finish_headnod_time = timer()
 
@@ -498,12 +503,12 @@ def macroHeadNod():
 				_start_headnod_time = timer()
 				_start_headnod_down_time = timer()
 				pubTo_maki_command( str(_nod_up_down) )
-				sleepWhileWaitingMS( IPT_NOD )
+				SWW_WI.sleepWhileWaitingMS( IPT_NOD )
 				_finish_headnod_down_time = timer()
 
 				_start_headnod_up_time = timer()
 				pubTo_maki_command( str(_nod_down_up) )
-				sleepWhileWaitingMS( IPT_NOD )
+				SWW_WI.sleepWhileWaitingMS( IPT_NOD )
 				_finish_headnod_up_time = timer()
 				_finish_headnod_time = timer()
 
@@ -651,34 +656,34 @@ def parseMAKICommand( m_cmd ):
 		rospy.logdebug( str(_emd_print) )
 
 
-#####################
-def sleepWhileWaitingMS( ms_sleep_time, increment=0.25, early=True):
-	## convert from IPT in milliseconds to sleep in seconds
-
-	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 
-	if early:
-		_new_ms_sleep_time = _new_ms_sleep_time - float(increment)
-	
-	#print "ms_sleep_time = " + str( ms_sleep_time )
-	#print "increment = " + str( increment )
-	#print "new_ns_sleep_time = " + str( _new_ms_sleep_time )
-	sleepWhileWaiting( _new_ms_sleep_time, increment )
-
-def sleepWhileWaiting( sleep_time, increment=1 ):
-	global PIC_INTERUPT
-	global ALIVE
-
-	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
-	increment = max(0.01, increment)	## previous max values: 1.0, 0.25	## in seconds
-	_start_sleep_time = timer()
-	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
-	while ( ALIVE and
-		not rospy.is_shutdown() and
-		not PIC_INTERUPT and
-		((timer() - _start_sleep_time) < sleep_time) ):
-		sleep(increment)
-
-	if VERBOSE_DEBUG: rospy.logdebug( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
+######################
+#def sleepWhileWaitingMS( ms_sleep_time, increment=0.25, early=True):
+#	## convert from IPT in milliseconds to sleep in seconds
+#
+#	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 
+#	if early:
+#		_new_ms_sleep_time = _new_ms_sleep_time - float(increment)
+#	
+#	#print "ms_sleep_time = " + str( ms_sleep_time )
+#	#print "increment = " + str( increment )
+#	#print "new_ns_sleep_time = " + str( _new_ms_sleep_time )
+#	sleepWhileWaiting( _new_ms_sleep_time, increment )
+#
+#def sleepWhileWaiting( sleep_time, increment=1 ):
+#	global PIC_INTERUPT
+#	global ALIVE
+#
+#	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
+#	increment = max(0.01, increment)	## previous max values: 1.0, 0.25	## in seconds
+#	_start_sleep_time = timer()
+#	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
+#	while ( ALIVE and
+#		not rospy.is_shutdown() and
+#		not PIC_INTERUPT and
+#		((timer() - _start_sleep_time) < sleep_time) ):
+#		sleep(increment)
+#
+#	if VERBOSE_DEBUG: rospy.logdebug( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
 
 #####################
 def pubTo_maki_command( commandOut ):
@@ -824,6 +829,7 @@ if __name__ == '__main__':
 	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
 	global PIC_INTERUPT
 	global DC_helper
+	global SWW_WI
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -845,6 +851,7 @@ if __name__ == '__main__':
 	mB_INTERUPT = True
 	PIC_INTERUPT = False
 	DC_helper = dynamixelConversions()
+	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
