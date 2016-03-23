@@ -22,6 +22,8 @@ import io
 
 import random
 
+from dynamixel_conversions import dynamixelConversions
+
 ## NOTE: These globals are #define at the top of the Arduino servo driver
 ## MAKIv1_4_servo_controller_LITE.ino
 INVALID_INT = 9999
@@ -121,7 +123,7 @@ LL_CLOSE_MAX = 361
 
 ## More MAKI related global variables from _2015_05_14_KECK_MAKIv1_4_teleop.ino
 #blink_time = [1000, 500, 250, 200, 150]	#, 100, 75]	## ms... 75ms looks even more realistic
-blink_time = [2000]		## ms
+blink_time = [2000, 1000, 800, 700, 600]		## ms
 eyelid_offset_blinking = -50	## LL decrement position
 eyelid_offset_open_wide = 30	## LL increment position
 
@@ -149,6 +151,21 @@ VERBOSE_DEBUG = False	## default is False
 #last_blink_time = 0
 #last_movement_time = 0
 
+def presetGoalSpeed_ticks_duration( servo, ticks, s_duration ):
+	global DC_helper
+	_gs = int( DC_helper.getGoalSpeed_ticks_duration(ticks, s_duration) ) + 1
+	if (_gs > 0) and (_gs < 1024):
+		_pub_cmd = servo + str(SC_SET_GS) + str(_gs) + str(TERM_CHAR_SEND)
+		rospy.logerr( str(_pub_cmd) )
+		pubTo_maki_command( str(_pub_cmd) )
+	elif (_gs == 0):
+		rospy.logerr("setting GoalSpeed to 0 (unlimited) is not allowed!")
+		rospy.logwarn("LL GoalSpeed is not changed")
+	else:
+		rospy.logerr("calculated GoalSpeed is out of bounds (0, 1023]; _gs = " + str(_gs))
+
+def presetGoalSpeed_ticks_durationMS( servo, ticks, ms_duration ):
+	presetGoalSpeed_ticks_duration( servo, ticks, float( ms_duration / 1000.0 ) )
 
 #######################
 ## To run, publish to /maki_command
@@ -182,7 +199,8 @@ def macroBlink():
 			for _blink_rep in range (1,2):	#range(1,6):	## [1,6)
 				#_blink_count = helper_macroBlink( _blink_count, True, _blink_rep, read_time=2.0 )
 				#_blink_count = helper_macroBlink( _blink_count, False, _blink_rep, read_time=2.0 )
-				_blink_count = helper_macroBlink( _blink_count, True, 3, read_time=0.5 )
+				#_blink_count = helper_macroBlink( _blink_count, True, 3, read_time=0.5 )
+				_blink_count = helper_macroBlink( _blink_count, False, 3, read_time=0.5 )
 				sleep(2)
 				rospy.logdebug("***************")
 
@@ -219,7 +237,8 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 		_half_blink_time = int( float(_blink_time) * 0.5 + 0.5 )
 		rospy.loginfo( "blink_time=" + str(_blink_time) + "; half_blink_time=" + str(_half_blink_time) )
 
-		pubTo_maki_command( "LLGS122Z" )	## should take 0.5 seconds to move 139 ticks
+		#_close_blink_time = int( float(_blink_time) * 0.35 + 0.5 )
+		#_open_blink_time = _blink_time - _close_blink_time
 
 		## maki_command suffix
 		#_m_cmd_suffix = SC_SET_IPT + str( _half_blink_time ) + TERM_CHAR_SEND
@@ -227,8 +246,10 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 		_blink_close = _m_cmd_prefix
 		if full_blink:
 			_blink_close += str(LL_CLOSE_MAX) + _m_cmd_suffix
+			presetGoalSpeed_ticks_durationMS( "LL", abs(LL_CLOSE_MAX - LL_OPEN_DEFAULT), _half_blink_time )
 		else:
 			_blink_close += str(LL_CLOSE_HALF) + _m_cmd_suffix
+			presetGoalSpeed_ticks_durationMS( "LL", abs(LL_CLOSE_HALF - LL_OPEN_DEFAULT), _half_blink_time )
 		_blink_open = _m_cmd_prefix + str(LL_OPEN_DEFAULT) + _m_cmd_suffix
 		
 		_start_blink_time = timer()
@@ -240,14 +261,16 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 			_start_blink_close_time = timer()
 			rospy.logdebug( "blink close" )
 			pubTo_maki_command( str(_blink_close) )
-			sleepWhileWaitingMS( _half_blink_time, 0.05 )
+			sleepWhileWaitingMS( _half_blink_time, 0.01 )
+			#sleepWhileWaitingMS( _close_blink_time, 0.01 )
 			_finish_blink_close_time = timer()
 
 			## blink open
 			_start_blink_open_time = timer()
 			rospy.logdebug( "blink open" )
 			pubTo_maki_command( str(_blink_open) )
-			sleepWhileWaitingMS( _half_blink_time, 0.05 )
+			sleepWhileWaitingMS( _half_blink_time, 0.01 )
+			#sleepWhileWaitingMS( _open_blink_time, 0.01 )
 			_finish_blink_open_time = timer()
 			_finish_blink_time = timer()
 
@@ -714,10 +737,13 @@ def parseMAKICommand( m_cmd ):
 
 
 #####################
-def sleepWhileWaitingMS( ms_sleep_time, increment=0.25 ):
+def sleepWhileWaitingMS( ms_sleep_time, increment=0.25, early=True):
 	## convert from IPT in milliseconds to sleep in seconds
 
-	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 - float(increment)
+	_new_ms_sleep_time = float(ms_sleep_time)/1000.0 
+	if early:
+		_new_ms_sleep_time = _new_ms_sleep_time - float(increment)
+	
 	#print "ms_sleep_time = " + str( ms_sleep_time )
 	#print "increment = " + str( increment )
 	#print "new_ns_sleep_time = " + str( _new_ms_sleep_time )
@@ -850,7 +876,9 @@ def reportMovementDuration():
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 
-	if (start_movement_time != None) and (finish_movement_time != None):
+	if ((start_movement_time != None) and
+		(finish_movement_time != None) and
+		(expected_movement_duration != None)):
 		rospy.loginfo( "maki_command #" + str(mc_count) + " : elapsed time = "
 			+ str( abs(finish_movement_time - start_movement_time) ) 
 			+ "; expected time = " + str(expected_movement_duration) )
@@ -880,6 +908,7 @@ if __name__ == '__main__':
 	global mc_count
 	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
 	global PIC_INTERUPT
+	global DC_helper
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -900,6 +929,7 @@ if __name__ == '__main__':
 	mES_INTERUPT = True
 	mB_INTERUPT = True
 	PIC_INTERUPT = False
+	DC_helper = dynamixelConversions()
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
