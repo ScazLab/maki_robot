@@ -186,9 +186,9 @@ def macroBlink():
 			_print_once = False
 
 		if mB_INTERUPT:	
-			print "start sleep 5"
+			#print "start sleep 5"
 			sleep(5)	# 5 seconds
-			print "end sleep 5"
+			#print "end sleep 5"
 			continue	## begin loop again from the beginning skipping below
 			#print "shouldn't get here"
 
@@ -308,7 +308,6 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 
 	# end	for _blink_time in blink_time:
 	return blink_count
-# KATE
 
 #######################
 ## To run, publish to /maki_command
