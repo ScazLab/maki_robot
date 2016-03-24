@@ -48,6 +48,7 @@ class timedTest:
 
 	def exitTimedTest(self):
 		self.ALIVE = False
+		self.mTT_INTERUPT = True
 
 	###############################
 	## Example contents of timed test
@@ -55,15 +56,21 @@ class timedTest:
 	def macroEmptyTest(self):
 		## this is a nested while loop
 		_print_once = True
-		while self.ALIVE and not rospy.is_shutdown():
+		#while self.ALIVE and not rospy.is_shutdown():
+		while self.ALIVE:
+			if not rospy.is_shutdown():
+				pass
+			else:
+				break	## break out of outer while loop
+
 			if _print_once:
 				rospy.logdebug("Entering macroEmptyTest outer while loop")
 				_print_once = False
 
 			if self.mTT_INTERUPT:	
-				#print "start sleep 5"
+				print "start sleep 5"
 				self.SWW_WI.sleepWhileWaiting( 5 )
-				#print "end sleep 5"
+				print "end sleep 5"
 				continue	## begin loop again from the beginning skipping below
 				#print "shouldn't get here"
 
@@ -84,6 +91,7 @@ class timedTest:
 
 			# end	while not mTT_INTERUPT
 		# end	while self.ALIVE and not rospy.is_shutdown():
+		rospy.loginfo("END: After outer while loop in macroEmptyTest()")
 
 	def helper_macroEmptyTest( self, pass_count, read_time=1.0 ):
 		_start_pass_time = None
