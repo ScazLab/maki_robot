@@ -5,12 +5,10 @@ from std_msgs.msg import String
 import os
 
 import math
-from time import sleep
 import sys
 import string
 
 from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-#import threading
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
 
 
@@ -23,7 +21,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 ########################
 ## Specific behavior tests will use this as base class
 ########################
-class timedTest:
+class timedTest(object):
 	## variables private to this class
 	## all instances of this class share the same value
 	__maki_msg_format = None
@@ -38,6 +36,7 @@ class timedTest:
 		if timedTest.__maki_msg_format == None:
 			timedTest.initPubMAKIFormat( self )
 		#rospy.logdebug( str(timedTest.__maki_msg_format) )
+		self.makiPP = None
 
 	def startTimedTest(self, makiPP):
 		self.mTT_INTERUPT = False
