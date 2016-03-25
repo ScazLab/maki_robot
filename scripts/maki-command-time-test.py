@@ -28,6 +28,7 @@ from dynamixel_conversions import dynamixelConversions
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 
 from saccade_test import saccadeTest
+from startle_test import startleTest
 
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
@@ -62,7 +63,7 @@ FEEDBACK_TOPIC = [ #"maki_feedback_max_pos",
 		]
 
 ## GLOBAL VARIABLES FOR PYTHON SCRIPT
-VERBOSE_DEBUG = True #False	## default is False
+VERBOSE_DEBUG = False	## default is False
 #ALIVE #= False		## make sure that all threads cleanly end
 #INIT #= True		## flag to read first message from MAKI (will contain PP)
 #makiPP
@@ -402,6 +403,13 @@ def macroHeadTurn():
 	_face_front = "HP" + SC_SET_GP + str(HP_FRONT) + SC_SET_IPT + str(IPT_FACE) + TERM_CHAR_SEND
 
 #####################
+def timedTestUpdate( makiPP ):
+	global eyeSaccade, startle
+
+	if eyeSaccade != None:	eyeSaccade.update( makiPP )
+	if startle != None:	startle.update( makiPP )
+
+#####################
 def parseRecvMsg ( recv_msg ):
 	global makiPP, makiGP
 	global init_dict
@@ -431,6 +439,7 @@ def parseRecvMsg ( recv_msg ):
 	if prefix=="PP":	#SC_GET_PP	# present position
 		if not ( tmp_dict == makiPP ):
 			makiPP.update(tmp_dict)
+			timedTestUpdate( makiPP )
 			if VERBOSE_DEBUG: rospy.logdebug( prefix + "=" + str(makiPP) )
 		if not init_dict[prefix]:
 			init_dict[prefix] = True
@@ -455,7 +464,7 @@ def parseRecvMsg ( recv_msg ):
 def updateMAKICommand( msg ):
 	global maki_command
 	global mHN_INTERUPT, mB_INTERUPT
-	global eyeSaccade
+	global eyeSaccade, startle
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -470,6 +479,7 @@ def updateMAKICommand( msg ):
 			mB_INTERUPT = True
 			rospy.logdebug( "msg.data = " + msg.data )
 			eyeSaccade.stopTimedTest()
+			startle.stopTimedTest()
 		elif (msg.data == "nod_test"):
 			mHN_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
@@ -481,6 +491,9 @@ def updateMAKICommand( msg ):
 			mB_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
+		elif (msg.data == "startle_test"):
+			rospy.logdebug( "msg.data = " + msg.data )
+			startle.startTimedTest( makiPP )
 		else:
 			maki_command = msg.data 
 			parseMAKICommand( maki_command )
@@ -697,7 +710,7 @@ if __name__ == '__main__':
 	global PIC_INTERUPT
 	global DC_helper
 	global SWW_WI
-	global eyeSaccade
+	global eyeSaccade, startle
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -719,6 +732,8 @@ if __name__ == '__main__':
 	PIC_INTERUPT = False
 	DC_helper = dynamixelConversions()
 	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
+	eyeSaccade = None
+	startle = None
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
@@ -761,6 +776,12 @@ if __name__ == '__main__':
 	thread_macroBlink = threading.Thread(target=macroBlink, args=())
 	thread_macroBlink.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
 	thread_macroBlink.start()
+
+	## STEP 7: START THREAD FOR TESTING STARTLE TIMING
+	startle = startleTest( VERBOSE_DEBUG, pub_cmd )
+	thread_macroStartle = threading.Thread(target=startle.macroStartle, args=())
+	thread_macroStartle.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	thread_macroStartle.start()
 
 	## ---------------------------------
 	## END OF INITIALIZATION
