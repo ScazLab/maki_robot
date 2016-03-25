@@ -22,8 +22,8 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 ## Specific behavior tests will use this as base class
 ########################
 class timedTest(object):
-	## variables private to this class
 	## all instances of this class share the same value
+	## variables private to this class
 	__maki_msg_format = None
 
 
@@ -48,6 +48,9 @@ class timedTest(object):
 	def exitTimedTest(self):
 		self.ALIVE = False
 		self.mTT_INTERUPT = True
+
+	def update( self, makiPP ):
+		self.makiPP = makiPP
 
 	###############################
 	## Example contents of timed test
