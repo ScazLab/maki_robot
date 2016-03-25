@@ -27,6 +27,8 @@ from dynamixel_conversions import dynamixelConversions
 
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 
+from saccade_test import saccadeTest
+
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
 		#SC_GET_MN,
@@ -60,7 +62,7 @@ FEEDBACK_TOPIC = [ #"maki_feedback_max_pos",
 		]
 
 ## GLOBAL VARIABLES FOR PYTHON SCRIPT
-VERBOSE_DEBUG = False	## default is False
+VERBOSE_DEBUG = True #False	## default is False
 #ALIVE #= False		## make sure that all threads cleanly end
 #INIT #= True		## flag to read first message from MAKI (will contain PP)
 #makiPP
@@ -228,144 +230,6 @@ def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
 	# end	for _blink_time in blink_time:
 	return blink_count
 
-#######################
-## To run, publish to /maki_command
-##	reset
-##	saccade_test
-## To stop, publish to /maki_command
-##	reset
-#######################
-def macroEyeSaccade():
-	global mES_INTERUPT
-	global ALIVE
-
-	## this is a nested while loop
-	_print_once = True
-	while ALIVE and not rospy.is_shutdown():
-		if _print_once:
-			rospy.logdebug("Entering macroEyeSaccade outer while loop")
-			_print_once = False
-
-		if mES_INTERUPT:	
-			#print "start sleep 5"
-			sleep(5)	# 5 seconds
-			#print "end sleep 5"
-			continue	## begin loop again from the beginning skipping below
-			#print "shouldn't get here"
-
-		## where is MAKI's EP closest to currently? EP_LEFT, EP_FRONT, EP_RIGHT
-		_ep_pp = makiPP["EP"]
-		_delta_ep_pp = abs( _ep_pp - EP_FRONT )
-		_ep_macro_pose = EP_FRONT
-		if ( abs( _ep_pp - EP_LEFT ) < _delta_ep_pp ):
-			_delta_ep_pp = abs( _ep_pp - EP_LEFT )
-			_ep_macro_pose = EP_LEFT
-		if ( abs( _ep_pp - EP_RIGHT ) < _delta_ep_pp ):
-			_delta_ep_pp = abs( _ep_pp - EP_RIGHT )
-			_ep_macro_pose = EP_RIGHT
-		## publish GP of _ep_macro_pose in case in between poses
-		pubTo_maki_command( "EP" + SC_SET_GP + str(_ep_macro_pose) + TERM_CHAR_SEND )
-
-		## raise LL so that it doesn't impede saccade
-		pubTo_maki_command( "LL" + SC_SET_GP + str(LL_OPEN_MAX) + TERM_CHAR_SEND )
-
-		rospy.logdebug("Entering macroEyeSaccade inner while loop")
-		_saccade_count = 0
-		while not mES_INTERUPT:
-
-			_saccade_count = helper_macroEyeSaccade( _saccade_count )
-
-			## try to nicely end testing the eye saccade
-			if mES_INTERUPT:
-				sleep(1)	## make sure to wait for message to reach Dynamixel servo
-				pubTo_maki_command( "reset" )
-				sleep(1)	## make sure to wait for message to reach Dynamixel servo
-			else:
-				pass
-
-		# end	while not mES_INTERUPT
-	# end	while ALIVE and not rospy.is_shutdown():
-
-def helper_macroEyeSaccade( saccade_count, read_time=1.0 ):
-	global mES_INTERUPT
-	global eye_saccade_time		## list of ints
-	global SWW_WI
-
-	_start_saccade_time = None
-	_start_saccade_side_time = None
-	_finish_saccade_side_time = None
-	_start_saccade_front_time = None
-	_finish_saccade_front_time = None
-	_finish_saccade_time = None
-	_total_saccade_time = 0
-
-	## maki_command prefix
-	_m_cmd_prefix = "EP" + SC_SET_GP
-
-	rospy.loginfo("-----------------")
-	for _eye_saccade_time in eye_saccade_time:
-		## maki_command suffix
-		_m_cmd_suffix = SC_SET_IPT + str( _eye_saccade_time ) + TERM_CHAR_SEND
-		_saccade_front_right = _m_cmd_prefix + str(EP_RIGHT) + _m_cmd_suffix
-		_saccade_front_left = _m_cmd_prefix + str(EP_LEFT) + _m_cmd_suffix
-		_saccade_front = _m_cmd_prefix + str(EP_FRONT) + _m_cmd_suffix
-
-		## used for choosing direction of eye saccade
-		## 0 = left, 1 = right
-		_rand_saccade_right = random.randint(0,1)
-
-		_start_saccade_time = timer()
-		_start_saccade_side_time = timer()
-		if _rand_saccade_right == 1:
-			rospy.logdebug( "saccade RIGHT" )
-			pubTo_maki_command( str(_saccade_front_right) )
-		else:
-			rospy.logdebug( "saccade LEFT" )
-			pubTo_maki_command( str(_saccade_front_left) )
-		SWW_WI.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
-		_finish_saccade_side_time = timer()
-		_finish_saccade_time = timer()
-		_total_saccade_time = abs(_finish_saccade_time - _start_saccade_time)
-
-		## make it easier to read
-		SWW_WI.sleepWhileWaiting( read_time, 0.5 )
-
-		_start_saccade_time = timer()
-		## return to eye pan looking front
-		_start_saccade_front_time = timer()
-		pubTo_maki_command( str(_saccade_front) )
-		SWW_WI.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
-		_finish_saccade_front_time = timer()
-		_finish_saccade_time = timer()
-		_total_saccade_time += abs(_finish_saccade_time - _start_saccade_time)
-
-		## make it easier to read
-		SWW_WI.sleepWhileWaiting( read_time, .5 )
-
-		saccade_count += 1
-		#rospy.loginfo( "Completed " + str(saccade_count) + " full eye saccades" )
-		rospy.loginfo( "Eye saccade #" + str(saccade_count) + ": full eye saccade = " 
-			+ str( _total_saccade_time )
-			+ "; eye saccade front->side = " + str( abs(_finish_saccade_side_time - _start_saccade_side_time) )
-			+ "; eye saccade side->front = " + str( abs(_finish_saccade_front_time - _start_saccade_front_time) ) )
-		rospy.loginfo("-----------------")
-
-		## try to nicely end testing the eye saccade
-		if mES_INTERUPT:
-			break	## break out of for loop
-		else:
-			## reset timers
-			_start_saccade_time = None
-			_start_saccade_side_time = None
-			_finish_saccade_side_time = None
-			_start_saccade_front_time = None
-			_finish_saccade_front_time = None
-			_finish_saccade_time = None
-			_total_saccade_time = 0
-
-	# end	for _eye_saccade_time in eye_saccade_time:
-
-	return saccade_count
 
 #######################
 ## To run, publish to /maki_command
@@ -590,7 +454,8 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def updateMAKICommand( msg ):
 	global maki_command
-	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
+	global mHN_INTERUPT, mB_INTERUPT
+	global eyeSaccade
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -602,17 +467,16 @@ def updateMAKICommand( msg ):
 	else:
 		if (msg.data == "reset"):
 			mHN_INTERUPT = True
-			mES_INTERUPT = True
 			mB_INTERUPT = True
 			rospy.logdebug( "msg.data = " + msg.data )
+			eyeSaccade.stopTimedTest()
 		elif (msg.data == "nod_test"):
 			mHN_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
 		elif (msg.data == "saccade_test"):
-			mES_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
-			rospy.logdebug( "mES_INTERUPT = " + str(mES_INTERUPT) )
+			eyeSaccade.startTimedTest( makiPP )
 		elif (msg.data == "blink_test"):
 			mB_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
@@ -717,7 +581,10 @@ def pubTo_maki_command( commandOut ):
 #####################
 def signal_handler(signal, frame):
 	global ALIVE
+	global eyeSaccade
 
+	eyeSaccade.exitTimedTest()
+	sleep(1)
 	ALIVE = False
 	sleep(1)
 	sys.exit()
@@ -826,10 +693,11 @@ if __name__ == '__main__':
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 	global mc_count
-	global mHN_INTERUPT, mES_INTERUPT, mB_INTERUPT
+	global mHN_INTERUPT, mB_INTERUPT
 	global PIC_INTERUPT
 	global DC_helper
 	global SWW_WI
+	global eyeSaccade
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -847,7 +715,6 @@ if __name__ == '__main__':
 	mc_count = 0
 	resetTimer()
 	mHN_INTERUPT = True
-	mES_INTERUPT = True
 	mB_INTERUPT = True
 	PIC_INTERUPT = False
 	DC_helper = dynamixelConversions()
@@ -885,7 +752,8 @@ if __name__ == '__main__':
 	thread_macroHeadNod.start()
 
 	## STEP 5: START THREAD FOR TESTING EYE SACCADE TIMING
-	thread_macroEyeSaccade = threading.Thread(target=macroEyeSaccade, args=())
+	eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
+	thread_macroEyeSaccade = threading.Thread(target=eyeSaccade.macroEyeSaccade, args=())
 	thread_macroEyeSaccade.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
 	thread_macroEyeSaccade.start()
 
