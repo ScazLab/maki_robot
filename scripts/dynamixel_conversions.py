@@ -1,5 +1,6 @@
-class dynamixelConversions:
+class dynamixelConversions(object):
 
+	## all instances of this class share the same value
 	## specs for Dynamixel motors AX-12 / AX-18
 	TICKS = 1024	## number of steps
 	OPERATING_ANGLE = 300.0	## degrees
