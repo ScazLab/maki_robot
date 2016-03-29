@@ -52,6 +52,7 @@ class startleTest( timedTest ):
 
 	def macroStartle( self ):
 		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		self.ALIVE = True
 
 		## this is a nested while loop
 		_print_once = True

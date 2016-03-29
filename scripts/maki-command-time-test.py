@@ -15,6 +15,7 @@ import signal
 
 from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 
+import thread
 import threading
 from array import *
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
@@ -409,6 +410,19 @@ def timedTestUpdate( makiPP ):
 	if eyeSaccade != None:	eyeSaccade.update( makiPP )
 	if startle != None:	startle.update( makiPP )
 
+def timedTestShutdown( ):
+	global eyeSaccade, startle
+
+	_allTimedTests = ( eyeSaccade, startle )
+
+	for _test in _allTimedTests:
+		if _test != None:
+			#rospy.logdebug("_test = " + str(_test) )
+			_test.stopTimedTest()
+			sleep(1)
+			_test.exitTimedTest()
+	#rospy.logdebug("HERE timedTestShutdown: " + str(_allTimedTests))
+
 #####################
 def parseRecvMsg ( recv_msg ):
 	global makiPP, makiGP
@@ -478,22 +492,37 @@ def updateMAKICommand( msg ):
 			mHN_INTERUPT = True
 			mB_INTERUPT = True
 			rospy.logdebug( "msg.data = " + msg.data )
-			eyeSaccade.stopTimedTest()
-			startle.stopTimedTest()
+			#eyeSaccade.stopTimedTest()
+			#startle.stopTimedTest()
+			timedTestShutdown()
 		elif (msg.data == "nod_test"):
 			mHN_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
 		elif (msg.data == "saccade_test"):
 			rospy.logdebug( "msg.data = " + msg.data )
-			eyeSaccade.startTimedTest( makiPP )
+			if eyeSaccade == None:
+				eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
+			## dynamically create separate thread only as needed
+			try:
+				thread.start_new_thread( eyeSaccade.macroEyeSaccade, () )
+				eyeSaccade.startTimedTest( makiPP )
+			except:
+				rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
 		elif (msg.data == "blink_test"):
 			mB_INTERUPT = False
 			rospy.logdebug( "msg.data = " + msg.data )
 			rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
 		elif (msg.data == "startle_test"):
 			rospy.logdebug( "msg.data = " + msg.data )
-			startle.startTimedTest( makiPP )
+			if startle == None:
+				startle = startleTest( VERBOSE_DEBUG, pub_cmd )
+			## dynamically create separate thread only as needed
+			try:
+				thread.start_new_thread( startle.macroStartle, () )
+				startle.startTimedTest( makiPP )
+			except:
+				rospy.logerr("Error: Unable to start thread for startle.macroStartle")
 		else:
 			maki_command = msg.data 
 			parseMAKICommand( maki_command )
@@ -594,9 +623,8 @@ def pubTo_maki_command( commandOut ):
 #####################
 def signal_handler(signal, frame):
 	global ALIVE
-	global eyeSaccade
 
-	eyeSaccade.exitTimedTest()
+	timedTestShutdown( )
 	sleep(1)
 	ALIVE = False
 	sleep(1)
@@ -762,26 +790,26 @@ if __name__ == '__main__':
 
 	## STEP 4: START THREAD FOR TESTING HEAD NODDING TIMING
 	ALIVE = True
-	thread_macroHeadNod = threading.Thread(target=macroHeadNod, args=())
-	thread_macroHeadNod.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	thread_macroHeadNod.start()
+	#thread_macroHeadNod = threading.Thread(target=macroHeadNod, args=())
+	#thread_macroHeadNod.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	#thread_macroHeadNod.start()
 
 	## STEP 5: START THREAD FOR TESTING EYE SACCADE TIMING
-	eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
-	thread_macroEyeSaccade = threading.Thread(target=eyeSaccade.macroEyeSaccade, args=())
-	thread_macroEyeSaccade.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	thread_macroEyeSaccade.start()
+	#eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
+	#thread_macroEyeSaccade = threading.Thread(target=eyeSaccade.macroEyeSaccade, args=())
+	#thread_macroEyeSaccade.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	#thread_macroEyeSaccade.start()
 
 	## STEP 6: START THREAD FOR TESTING BLINKING TIMING
-	thread_macroBlink = threading.Thread(target=macroBlink, args=())
-	thread_macroBlink.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	thread_macroBlink.start()
+	#thread_macroBlink = threading.Thread(target=macroBlink, args=())
+	#thread_macroBlink.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	#thread_macroBlink.start()
 
 	## STEP 7: START THREAD FOR TESTING STARTLE TIMING
-	startle = startleTest( VERBOSE_DEBUG, pub_cmd )
-	thread_macroStartle = threading.Thread(target=startle.macroStartle, args=())
-	thread_macroStartle.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	thread_macroStartle.start()
+	#startle = startleTest( VERBOSE_DEBUG, pub_cmd )
+	#thread_macroStartle = threading.Thread(target=startle.macroStartle, args=())
+	#thread_macroStartle.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
+	#thread_macroStartle.start()
 
 	## ---------------------------------
 	## END OF INITIALIZATION
