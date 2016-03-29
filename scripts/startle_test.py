@@ -12,8 +12,10 @@ from timeit import default_timer as timer	## wall clock. Unix 1/100 second granu
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
+from head_tilt_timed_test import headTiltTimedTest
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 
+HP_UP = 525
 
 ########################
 ## Test startle behavior
@@ -21,7 +23,8 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 ## Description: from neutral, MAKI rapidly opens eyes wide (LL_OPEN_MAX)
 ##	and head lifts slightly (HT). Eye tilt (ET) compensates for HT
 ########################
-class startleTest( timedTest ):
+#class startleTest( timedTest, headTiltTimedTest ):
+class startleTest( headTiltTimedTest ):
 	## variables private to this class
 	## all instances of this class share the same value
 	# none
@@ -29,7 +32,7 @@ class startleTest( timedTest ):
 
 	def __init__(self, verbose_debug, ros_pub):
 		## call base class' __init__
-		timedTest.__init__( self, verbose_debug, ros_pub )
+		headTiltTimedTest.__init__( self, verbose_debug, ros_pub )
 		## add anything else needed by an instance of this subclass
 		self.DC_helper = dynamixelConversions()
 
@@ -100,44 +103,63 @@ class startleTest( timedTest ):
 		_total_lid_open_time = 0
 
 		## neutral to LL_OPEN_MAX
-		NEUTRAL = self.makiPP["LL"]
-		_delta_ticks = abs( NEUTRAL - LL_OPEN_MAX )
+		NEUTRAL_LL = self.makiPP["LL"]
+		_delta_ticks_LL = abs( NEUTRAL_LL - LL_OPEN_MAX )
+		## neutral to HT_UP
+		#NEUTRAL_HT = self.makiPP["HT"]
+		NEUTRAL_HT = HT_MIDDLE
+		_delta_ticks_HT = abs( NEUTRAL_HT - HT_UP )
 
 		## maki_cmd 
-		_m_cmd_prefix = "LL" + str(SC_SET_GS)
-		_m_cmd_lid_neutral_open = "LL" + str(SC_SET_GP) + str(LL_OPEN_MAX) + str(TERM_CHAR_SEND)
-		_m_cmd_lid_open_neutral = "LL" + str(SC_SET_GP) + str(NEUTRAL) + str(TERM_CHAR_SEND)
+		_m_cmd_prefix_LL = "LL" + str(SC_SET_GS)
+		_m_cmd_lid_neutral_open = "LL" + str(SC_SET_GP) + str(LL_OPEN_MAX) #+ str(TERM_CHAR_SEND)
+		_m_cmd_lid_open_neutral = "LL" + str(SC_SET_GP) + str(NEUTRAL_LL) #+ str(TERM_CHAR_SEND)
+		_m_cmd_prefix_HT = "HT" + str(SC_SET_GS)
+		_m_cmd_head_neutral_up = "HT" + str(SC_SET_GP) + str(HT_UP) #+ str(TERM_CHAR_SEND)
+		_m_cmd_head_up_neutral = "HT" + str(SC_SET_GP) + str(NEUTRAL_HT) #+ str(TERM_CHAR_SEND)
+
+		headTiltTimedTest.enableHT( self )
 
 		rospy.loginfo("-----------------")
-		for _ms_duration in range(500, 100, -25):
+		#for _ms_duration in range(500, 100, -25):
+		#for _ms_duration in range(500, 0, -50):
+		for _ms_duration in range(400, 100, -10):
 			## calculate GoalSpeed
-			_gs = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks, _ms_duration) ) + 1
+			_gs_LL = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_LL, _ms_duration) ) + 1
+			_gs_HT = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_HT, _ms_duration) ) + 1
 
 			## preset eyelid to open GoalSpeed
-			_pub_cmd = _m_cmd_prefix + str(_gs) + str(TERM_CHAR_SEND)
+			_pub_cmd = _m_cmd_prefix_LL + str(_gs_LL) 
+			_pub_cmd += _m_cmd_prefix_HT + str(_gs_HT)
+			_pub_cmd += str(TERM_CHAR_SEND)
 			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
 			_sww_wi.sleepWhileWaitingMS( 100, 0.05 )
 
 			## publish eyelid neutral to LL_OPEN_MAX GoalPosition
-			timedTest.pubTo_maki_command( self, str(_m_cmd_lid_neutral_open) )
-			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01 )
-
-			## preset eyelid to neutral GoalSpeed
-			_pub_cmd = _m_cmd_prefix + str(100) + str(TERM_CHAR_SEND)
-			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
+			timedTest.pubTo_maki_command( self, str(_m_cmd_lid_neutral_open + _m_cmd_head_neutral_up + TERM_CHAR_SEND) )
 			_start_lid_open_time = timer()
-			_sww_wi.sleepWhileWaitingMS( 100, 0.05 )
+			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01 )
 			_finish_lid_open_time = timer()
 
+			_sww_wi.sleepWhileWaitingMS( 500, 0.01 )
+			## preset eyelid to neutral GoalSpeed
+			## return to neutral slowly
+			_pub_cmd = _m_cmd_prefix_LL + str(31)	## used spreadsheet to calculate these values
+			_pub_cmd += _m_cmd_prefix_HT + str(26)
+			_pub_cmd += str(TERM_CHAR_SEND)
+			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
+			_sww_wi.sleepWhileWaitingMS( 100, 0.05 )
+
 			## publish eyelid open to neutral GoalPosition
-			timedTest.pubTo_maki_command( self, str(_m_cmd_lid_open_neutral) )
+			timedTest.pubTo_maki_command( self, str(_m_cmd_lid_open_neutral + _m_cmd_head_up_neutral + TERM_CHAR_SEND) )
 			_sww_wi.sleepWhileWaiting( 1 )
 
 			_total_lid_open_time = abs( _finish_lid_open_time - _start_lid_open_time )
 			startle_count += 1
 			rospy.loginfo( "Startle #" + str(startle_count) 
-				+ ": GS = " + str(_gs)
-				+ "expected time = " + str( _ms_duration )
+				+ ": GS_LL = " + str(_gs_LL)
+				+ ", GS_HT = " + str(_gs_HT)
+				+ "; expected time = " + str( _ms_duration )
 				+ "ms; actual lid_open time = " + str( _total_lid_open_time ) 
 				+ " seconds" )
 
@@ -154,6 +176,8 @@ class startleTest( timedTest ):
 				_finish_lid_open_time = None
 				_total_lid_open_time = 0
 		# end	for _ms_duration
+
+		headTiltTimedTest.disableHT( self )
 		return startle_count
 
 
