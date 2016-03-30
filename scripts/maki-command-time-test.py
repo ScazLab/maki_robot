@@ -30,6 +30,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 
 from saccade_test import saccadeTest
 from startle_test import startleTest
+from head_nod_test import headNodTest
 from blink_test import blinkTest
 
 ## subset of servo control infix for type of feedback
@@ -76,170 +77,6 @@ VERBOSE_DEBUG = False	## default is False
 
 
 
-#######################
-## To run, publish to /maki_command
-##	reset
-##	HTTL1023Z
-##	nod_test
-## To stop, publish to /maki_command
-##	reset
-##	HTTL0Z
-#######################
-def macroHeadNod():
-	global mHN_INTERUPT
-	global ALIVE
-	global makiPP
-	global ht_tl_enable, ht_tl_disable
-	global SWW_WI
-
-	## different versions of head nodding
-	_v1 = False
-	_v2 = True
-
-	rospy.logdebug("macroHeadNod: BEGIN")
-
-	_start_headnod_time = None
-	_start_headnod_up_time = None
-	_start_headnod_down_time = None
-	_finish_headnod_up_time = None
-	_finish_headnod_down_time = None
-	_finish_headnod_time = None
-
-	_headnod_max_min_dist = float( abs( HT_UP - HT_DOWN ) )
-	_headnod_middle_down_dist = float( abs( HT_MIDDLE - HT_DOWN ) )
-	_headnod_middle_up_dist = float( abs( HT_MIDDLE - HT_UP ) )
-	## debugging
-	#print "_headnod_max_min_dist = " 
-	#print _headnod_max_min_dist 
-	#print "str(" + str(_headnod_max_min_dist) + ")"
-	##
-	#print "_headnod_middle_down_dist = " 
-	#print _headnod_middle_down_dist 
-	#print "str(" + str(_headnod_middle_down_dist) + ")"
-	##
-	#print "_headnod_middle_up_dist = " 
-	#print _headnod_middle_up_dist 
-	#print "str(" + str(_headnod_middle_up_dist) + ")"
-	##
-	#print _headnod_middle_down_dist / _headnod_max_min_dist
-	#print _headnod_middle_up_dist / _headnod_max_min_dist
-	_ipt_nod_middle_down = float( (_headnod_middle_down_dist / _headnod_max_min_dist) * IPT_NOD ) 
-	_ipt_nod_middle_up = float( (_headnod_middle_up_dist / _headnod_max_min_dist) * IPT_NOD ) 
-	_ipt_nod_middle_down = int(_ipt_nod_middle_down + 0.5)	## implicit rounding
-	_ipt_nod_middle_up = int(_ipt_nod_middle_up + 0.5)	## implicit rounding
-	rospy.logdebug( "(full)\tIPT_NOD = " + str(IPT_NOD) + "ms" )
-	rospy.logdebug( "(partial)\t_ipt_nod_middle_down = " + str(_ipt_nod_middle_down) + "ms" )
-	rospy.logdebug( "(partial)\t_ipt_nod_middle_up = " + str(_ipt_nod_middle_up) + "ms" )
-	rospy.logdebug( "(summed partial)\t_ipt_nod_middle_* = " + str( _ipt_nod_middle_down + _ipt_nod_middle_up ) + "ms" )
-
-	## maki_command prefix
-	_m_cmd_prefix = "HT" + SC_SET_GP
-	## nod macros
-	_nod_up_down = _m_cmd_prefix + str(HT_DOWN) + SC_SET_IPT + str(IPT_NOD) + TERM_CHAR_SEND
-	_nod_down_up = _m_cmd_prefix + str(HT_UP) + SC_SET_IPT + str(IPT_NOD) + TERM_CHAR_SEND
-	_nod_middle_up = _m_cmd_prefix + str(HT_UP) + SC_SET_IPT + str(_ipt_nod_middle_up) + TERM_CHAR_SEND 
-	_nod_middle_down = _m_cmd_prefix + str(HT_DOWN) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
-	_nod_up_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_up) + TERM_CHAR_SEND 
-	_nod_down_middle = _m_cmd_prefix + str(HT_MIDDLE) + SC_SET_IPT + str(_ipt_nod_middle_down) + TERM_CHAR_SEND 
-	## this is a nested while loop
-	_print_once = True
-	while ALIVE and not rospy.is_shutdown():
-		if _print_once:
-			rospy.logdebug("Entering macroHeadNod outer while loop")
-			_print_once = False
-
-		if mHN_INTERUPT:	
-			#print "start sleep 5"
-			sleep(5)	# 5 seconds
-			#print "end sleep 5"
-			continue	## begin loop again from the beginning skipping below
-			#print "shouldn't get here"
-
-		## try to nicely startup headnod testing without jerking MAKI's head tilt servo
-		pubTo_maki_command( "HT" + SC_SET_GP + str(makiPP["HT"]) + TERM_CHAR_SEND )
-		sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-		pubTo_maki_command( "HT" + SC_SET_TL + str(ht_tl_enable) + TERM_CHAR_SEND )
-		sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-
-		## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
-		_ht_pp = makiPP["HT"]
-		_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
-		_ht_macro_pose = HT_MIDDLE
-		if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
-			_delta_ht_pp = abs( _ht_pp - HT_UP )
-			_ht_macro_pose = HT_UP
-		if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
-			_delta_ht_pp = abs( _ht_pp - HT_DOWN )
-			_ht_macro_pose = HT_DOWN
-		## publish GP of _ht_macro_pose in case in between poses
-		pubTo_maki_command( "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND )
-
-		if (_ht_macro_pose == HT_MIDDLE):	
-			## looking up first has strongest nodding cue
-			pubTo_maki_command( str(_nod_middle_up) )
-			SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
-
-		rospy.logdebug("Entering macroHeadNod inner while loop")
-		_nod_count = 0
-		while not mHN_INTERUPT:
-			rospy.loginfo("-----------------")
-
-			## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
-			if _v1:
-				_start_headnod_time = timer()
-				_start_headnod_down_time = timer()
-				pubTo_maki_command( str(_nod_up_middle) )
-				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
-
-				pubTo_maki_command( str(_nod_middle_down) )
-				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
-
-				pubTo_maki_command( str(_nod_middle_down) )
-				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
-				_finish_headnod_down_time = timer()
-
-				_start_headnod_up_time = timer()
-				pubTo_maki_command( str(_nod_down_middle) )
-				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_down )
-		
-				pubTo_maki_command( str(_nod_middle_up) )
-				SWW_WI.sleepWhileWaitingMS( _ipt_nod_middle_up )
-				_finish_headnod_up_time = timer()
-				_finish_headnod_time = timer()
-
-			## VERSION 2: UP --> DOWN --> UP
-			if _v2:
-				_start_headnod_time = timer()
-				_start_headnod_down_time = timer()
-				pubTo_maki_command( str(_nod_up_down) )
-				SWW_WI.sleepWhileWaitingMS( IPT_NOD )
-				_finish_headnod_down_time = timer()
-
-				_start_headnod_up_time = timer()
-				pubTo_maki_command( str(_nod_down_up) )
-				SWW_WI.sleepWhileWaitingMS( IPT_NOD )
-				_finish_headnod_up_time = timer()
-				_finish_headnod_time = timer()
-
-			_nod_count += 1
-			#rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )
-			rospy.loginfo( "Head nod #" + str(_nod_count) + ": full nod = " 
-				+ str( abs(_finish_headnod_time - _start_headnod_time) )
-				+ "; nod up->down = " + str( abs(_finish_headnod_down_time - _start_headnod_down_time) )
-				+ "; nod down->up = " + str( abs(_finish_headnod_up_time - _start_headnod_up_time) ) )
-			rospy.loginfo("-----------------")
-
-
-			## try to nicely end testing the headnod
-			if mHN_INTERUPT:
-				sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-				pubTo_maki_command( "reset" )
-				sleep(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-				pubTo_maki_command( "HT" + SC_SET_TL + str(ht_tl_disable) + TERM_CHAR_SEND )
-		#end	while not mHN_INTERUPT:
-
-	rospy.logdebug("macroHeadNod: END")
-
 
 def macroHeadTurn():
 	_face_right = "HP" + SC_SET_GP + str(HP_RIGHT) + SC_SET_IPT + str(IPT_FACE) + TERM_CHAR_SEND
@@ -248,16 +85,17 @@ def macroHeadTurn():
 
 #####################
 def timedTestUpdate( makiPP ):
-	global eyeSaccade, startle, blink
+	global eyeSaccade, startle, blink, headNod
 
 	if eyeSaccade != None:	eyeSaccade.update( makiPP )
 	if startle != None:	startle.update( makiPP )
+	if headNod != None:	headNod.update( makiPP )
 	if blink != None:	blink.update( makiPP )
 
 def timedTestShutdown( ):
-	global eyeSaccade, startle, blink
+	global eyeSaccade, startle, blink, headNod
 
-	_allTimedTests = ( eyeSaccade, startle, blink )
+	_allTimedTests = ( eyeSaccade, startle, blink, headNod )
 
 	for _test in _allTimedTests:
 		if _test != None:
@@ -321,7 +159,7 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def getMacroCommand( msg ):
 	global mHN_INTERUPT, mB_INTERUPT
-	global eyeSaccade, startle, blink
+	global eyeSaccade, startle, blink, headNod
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	if (msg.data == "reset") or (msg.data == "end"):
@@ -332,9 +170,17 @@ def getMacroCommand( msg ):
 		#startle.stopTimedTest()
 		timedTestShutdown()
 	elif (msg.data == "nod_test"):
-		mHN_INTERUPT = False
+		#mHN_INTERUPT = False
 		rospy.logdebug( "msg.data = " + msg.data )
-		rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
+		#rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
+		if headNod == None:
+			headNod = headNodTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( headNod.macroHeadNod, () )
+			headNod.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for headNod.macroHeadNod")
 	elif (msg.data == "saccade_test"):
 		rospy.logdebug( "msg.data = " + msg.data )
 		if eyeSaccade == None:
@@ -659,7 +505,7 @@ if __name__ == '__main__':
 	global PIC_INTERUPT
 	global DC_helper
 	global SWW_WI
-	global eyeSaccade, startle, blink
+	global eyeSaccade, startle, blink, headNod
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -683,6 +529,7 @@ if __name__ == '__main__':
 	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
 	eyeSaccade = None
 	startle = None
+	headNod = None
 	blink = None
 
 	## STEP 2: SIGNAL HANDLER
