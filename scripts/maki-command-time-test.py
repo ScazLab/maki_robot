@@ -475,6 +475,60 @@ def parseRecvMsg ( recv_msg ):
 
 
 #####################
+def getMacroCommand( msg ):
+	global mHN_INTERUPT, mB_INTERUPT
+	global eyeSaccade, startle, asleepAwake
+	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
+
+	if (msg.data == "reset") or (msg.data == "end"):
+		mHN_INTERUPT = True
+		mB_INTERUPT = True
+		rospy.logdebug( "msg.data = " + msg.data )
+		#eyeSaccade.stopTimedTest()
+		#startle.stopTimedTest()
+		timedTestShutdown()
+	elif (msg.data == "nod_test"):
+		mHN_INTERUPT = False
+		rospy.logdebug( "msg.data = " + msg.data )
+		rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
+	elif (msg.data == "saccade_test"):
+		rospy.logdebug( "msg.data = " + msg.data )
+		if eyeSaccade == None:
+			eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( eyeSaccade.macroEyeSaccade, () )
+			eyeSaccade.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
+	elif (msg.data == "blink_test"):
+		mB_INTERUPT = False
+		rospy.logdebug( "msg.data = " + msg.data )
+		rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
+	elif (msg.data == "startle_test"):
+		rospy.logdebug( "msg.data = " + msg.data )
+		if startle == None:
+			startle = startleTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( startle.macroStartle, () )
+			startle.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for startle.macroStartle")
+	elif (msg.data == "asleep_test"):
+		rospy.logdebug( "msg.data = " + msg.data )
+		if asleepAwake == None:
+			asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( asleepAwake.macroAsleep, () )
+			asleepAwake.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAsleep")
+	else:
+		rospy.logerr("Error: Unknown " + str(msg.data))
+	return
+	
 def updateMAKICommand( msg ):
 	global maki_command
 	global mHN_INTERUPT, mB_INTERUPT
@@ -488,44 +542,57 @@ def updateMAKICommand( msg ):
 	if _tmp != None:
 		pass
 	else:
-		if (msg.data == "reset"):
-			mHN_INTERUPT = True
-			mB_INTERUPT = True
-			rospy.logdebug( "msg.data = " + msg.data )
-			#eyeSaccade.stopTimedTest()
-			#startle.stopTimedTest()
-			timedTestShutdown()
-		elif (msg.data == "nod_test"):
-			mHN_INTERUPT = False
-			rospy.logdebug( "msg.data = " + msg.data )
-			rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
-		elif (msg.data == "saccade_test"):
-			rospy.logdebug( "msg.data = " + msg.data )
-			if eyeSaccade == None:
-				eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
-			## dynamically create separate thread only as needed
-			try:
-				thread.start_new_thread( eyeSaccade.macroEyeSaccade, () )
-				eyeSaccade.startTimedTest( makiPP )
-			except:
-				rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
-		elif (msg.data == "blink_test"):
-			mB_INTERUPT = False
-			rospy.logdebug( "msg.data = " + msg.data )
-			rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
-		elif (msg.data == "startle_test"):
-			rospy.logdebug( "msg.data = " + msg.data )
-			if startle == None:
-				startle = startleTest( VERBOSE_DEBUG, pub_cmd )
-			## dynamically create separate thread only as needed
-			try:
-				thread.start_new_thread( startle.macroStartle, () )
-				startle.startTimedTest( makiPP )
-			except:
-				rospy.logerr("Error: Unable to start thread for startle.macroStartle")
-		else:
-			maki_command = msg.data 
-			parseMAKICommand( maki_command )
+		maki_command = msg.data 
+		parseMAKICommand( maki_command )
+
+		#if (msg.data == "reset"):
+		#	mHN_INTERUPT = True
+		#	mB_INTERUPT = True
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	#eyeSaccade.stopTimedTest()
+		#	#startle.stopTimedTest()
+		#	timedTestShutdown()
+		#elif (msg.data == "nod_test"):
+		#	mHN_INTERUPT = False
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
+		#elif (msg.data == "saccade_test"):
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	if eyeSaccade == None:
+		#		eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
+		#	## dynamically create separate thread only as needed
+		#	try:
+		#		thread.start_new_thread( eyeSaccade.macroEyeSaccade, () )
+		#		eyeSaccade.startTimedTest( makiPP )
+		#	except:
+		#		rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
+		#elif (msg.data == "blink_test"):
+		#	mB_INTERUPT = False
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
+		#elif (msg.data == "startle_test"):
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	if startle == None:
+		#		startle = startleTest( VERBOSE_DEBUG, pub_cmd )
+		#	## dynamically create separate thread only as needed
+		#	try:
+		#		thread.start_new_thread( startle.macroStartle, () )
+		#		startle.startTimedTest( makiPP )
+		#	except:
+		#		rospy.logerr("Error: Unable to start thread for startle.macroStartle")
+		#elif (msg.data == "asleep_test"):
+		#	rospy.logdebug( "msg.data = " + msg.data )
+		#	if asleepAwake == None:
+		#		asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
+		#	## dynamically create separate thread only as needed
+		#	try:
+		#		thread.start_new_thread( asleepAwake.macroAsleep, () )
+		#		asleepAwake.startTimedTest( makiPP )
+		#	except:
+		#		rospy.logerr("Error: Unable to start thread for asleepAwake.macroAsleep")
+		#else:
+		#	maki_command = msg.data 
+		#	parseMAKICommand( maki_command )
 
 	return
 
@@ -694,6 +761,8 @@ def initSubFeedback():
 
 	rospy.Subscriber( "/maki_command", String, updateMAKICommand )
 	rospy.logdebug( "now subscribed to /maki_command" )
+	rospy.Subscriber( "/maki_macro", String, getMacroCommand )
+	rospy.logdebug( "now subscribed to /maki_macro" )
 
 	rospy.logdebug( str(_fname) + ": END")
 	return
