@@ -39,6 +39,7 @@ class timedTest(object):
 		self.makiPP = None
 
 	def startTimedTest(self, makiPP):
+		self.ALIVE = True
 		self.mTT_INTERUPT = False
 		self.makiPP = makiPP
 
