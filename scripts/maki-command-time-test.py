@@ -30,6 +30,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 
 from saccade_test import saccadeTest
 from startle_test import startleTest
+from blink_test import blinkTest
 
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
@@ -73,164 +74,6 @@ VERBOSE_DEBUG = False	## default is False
 #last_blink_time = 0
 #last_movement_time = 0
 
-def presetGoalSpeed_ticks_duration( servo, ticks, s_duration ):
-	global DC_helper
-	_gs = int( DC_helper.getGoalSpeed_ticks_duration(ticks, s_duration) ) + 1
-	if (_gs > 0) and (_gs < 1024):
-		_pub_cmd = servo + str(SC_SET_GS) + str(_gs) + str(TERM_CHAR_SEND)
-		rospy.logerr( str(_pub_cmd) )
-		pubTo_maki_command( str(_pub_cmd) )
-	elif (_gs == 0):
-		rospy.logerr("setting GoalSpeed to 0 (unlimited) is not allowed!")
-		rospy.logwarn("LL GoalSpeed is not changed")
-	else:
-		rospy.logerr("calculated GoalSpeed is out of bounds (0, 1023]; _gs = " + str(_gs))
-
-def presetGoalSpeed_ticks_durationMS( servo, ticks, ms_duration ):
-	presetGoalSpeed_ticks_duration( servo, ticks, float( ms_duration / 1000.0 ) )
-
-#######################
-## To run, publish to /maki_command
-##	reset
-##	blink_test
-## To stop, publish to /maki_command
-##	reset
-#######################
-def macroBlink():
-	global mB_INTERUPT
-	global ALIVE
-
-	## this is a nested while loop
-	_print_once = True
-	while ALIVE and not rospy.is_shutdown():
-		if _print_once:
-			rospy.logdebug("Entering macroBlink outer while loop")
-			_print_once = False
-
-		if mB_INTERUPT:	
-			#print "start sleep 5"
-			sleep(5)	# 5 seconds
-			#print "end sleep 5"
-			continue	## begin loop again from the beginning skipping below
-			#print "shouldn't get here"
-
-		rospy.logdebug("Entering macroBlink inner while loop")
-		_blink_count = 0
-		while not mB_INTERUPT:
-
-			for _blink_rep in range (1,2):	#range(1,6):	## [1,6)
-				#_blink_count = helper_macroBlink( _blink_count, True, _blink_rep, read_time=2.0 )
-				#_blink_count = helper_macroBlink( _blink_count, False, _blink_rep, read_time=2.0 )
-				#_blink_count = helper_macroBlink( _blink_count, True, 3, read_time=0.5 )
-				_blink_count = helper_macroBlink( _blink_count, False, 3, read_time=0.5 )
-				sleep(2)
-				rospy.logdebug("***************")
-
-				## try to nicely end testing the eye blink
-				if mB_INTERUPT:
-					sleep(1)	## make sure to wait for message to reach Dynamixel servo
-					pubTo_maki_command( "reset" )
-					sleep(1)	## make sure to wait for message to reach Dynamixel servo
-				else:
-					pass
-			# end	for _blink_rep in range()
-
-		# end	while not mB_INTERUPT
-	# end	while ALIVE and not rospy.is_shutdown():
-
-def helper_macroBlink( blink_count, full_blink, blink_rep, read_time=1.0 ):
-	global mB_INTERUPT
-	global blink_time		## list of ints
-	global SWW_WI
-
-	_start_blink_time = None
-	_start_blink_close_time = None
-	_finish_blink_close_time = None
-	_start_blink_open_time = None
-	_finish_blink_open_time = None
-	_finish_blink_time = None
-	_total_blink_time = 0
-
-	## maki_command prefix
-	_m_cmd_prefix = "LL" + SC_SET_GP
-
-	rospy.loginfo("blink_rep=" + str(blink_rep))
-	rospy.loginfo("-----------------")
-	for _blink_time in blink_time:
-		_half_blink_time = int( float(_blink_time) * 0.5 + 0.5 )
-		rospy.loginfo( "blink_time=" + str(_blink_time) + "; half_blink_time=" + str(_half_blink_time) )
-
-		#_close_blink_time = int( float(_blink_time) * 0.35 + 0.5 )
-		#_open_blink_time = _blink_time - _close_blink_time
-
-		## maki_command suffix
-		#_m_cmd_suffix = SC_SET_IPT + str( _half_blink_time ) + TERM_CHAR_SEND
-		_m_cmd_suffix = TERM_CHAR_SEND
-		_blink_close = _m_cmd_prefix
-		if full_blink:
-			_blink_close += str(LL_CLOSE_MAX) + _m_cmd_suffix
-			presetGoalSpeed_ticks_durationMS( "LL", abs(LL_CLOSE_MAX - LL_OPEN_DEFAULT), _half_blink_time )
-		else:
-			_blink_close += str(LL_CLOSE_HALF) + _m_cmd_suffix
-			presetGoalSpeed_ticks_durationMS( "LL", abs(LL_CLOSE_HALF - LL_OPEN_DEFAULT), _half_blink_time )
-		_blink_open = _m_cmd_prefix + str(LL_OPEN_DEFAULT) + _m_cmd_suffix
-		
-		_start_blink_time = timer()
-		#for blink_rep in range(1, 6):
-		for _flutter_count in range(0, blink_rep):
-			rospy.loginfo( str(_flutter_count) )
-
-			## blink close
-			_start_blink_close_time = timer()
-			rospy.logdebug( "blink close" )
-			pubTo_maki_command( str(_blink_close) )
-			SWW_WI.sleepWhileWaitingMS( _half_blink_time, 0.01 )
-			#SWW_WI.sleepWhileWaitingMS( _close_blink_time, 0.01 )
-			_finish_blink_close_time = timer()
-
-			## blink open
-			_start_blink_open_time = timer()
-			rospy.logdebug( "blink open" )
-			pubTo_maki_command( str(_blink_open) )
-			SWW_WI.sleepWhileWaitingMS( _half_blink_time, 0.01 )
-			#SWW_WI.sleepWhileWaitingMS( _open_blink_time, 0.01 )
-			_finish_blink_open_time = timer()
-			_finish_blink_time = timer()
-
-			if mB_INTERUPT:
-				rospy.logerr("Abort blink_test")
-				break	## break out of inner for loop
-		# end	for _flutter_count in range(1, blink_rep):
-		_finish_blink_time = timer()
-
-		## make it easier to read
-		SWW_WI.sleepWhileWaiting( read_time, .5 )
-
-		blink_count += 1
-		_total_blink_time = abs(_finish_blink_time - _start_blink_time)
-		#rospy.loginfo( "Completed " + str(blink_count) + " full eye blinks" )
-		rospy.loginfo( "Eye blink #" + str(blink_count) + ": full eye blink = " 
-			+ str( _total_blink_time )
-			+ "; blink open->close = " + str( abs(_finish_blink_close_time - _start_blink_close_time) )
-			+ "; blink close->open = " + str( abs(_finish_blink_open_time - _start_blink_open_time) ) )
-
-		rospy.loginfo("-----------------")
-
-		## try to nicely end testing the eye blink
-		if mB_INTERUPT:
-			break	## break out of outer for loop
-		else:
-			## reset timers
-			_start_blink_time = None
-			_start_blink_close_time = None
-			_finish_blink_close_time = None
-			_start_blink_open_time = None
-			_finish_blink_open_time = None
-			_finish_blink_time = None
-			_total_blink_time = 0
-
-	# end	for _blink_time in blink_time:
-	return blink_count
 
 
 #######################
@@ -405,15 +248,16 @@ def macroHeadTurn():
 
 #####################
 def timedTestUpdate( makiPP ):
-	global eyeSaccade, startle
+	global eyeSaccade, startle, blink
 
 	if eyeSaccade != None:	eyeSaccade.update( makiPP )
 	if startle != None:	startle.update( makiPP )
+	if blink != None:	blink.update( makiPP )
 
 def timedTestShutdown( ):
-	global eyeSaccade, startle
+	global eyeSaccade, startle, blink
 
-	_allTimedTests = ( eyeSaccade, startle )
+	_allTimedTests = ( eyeSaccade, startle, blink )
 
 	for _test in _allTimedTests:
 		if _test != None:
@@ -477,7 +321,7 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def getMacroCommand( msg ):
 	global mHN_INTERUPT, mB_INTERUPT
-	global eyeSaccade, startle, asleepAwake
+	global eyeSaccade, startle, blink
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	if (msg.data == "reset") or (msg.data == "end"):
@@ -502,9 +346,17 @@ def getMacroCommand( msg ):
 		except:
 			rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
 	elif (msg.data == "blink_test"):
-		mB_INTERUPT = False
+		#mB_INTERUPT = False
 		rospy.logdebug( "msg.data = " + msg.data )
-		rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
+		#rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
+		if blink == None:
+			blink = blinkTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( blink.macroBlink, () )
+			blink.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for blink.macroBlink")
 	elif (msg.data == "startle_test"):
 		rospy.logdebug( "msg.data = " + msg.data )
 		if startle == None:
@@ -807,7 +659,7 @@ if __name__ == '__main__':
 	global PIC_INTERUPT
 	global DC_helper
 	global SWW_WI
-	global eyeSaccade, startle
+	global eyeSaccade, startle, blink
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -831,6 +683,7 @@ if __name__ == '__main__':
 	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
 	eyeSaccade = None
 	startle = None
+	blink = None
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
