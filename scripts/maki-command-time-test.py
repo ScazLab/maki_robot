@@ -32,6 +32,7 @@ from saccade_test import saccadeTest
 from startle_test import startleTest
 from head_nod_test import headNodTest
 from blink_test import blinkTest
+from asleep_awake_test import asleepAwakeTest
 
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
@@ -86,16 +87,19 @@ def macroHeadTurn():
 #####################
 def timedTestUpdate( makiPP ):
 	global eyeSaccade, startle, blink, headNod
+	global asleepAwake
 
 	if eyeSaccade != None:	eyeSaccade.update( makiPP )
 	if startle != None:	startle.update( makiPP )
 	if headNod != None:	headNod.update( makiPP )
 	if blink != None:	blink.update( makiPP )
+	if asleepAwake != None:	asleepAwake.update( makiPP )
 
 def timedTestShutdown( ):
 	global eyeSaccade, startle, blink, headNod
+	global asleepAwake
 
-	_allTimedTests = ( eyeSaccade, startle, blink, headNod )
+	_allTimedTests = ( eyeSaccade, startle, blink, headNod, asleepAwake )
 
 	for _test in _allTimedTests:
 		if _test != None:
@@ -103,6 +107,8 @@ def timedTestShutdown( ):
 			_test.stopTimedTest()
 			sleep(1)
 			_test.exitTimedTest()
+
+	pubTo_maki_command( "HT" + str(SC_SET_TL) + str(ht_tl_disable) + str(TERM_CHAR_SEND) )
 	#rospy.logdebug("HERE timedTestShutdown: " + str(_allTimedTests))
 
 #####################
@@ -160,6 +166,7 @@ def parseRecvMsg ( recv_msg ):
 def getMacroCommand( msg ):
 	global mHN_INTERUPT, mB_INTERUPT
 	global eyeSaccade, startle, blink, headNod
+	global asleepAwake
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	if (msg.data == "reset") or (msg.data == "end"):
@@ -223,6 +230,16 @@ def getMacroCommand( msg ):
 			asleepAwake.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAsleep")
+	elif (msg.data == "awake_test"):
+		rospy.logdebug( "msg.data = " + msg.data )
+		if asleepAwake == None:
+			asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( asleepAwake.macroAwake, () )
+			asleepAwake.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAwake")
 	else:
 		rospy.logerr("Error: Unknown " + str(msg.data))
 	return
@@ -230,7 +247,7 @@ def getMacroCommand( msg ):
 def updateMAKICommand( msg ):
 	global maki_command
 	global mHN_INTERUPT, mB_INTERUPT
-	global eyeSaccade, startle
+	global eyeSaccade, startle, asleepAwake
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -506,6 +523,7 @@ if __name__ == '__main__':
 	global DC_helper
 	global SWW_WI
 	global eyeSaccade, startle, blink, headNod
+	global asleepAwake
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -531,6 +549,7 @@ if __name__ == '__main__':
 	startle = None
 	headNod = None
 	blink = None
+	asleepAwake = None
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
