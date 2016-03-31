@@ -164,22 +164,14 @@ def parseRecvMsg ( recv_msg ):
 
 #####################
 def getMacroCommand( msg ):
-	global mHN_INTERUPT, mB_INTERUPT
 	global eyeSaccade, startle, blink, headNod
 	global asleepAwake
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	if (msg.data == "reset") or (msg.data == "end"):
-		mHN_INTERUPT = True
-		mB_INTERUPT = True
-		rospy.logdebug( "msg.data = " + msg.data )
-		#eyeSaccade.stopTimedTest()
-		#startle.stopTimedTest()
 		timedTestShutdown()
+
 	elif (msg.data == "nod_test"):
-		#mHN_INTERUPT = False
-		rospy.logdebug( "msg.data = " + msg.data )
-		#rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
 		if headNod == None:
 			headNod = headNodTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -188,8 +180,8 @@ def getMacroCommand( msg ):
 			headNod.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for headNod.macroHeadNod")
+
 	elif (msg.data == "saccade_test"):
-		rospy.logdebug( "msg.data = " + msg.data )
 		if eyeSaccade == None:
 			eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -198,10 +190,8 @@ def getMacroCommand( msg ):
 			eyeSaccade.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
+
 	elif (msg.data == "blink_test"):
-		#mB_INTERUPT = False
-		rospy.logdebug( "msg.data = " + msg.data )
-		#rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
 		if blink == None:
 			blink = blinkTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -210,8 +200,8 @@ def getMacroCommand( msg ):
 			blink.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for blink.macroBlink")
+
 	elif (msg.data == "startle_test"):
-		rospy.logdebug( "msg.data = " + msg.data )
 		if startle == None:
 			startle = startleTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -220,8 +210,8 @@ def getMacroCommand( msg ):
 			startle.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for startle.macroStartle")
+
 	elif (msg.data == "asleep_test"):
-		rospy.logdebug( "msg.data = " + msg.data )
 		if asleepAwake == None:
 			asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -230,8 +220,8 @@ def getMacroCommand( msg ):
 			asleepAwake.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAsleep")
+
 	elif (msg.data == "awake_test"):
-		rospy.logdebug( "msg.data = " + msg.data )
 		if asleepAwake == None:
 			asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
 		## dynamically create separate thread only as needed
@@ -240,14 +230,14 @@ def getMacroCommand( msg ):
 			asleepAwake.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAwake")
+
 	else:
 		rospy.logerr("Error: Unknown " + str(msg.data))
+
 	return
 	
 def updateMAKICommand( msg ):
 	global maki_command
-	global mHN_INTERUPT, mB_INTERUPT
-	global eyeSaccade, startle, asleepAwake
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	## filter out feedback requests using regex
@@ -259,55 +249,6 @@ def updateMAKICommand( msg ):
 	else:
 		maki_command = msg.data 
 		parseMAKICommand( maki_command )
-
-		#if (msg.data == "reset"):
-		#	mHN_INTERUPT = True
-		#	mB_INTERUPT = True
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	#eyeSaccade.stopTimedTest()
-		#	#startle.stopTimedTest()
-		#	timedTestShutdown()
-		#elif (msg.data == "nod_test"):
-		#	mHN_INTERUPT = False
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	rospy.logdebug( "mHN_INTERUPT = " + str(mHN_INTERUPT) )
-		#elif (msg.data == "saccade_test"):
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	if eyeSaccade == None:
-		#		eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
-		#	## dynamically create separate thread only as needed
-		#	try:
-		#		thread.start_new_thread( eyeSaccade.macroEyeSaccade, () )
-		#		eyeSaccade.startTimedTest( makiPP )
-		#	except:
-		#		rospy.logerr("Error: Unable to start thread for eyeSaccade.macroEyeSaccade")
-		#elif (msg.data == "blink_test"):
-		#	mB_INTERUPT = False
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	rospy.logdebug( "mB_INTERUPT = " + str(mB_INTERUPT) )
-		#elif (msg.data == "startle_test"):
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	if startle == None:
-		#		startle = startleTest( VERBOSE_DEBUG, pub_cmd )
-		#	## dynamically create separate thread only as needed
-		#	try:
-		#		thread.start_new_thread( startle.macroStartle, () )
-		#		startle.startTimedTest( makiPP )
-		#	except:
-		#		rospy.logerr("Error: Unable to start thread for startle.macroStartle")
-		#elif (msg.data == "asleep_test"):
-		#	rospy.logdebug( "msg.data = " + msg.data )
-		#	if asleepAwake == None:
-		#		asleepAwake = asleepAwakeTest( VERBOSE_DEBUG, pub_cmd )
-		#	## dynamically create separate thread only as needed
-		#	try:
-		#		thread.start_new_thread( asleepAwake.macroAsleep, () )
-		#		asleepAwake.startTimedTest( makiPP )
-		#	except:
-		#		rospy.logerr("Error: Unable to start thread for asleepAwake.macroAsleep")
-		#else:
-		#	maki_command = msg.data 
-		#	parseMAKICommand( maki_command )
 
 	return
 
@@ -518,7 +459,6 @@ if __name__ == '__main__':
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 	global mc_count
-	global mHN_INTERUPT, mB_INTERUPT
 	global PIC_INTERUPT
 	global DC_helper
 	global SWW_WI
@@ -540,8 +480,6 @@ if __name__ == '__main__':
 	maki_command = ""
 	mc_count = 0
 	resetTimer()
-	mHN_INTERUPT = True
-	mB_INTERUPT = True
 	PIC_INTERUPT = False
 	DC_helper = dynamixelConversions()
 	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
@@ -575,29 +513,6 @@ if __name__ == '__main__':
 		else:
 			INIT = False
 			rospy.loginfo( "Init MAKI state -- DONE" )
-
-	## STEP 4: START THREAD FOR TESTING HEAD NODDING TIMING
-	ALIVE = True
-	#thread_macroHeadNod = threading.Thread(target=macroHeadNod, args=())
-	#thread_macroHeadNod.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	#thread_macroHeadNod.start()
-
-	## STEP 5: START THREAD FOR TESTING EYE SACCADE TIMING
-	#eyeSaccade = saccadeTest( VERBOSE_DEBUG, pub_cmd )
-	#thread_macroEyeSaccade = threading.Thread(target=eyeSaccade.macroEyeSaccade, args=())
-	#thread_macroEyeSaccade.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	#thread_macroEyeSaccade.start()
-
-	## STEP 6: START THREAD FOR TESTING BLINKING TIMING
-	#thread_macroBlink = threading.Thread(target=macroBlink, args=())
-	#thread_macroBlink.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	#thread_macroBlink.start()
-
-	## STEP 7: START THREAD FOR TESTING STARTLE TIMING
-	#startle = startleTest( VERBOSE_DEBUG, pub_cmd )
-	#thread_macroStartle = threading.Thread(target=startle.macroStartle, args=())
-	#thread_macroStartle.setDaemon(True)	# make sure to set this; otherwise, stuck with this thread open
-	#thread_macroStartle.start()
 
 	## ---------------------------------
 	## END OF INITIALIZATION
