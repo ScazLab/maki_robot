@@ -33,6 +33,7 @@ from startle_test import startleTest
 from head_nod_test import headNodTest
 from blink_test import blinkTest
 from asleep_awake_test import asleepAwakeTest
+from turn_to_screen_test import turnToScreenTest
 
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
@@ -87,19 +88,20 @@ def macroHeadTurn():
 #####################
 def timedTestUpdate( makiPP ):
 	global eyeSaccade, startle, blink, headNod
-	global asleepAwake
+	global asleepAwake, turnToScreen
 
 	if eyeSaccade != None:	eyeSaccade.update( makiPP )
 	if startle != None:	startle.update( makiPP )
 	if headNod != None:	headNod.update( makiPP )
 	if blink != None:	blink.update( makiPP )
 	if asleepAwake != None:	asleepAwake.update( makiPP )
+	if turnToScreen != None:	turnToScreen.update( makiPP )
 
 def timedTestShutdown( ):
 	global eyeSaccade, startle, blink, headNod
-	global asleepAwake
+	global asleepAwake, turnToScreen
 
-	_allTimedTests = ( eyeSaccade, startle, blink, headNod, asleepAwake )
+	_allTimedTests = ( eyeSaccade, startle, blink, headNod, asleepAwake, turnToScreen )
 
 	for _test in _allTimedTests:
 		if _test != None:
@@ -165,7 +167,7 @@ def parseRecvMsg ( recv_msg ):
 #####################
 def getMacroCommand( msg ):
 	global eyeSaccade, startle, blink, headNod
-	global asleepAwake
+	global asleepAwake, turnToScreen
 	#rospy.logdebug(rospy.get_caller_id() + ": I heard %s", msg.data)
 
 	if (msg.data == "reset") or (msg.data == "end"):
@@ -230,6 +232,16 @@ def getMacroCommand( msg ):
 			asleepAwake.startTimedTest( makiPP )
 		except:
 			rospy.logerr("Error: Unable to start thread for asleepAwake.macroAwake")
+
+	elif (msg.data == "turn_screen_test"):
+		if turnToScreen == None:
+			turnToScreen = turnToScreenTest( VERBOSE_DEBUG, pub_cmd )
+		## dynamically create separate thread only as needed
+		try:
+			thread.start_new_thread( turnToScreen.macroTurnToScreen, () )
+			turnToScreen.startTimedTest( makiPP )
+		except:
+			rospy.logerr("Error: Unable to start thread for turnToScreen.macroTurnToScreen")
 
 	else:
 		rospy.logerr("Error: Unknown " + str(msg.data))
@@ -463,7 +475,7 @@ if __name__ == '__main__':
 	global DC_helper
 	global SWW_WI
 	global eyeSaccade, startle, blink, headNod
-	global asleepAwake
+	global asleepAwake, turnToScreen
 
 	## ---------------------------------
 	## INITIALIZATION
@@ -488,6 +500,7 @@ if __name__ == '__main__':
 	headNod = None
 	blink = None
 	asleepAwake = None
+	turnToScreen = None
 
 	## STEP 2: SIGNAL HANDLER
 	#to allow closing the program using ctrl+C
