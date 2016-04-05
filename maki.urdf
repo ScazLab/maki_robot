@@ -8,33 +8,24 @@
 	<color rgba="0 0 0 1"/>
 </material>
 <material name="white">
-	<color rgba="1 1 1 0.9"/>
-</material>
-<material name="blackA">
-	<color rgba="0 0 0 0.25"/>
+	<color rgba="1 1 1 1"/>
 </material>
 
 
-
-<!-- BODY -->
 <link name="base_link">
 	<visual>
 		<geometry>
-			<cylinder length="0.16142" radius="0.069915"/>
+			<cylinder length="1" radius="0.5"/>
 		</geometry>
-		<!-- z = 0.5 * cylinder length -->
-		<origin rpy="0 0 0" xyz="0 0 0.08071"/>
+		<origin rpy="0 0 0" xyz="0 0 0.5"/>
 		<material name="white"/>
 	</visual>
 </link>
 
-
-
-<!-- HEAD -->
 <link name="head">
 	<visual>
 		<geometry>
-			<sphere radius="0.0821"/>
+			<sphere radius="0.6"/>
 		</geometry>
 		<material name="white"/>
 	</visual>
@@ -42,19 +33,16 @@
 <link name="virtual_head"></link>
 <joint name="head_tilt" type="revolute">
 	<parent link="virtual_head"/>
-	<!-- lower, upper in radians -->
+	<!--
 	<limit effort="1000.0" lower="-0.358" upper="0.394" velocity="0.5"/>
+	-->
+	<limit effort="1000.0" lower="2.354" upper="2.764" velocity="0.5"/>	<!-- HP_MAX = 540, HP_MIN = 460 -->
 	<child link="head"/>
-	<!-- z = sphere radius + cylinder length -->
-	<origin xyz="0 0 0.243242"/>
+	<origin rpy="0 3.9 0" xyz="0 0 1.6"/>
 	<axis xyz="0 1 0"/>
 </joint>
-<joint name="head_pan" type="revolute">
-	<!-- lower, upper in radians -->
-	<!--
+<joint name="head_swivel" type="revolute">
 	<limit effort="1000.0" lower="-1.309" upper="1.308" velocity="0.5"/>	
-	-->
-	<limit effort="1000.0" lower="-1.0" upper="1.0" velocity="0.5"/>	
 	<parent link="base_link"/>
 	<child link="virtual_head"/>
 	<origin xyz="0 0 0"/>
@@ -63,220 +51,118 @@
 
 
 
-<!-- LEFT EYE -->
-<link name="eye_left">
+<link name="eye1">
 	<visual>
 		<origin rpy="0 0 0" xyz="0 0 0"/>
 		<geometry>
-			<sphere radius="0.02211"/>
+			<sphere radius="0.15"/>
 		</geometry>
-		<material name="blackA"/>
+		<material name="black"/>
 	</visual>	
 </link>
-<link name="virtual_eye_left"></link>
-<joint name="eye_left_pan" type="revolute">
+<link name="virtual_eye"></link>
+<joint name="eye1_swivel" type="revolute">
 	<parent link="head"/>
-	<child link="virtual_eye_left"/>
-	<!-- lower, upper in radians -->
-	<!--
+	<child link="virtual_eye"/>
 	<limit effort="1000.0" lower="-0.337" upper="0.266" velocity="0.5"/>
-	-->
-	<limit effort="1000.0" lower="-0.25" upper="0.25" velocity="0.5"/>
-	<!--
 	<origin xyz="0.4 -0.25 0.25"/>
-	-->
-	<origin xyz="0.07589 0.03771 0"/>
 	<axis xyz="0 0 1"/>
 </joint>
-<joint name="eye_left_tilt" type="revolute">
-	<parent link="virtual_eye_left"/>
-	<child link="eye_left"/>	
-	<!--
+<joint name="eye1_tilt" type="revolute">
+	<parent link="virtual_eye"/>
+	<child link="eye1"/>	
 	<limit effort="1000.0" lower="-0.501" upper="0.445" velocity="0.5"/>
-	-->
-	<limit effort="1000.0" lower="-0.65" upper="0.6" velocity="0.5"/>
 	<axis xyz="0 1 0"/>
 </joint>
 
-
-
-<!-- RIGHT EYE -->
-<link name="eye_right">
+<link name="eye2">
 	<visual>
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
-			<sphere radius="0.02211"/>
+			<sphere radius="0.15"/>
 		</geometry>
-		<material name="blackA"/>
+		<material name="black"/>
 	</visual>
 </link>
-<link name="virtual_eye_right"></link>
-<joint name="eye_right_tilt" type="continuous">
-	<parent link="virtual_eye_right"/>
-	<child link="eye_right"/>	
-	<axis xyz="0 1 0"/>
-	<mimic joint="eye_left_tilt"/>		
-</joint>
-<joint name="eye_right_pan" type="continuous">
-	<parent link="head"/>
-	<child link="virtual_eye_right"/>	
-	<!-- same as eye_left_pan with negative y, instead of positive -->
-	<origin xyz="0.07589 -0.03771 0"/>
-	<axis xyz="0 0 1"/>
-	<mimic joint="eye_left_pan"/>		
-</joint>
+<link name="virtual_eye2"></link>
 
-
-
-<!-- EYELIDS -->
-<!-- eyelid_right motor has been removed and coupled to eyelid_left -->
-<link name="eyelid_left">
+<link name="eyelid1">
 	<visual>
-		<!--
-		<origin rpy="0 0 1.57" xyz="0 0 0.5"/>
-		-->
-		<!-- 	x = iris origin x + iris cylinder length + pupil cylinder length,
-			z = iris cylinder radius -->
-		<origin rpy="0.785 0 1.57" xyz="0.025 0 0.015"/>
+		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
 		<geometry>
-			<!--
 			<box size="0.3 0.05 0.05"/>
-			-->
-			<box size="0.032 0.005 0.005"/>
 		</geometry>
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid_left_joint" type="revolute">
-	<!--
+<joint name="eyelid1_joint" type="revolute">
 	<origin xyz="0.4 -0.25 0.25"/>
-	-->
-	<!-- use origin of eye_left_pan -->
-	<origin xyz="0.07589 0.03771 0"/>
 	<axis xyz="0 1 0"/>	
 	<parent link="head"/>
-	<child link="eyelid_left"/>	
-	<!--
+	<child link="eyelid1"/>	
 	<limit effort="1000.0" lower="-0.179" upper="0.712" velocity="0.5"/>
-	-->
-	<limit effort="1000.0" lower="-0.3" upper="1.0" velocity="0.5"/>
 </joint>
-<link name="eyelid_right">
+<link name="eyelid2">
 	<visual>
-		<!-- 	x = iris origin x + iris cylinder length + pupil cylinder length,
-			z = iris cylinder radius -->
-		<origin rpy="0.785 0 1.57" xyz="0.025 0 0.015"/>
+		<origin rpy="0 0 1.57" xyz="0 0 0.15"/>
 		<geometry>
-			<box size="0.032 0.005 0.005"/>
+			<box size="0.3 0.05 0.05"/>
 		</geometry>
 		<material name="white"/>
 	</visual>
 </link>
-<joint name="eyelid_right_joint" type="continuous">
+<joint name="eyelid2_joint" type="continuous">
 	<parent link="head"/>
-	<child link="eyelid_right"/>		
-	<!-- use origin of eye_right_pan -->
-	<origin xyz="0.07589 -0.03771 0"/>
+	<child link="eyelid2"/>		
+	<origin xyz="0.4 0.25 0.25"/>
 	<axis xyz="0 1 0"/>	
-	<mimic joint="eyelid_left_joint"/>
+	<mimic joint="eyelid1_joint"/>
 </joint>
 
+<joint name="eye2_tilt" type="continuous">
+	<parent link="virtual_eye2"/>
+	<child link="eye2"/>	
+	<axis xyz="0 1 0"/>
+	<mimic joint="eye1_tilt"/>		
+</joint>
+<joint name="eye2_swivel" type="continuous">
+	<parent link="head"/>
+	<child link="virtual_eye2"/>	
+	<origin xyz="0.4 0.25 0.25"/>
+	<axis xyz="0 0 1"/>
+	<mimic joint="eye1_swivel"/>		
+</joint>
 
-
-
-<!-- IRISES -->
-<link name="iris_right">
+<link name="iris1">
 	<visual>
-		<!--
 		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
 			<sphere radius="0.05"/>
 		</geometry>
-		-->
-		<origin rpy="0 1.57 0" xyz="0 0 0" />
-		<geometry>
-			<cylinder length="0.005" radius="0.015"/>
-		</geometry>
 		<material name="blue"/>
 	</visual>
 </link>
-<joint name="iris_right_joint" type="fixed">
-	<!--
+<joint name="iris1_joint" type="fixed">
 	<origin xyz="0.12 0 0"/>	
-	-->
-	<origin xyz="0.015 0 0"/>	
-	<parent link="eye_right"/>
-	<child link="iris_right"/>
+	<parent link="eye1"/>
+	<child link="iris1"/>
+	
 </joint>
 
-<link name="iris_left">
+<link name="iris2">
 	<visual>
-		<origin rpy="0 1.57 0" xyz="0 0 0" />
+		<origin rpy="0 0 1" xyz="0 0 0"/>
 		<geometry>
-			<cylinder length="0.005" radius="0.015"/>
+			<sphere radius="0.05"/>
 		</geometry>
 		<material name="blue"/>
 	</visual>
 </link>
-<joint name="iris_left_joint" type="fixed">
-	<origin xyz="0.015 0 0"/>	
-	<parent link="eye_left"/>
-	<child link="iris_left"/>
+<joint name="iris2_joint" type="fixed">
+	<origin xyz="0.12 0 0"/>	
+	<parent link="eye2"/>
+	<child link="iris2"/>
+	
 </joint>
-
-
-
-<!-- PUPILS -->
-<link name="pupil_right">
-	<visual>
-		<origin rpy="0 1.57 0" xyz="0 0 0"/>
-		<geometry>
-			<cylinder length="0.005" radius="0.00633"/>
-		</geometry>
-		<material name="black"/>
-	</visual>
-</link>
-<joint name="pupil_right_joint" type="fixed">
-	<origin xyz="0.005 0 0"/>
-	<parent link="iris_right"/>
-	<child link="pupil_right"/>
-</joint>
-
-<link name="pupil_left">
-	<visual>
-		<origin rpy="0 1.57 0" xyz="0 0 0"/>
-		<geometry>
-			<cylinder length="0.005" radius="0.00633"/>
-		</geometry>
-		<material name="black"/>
-	</visual>
-</link>
-<joint name="pupil_left_joint" type="fixed">
-	<origin xyz="0.005 0 0"/>
-	<parent link="iris_left"/>
-	<child link="pupil_left"/>
-</joint>
-
-
-
-<!-- MOUTH CAMERA -->
-<link name="mouth_camera">
-	<visual>
-		<origin rpy="0 1.57 0" xyz="0 0 0"/>
-		<geometry>
-			<!--
-			<cylinder length="0.005" radius="0.007"/>
-			-->
-			<cylinder length="0.001" radius="0.001425"/>
-		</geometry>
-		<material name="black"/>
-	</visual>
-</link>
-<joint name="robot_mouth_camera" type="fixed">
-	<origin xyz="0.07 0 -0.044"/>
-	<parent link="head" />
-	<child link="mouth_camera" />
-</joint>
-
 
 </robot>
