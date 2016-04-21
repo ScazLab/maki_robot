@@ -429,8 +429,10 @@ def initSubFeedback():
 
 	rospy.Subscriber( "/maki_command", String, updateMAKICommand )
 	rospy.logdebug( "now subscribed to /maki_command" )
-	rospy.Subscriber( "/maki_macro", String, getMacroCommand )
-	rospy.logdebug( "now subscribed to /maki_macro" )
+	#rospy.Subscriber( "/maki_macro", String, getMacroCommand )
+	#rospy.logdebug( "now subscribed to /maki_macro" )
+	rospy.Subscriber( "/maki_test", String, getMacroCommand )
+	rospy.logdebug( "now subscribed to /maki_test" )
 
 	rospy.logdebug( str(_fname) + ": END")
 	return
