@@ -170,6 +170,15 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_enable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_enable) + str(TERM_CHAR_SEND)
 		if headTiltBaseBehavior.__ht_disable_cmd == None:
 			headTiltBaseBehavior.__ht_disable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_disable) + str(TERM_CHAR_SEND)
+	def start( self, makiPP ):
+		baseBehavior.start( self, makiPP )
+		self.enableHT()
+
+	def stop( self ):
+		print "headTiltBaseBehavior: stop()"
+		baseBehavior.stop( self )
+		self.disableHT()
+		print "headTiltBaseBehavior: stop() -- END"
 
 	def enableHT( self ):
 		if headTiltBaseBehavior.__ht_enabled == True:
