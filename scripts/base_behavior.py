@@ -107,8 +107,9 @@ class baseBehavior(object):
         	# see http://wiki.ros.org/rospy/Overview/Logging
         	if self.VERBOSE_DEBUG:
 			## TODO: FIX
-        	        #self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode, log_level=rospy.DEBUG)
-        	        self.ros_pub = rospy.init_node("anon", anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+			## str(nodename) = /<__main__.headNod object at 0x7f24b3e07150>
+        	        #self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+        	        self.ros_pub = rospy.init_node("anon", anonymous=True, log_level=rospy.DEBUG)
 			rospy.logdebug("log_level=rospy.DEBUG")
         	else:
         	        self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
