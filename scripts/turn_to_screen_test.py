@@ -167,12 +167,12 @@ class turnToScreenTest( headTiltTimedTest ):
 			headTiltTimedTest.enableHT( self )
 
 			## calculate GoalSpeed
-			_gs_HT = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_HT, _ms_duration) ) + 1
-			_gs_HP = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_HP, _ms_duration) ) + 1
+			_gs_HT = abs( int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_HT, _ms_duration) ) + 1 )
+			_gs_HP = abs( int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_HP, _ms_duration) ) + 1 )
 			## eyes should finish first
 			#_ms_duration_eyes = int( (float(_ms_duration) * 0.3) + 0.5 )
 			_ms_duration_eyes = _ms_duration
-			_gs_ET = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_ET, _ms_duration_eyes) ) + 1
+			_gs_ET = abs( int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_ET, _ms_duration_eyes) ) + 1 )
 			#_gs_EP = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_EP, _ms_duration_eyes) ) + 1
 			rospy.logerr("ms_duration_eyes = " + str(_ms_duration_eyes) + "ms")
 
