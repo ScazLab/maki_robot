@@ -116,9 +116,6 @@ class headNod( headTiltBaseBehavior ):
 				##print "shouldn't get here"
 				return
 
-			## try to nicely startup headnod testing without jerking MAKI's head tilt servo
-			headTiltBaseBehavior.enableHT( self )
-
 			## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
 			_ht_pp = self.makiPP["HT"]
 			_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
@@ -152,19 +149,22 @@ class headNod( headTiltBaseBehavior ):
 					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_down) )
 					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
 
-					_start_headnod_up_time = timer()
 					baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle) )
 					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
 		
 					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up) )
 					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_up )
 
-				## VERSION 2: UP --> DOWN --> UP
+				## VERSION 2: UP --> DOWN --> MIDDLE
 				if headNod.v2:
+					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up) )
+					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
+
 					baseBehavior.pubTo_maki_command( self, str(self.nod_up_down) )
 					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
 
-					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up) )
+					baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle) )
+					#self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
 					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
 
 				rospy.loginfo("-----------------")
@@ -190,9 +190,10 @@ class headNod( headTiltBaseBehavior ):
 		print msg.data
 
 		if msg.data == "nod":
-			baseBehavior.start(self, self.makiPP)
+			### try to nicely startup headnod testing without jerking MAKI's head tilt servo
+			headTiltBaseBehavior.start(self, self.makiPP)
 			self.macroHeadNod()
-			baseBehavior.stop(self)
+			headTiltBaseBehavior.stop(self)
 		return
 
 if __name__ == '__main__':
