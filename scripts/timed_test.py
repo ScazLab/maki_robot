@@ -32,7 +32,10 @@ class timedTest(object):
 		self.mTT_INTERUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterupt()
-		self.ros_pub = ros_pub		## can we pass a ros publisher??? Apparently so!
+		if ros_pub == None:
+			self.initROS( self )
+		else:
+			self.ros_pub = ros_pub		## can we pass a ros publisher??? Apparently so!
 		if timedTest.__maki_msg_format == None:
 			timedTest.initPubMAKIFormat( self )
 		#rospy.logdebug( str(timedTest.__maki_msg_format) )
