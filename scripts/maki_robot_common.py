@@ -79,10 +79,15 @@ IPT_NOD = 1750	#ms
 HP_LEFT = 312
 HP_FRONT = 512
 HP_RIGHT = 712
+#HP_LEFT = 404	## demo
+#HP_RIGHT = 620	## demo
 
 HT_UP = 540
 HT_MIDDLE = 505
 HT_DOWN = 460
+
+HP_ALISSA = 620
+HT_ALISSA = 540
 
 EP_LEFT = 468
 EP_FRONT = 512
@@ -109,7 +114,7 @@ ht_tl_disable = 0
 
 falling_asleep_time = 3000
 waking_up_time = 2000
-resetting_time = 2000
+resetting_time = 5000	#2000
 
 ## ktsui, INSPIRE 4, pilot3-1
 slow_blink_time = 550	#1000	#ms	
