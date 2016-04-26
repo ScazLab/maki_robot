@@ -150,7 +150,7 @@ class turnToScreenTest( headTiltTimedTest ):
 		_m_cmd_eye_neutral_left = _m_cmd_prefix_EP + str(EP_LEFT)
 		_m_cmd_eye_neutral_right = _m_cmd_prefix_EP + str(EP_RIGHT)
 		_m_cmd_eye_lr_neutral = _m_cmd_prefix_EP + str(NEUTRAL_EP)
-		_m_cmd_prefix_HP = "EP" + str(SC_SET_GS)
+		_m_cmd_prefix_EP = "EP" + str(SC_SET_GS)	## fixed typo
 
 		headTiltTimedTest.enableHT( self )
 		_sww_wi.sleepWhileWaitingMS(1000, 0.05)
