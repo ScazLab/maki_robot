@@ -107,14 +107,24 @@ class baseBehavior(object):
 		print str(_fname) + ": BEGIN"	## THIS IS BEFORE ROSNODE INIT
 
 		_anon_rosnode = False
-		if nodename == "anon":	_anon_rosnode = True
+		if nodename == "anon":
+			_anon_rosnode = True
+		else:
+			## Parse nodename
+			## Examples passed: <__main__.headNod object at 0x7f24b3e07150>
+			## <__main__.lookAlissa object at 0xb6c91bac>
+			#print str(nodename)
+			_tmp_nodename = str(nodename)
+			_object_name_format = "^\<\_\_main\_\_\.(\w+)"
+			#print _object_name_format
+			_tmp = re.search( _object_name_format, _tmp_nodename )
+			if _tmp != None:
+				nodename = _tmp.group(1)
+			print nodename
 
         	# see http://wiki.ros.org/rospy/Overview/Logging
         	if self.VERBOSE_DEBUG:
-			## TODO: FIX
-			## str(nodename) = /<__main__.headNod object at 0x7f24b3e07150>
-        	        #self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
-        	        self.ros_pub = rospy.init_node("anon", anonymous=True, log_level=rospy.DEBUG)
+        	        self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
 			rospy.logdebug("log_level=rospy.DEBUG")
         	else:
         	        self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
