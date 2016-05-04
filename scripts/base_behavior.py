@@ -166,7 +166,6 @@ class baseBehavior(object):
 		#print feedback
 
 		# Setup subscribers
-		#for _topic, _type, _callback in feedback:
 		for _prefix, _sub_params in feedback.iteritems():
 			_topic = _sub_params[0]
 			_type = _sub_params[1]
@@ -230,12 +229,21 @@ class headTiltBaseBehavior(baseBehavior):
 	def __init__(self, verbose_debug, ros_pub):
 		## call base class' __init__
 		baseBehavior.__init__( self, verbose_debug, ros_pub )
+
+		## subscribe to rostopic maki_feedback_torque_limit and maki_feedback_goal_pos
+		_maki_feedback_sub = {}		## init as empty dictionary
+		_maki_feedback_sub[ str(SC_GET_TL) ] = ("maki_feedback_torque_limit", String, self.parseMAKIFeedbackMsg)
+		_maki_feedback_sub[ str(SC_GET_GP) ] = ("maki_feedback_goal_pos", String, self.parseMAKIFeedbackMsg)
+		baseBehavior.initROSSub( self, _maki_feedback_sub )
+
 		if headTiltBaseBehavior.__ht_enabled == None:
 			headTiltBaseBehavior.__ht_enabled = False
 		if headTiltBaseBehavior.__ht_enable_cmd == None:
 			headTiltBaseBehavior.__ht_enable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_enable) + str(TERM_CHAR_SEND)
 		if headTiltBaseBehavior.__ht_disable_cmd == None:
 			headTiltBaseBehavior.__ht_disable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_disable) + str(TERM_CHAR_SEND)
+
+
 	def start( self, makiPP ):
 		baseBehavior.start( self, makiPP )
 		self.enableHT()
