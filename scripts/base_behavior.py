@@ -24,7 +24,9 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
 class baseBehavior(object):
 	## all instances of this class share the same value
 	## variables private to this class
-	__maki_msg_format = None
+	__maki_cmd_msg_format = None
+	__maki_feedback_format = None
+	__maki_feedback_values = {}	## empty dictionary
 
 
 	def __init__(self, verbose_debug, ros_pub):
@@ -36,10 +38,13 @@ class baseBehavior(object):
 			self.initROS( self )
 		else:
 			self.ros_pub = ros_pub		## can we pass a ros publisher??? Apparently so!
-		if baseBehavior.__maki_msg_format == None:
+		if baseBehavior.__maki_cmd_msg_format == None:
 			baseBehavior.initPubMAKIFormat( self )
-		#rospy.logdebug( str(baseBehavior.__maki_msg_format) )
+			#rospy.logdebug( str(baseBehavior.__maki_cmd_msg_format) )
+		if baseBehavior.__maki_feedback_format == None:
+			baseBehavior.initSubMAKIFormat( self )
 		self.initPubMAKI()
+		self.initSubMAKIFeedback()
 		self.makiPP = None
 
 	def start(self, makiPP):
@@ -71,7 +76,7 @@ class baseBehavior(object):
 		_pub_flag = False
 
 		## make sure that commandOut ends in only one TERM_CHAR_SEND
-		_tmp = re.search( baseBehavior.__maki_msg_format, commandOut )
+		_tmp = re.search( baseBehavior.__maki_cmd_msg_format, commandOut )
 		if _tmp != None:
 			## Yes, commandOut ends in only one TERM_CHAR_SEND
 			_pub_flag = True
@@ -141,13 +146,74 @@ class baseBehavior(object):
 		rospy.logdebug( str(_fname) + ": BEGIN")
 
 		## make sure that commandOut ends in only one TERM_CHAR_SEND
-		baseBehavior.__maki_msg_format = "\A[a-yA-Y]+[a-yA-Y0-9]*"
-		baseBehavior.__maki_msg_format += str(TERM_CHAR_SEND)
-		baseBehavior.__maki_msg_format += "{1}$"
+		baseBehavior.__maki_cmd_msg_format = "\A[a-yA-Y]+[a-yA-Y0-9]*"
+		baseBehavior.__maki_cmd_msg_format += str(TERM_CHAR_SEND)
+		baseBehavior.__maki_cmd_msg_format += "{1}$"
 
 		rospy.loginfo( str(_fname) + ": END")
 		return
 
+	def initSubMAKIFormat( self ):
+		## Setup regex template for expected feedback syntax
+		_feedback_msg_format = "\A([A-Z]{2})"	## 2 alphabetic char prefix
+		_feedback_msg_format += "(([0-9]+" + DELIMITER_RECV + "){" + str(SERVOCOUNT-1) + "}[0-9]+)" 
+		_feedback_msg_format += TERM_CHAR_RECV + "\Z"
+		#print _feedback_msg_format
+		baseBehavior.__maki_feedback_format = re.compile(_feedback_msg_format)
+		return
+
+	def initROSSub( self, feedback ):
+		#print feedback
+
+		# Setup subscribers
+		#for _topic, _type, _callback in feedback:
+		for _prefix, _sub_params in feedback.iteritems():
+			_topic = _sub_params[0]
+			_type = _sub_params[1]
+			_callback = _sub_params[2]
+			rospy.Subscriber( _topic, _type, _callback )
+			rospy.logdebug( "now subscribed to " + str(_topic) )
+		return
+
+	def initSubMAKIFeedback( self ):
+		_maki_feedback_sub = {}		## init as empty dictionary
+		_maki_feedback_sub[ str(SC_GET_PP) ] = ("maki_feedback_pres_pos", String, self.parseMAKIFeedbackMsg)
+		_maki_feedback_sub[ str(SC_GET_ER) ] = ("maki_feedback_error", String, self.parseMAKIFeedbackMsg)
+		baseBehavior.initROSSub( self, _maki_feedback_sub )
+		return
+
+	def parseMAKIFeedbackMsg ( self, recv_msg ):
+		if self.VERBOSE_DEBUG:
+			#rospy.logdebug( "parseMAKIFeedbackMsg: BEGIN" )
+			rospy.logdebug( "Received: " + str(recv_msg.data) )
+
+		_tmp = baseBehavior.__maki_feedback_format.search( recv_msg.data )
+		if _tmp != None:
+			_prefix = _tmp.group(1)
+			_feedback_values = _tmp.group(2)
+			#print "Validated: prefix='" + _prefix + "' and feedback_values='" + _feedback_values + "'"
+		else:
+			rospy.logerr( "Received with ERROR! Invalid message format: " + str(recv_msg) )
+			return	## return without an expression argument returns None. Falling off the end of a function also returns None
+
+		_values = re.findall("([0-9]+)", _feedback_values)	## this is a list of strings
+		## need to conver to int (see http://stackoverflow.com/questions/22672598/converting-lists-of-digits-stored-as-strings-into-integers-python-2-7) 
+		_tmp_dict = dict( zip(F_VAL_SEQ, map(int, _values)) )
+
+		if (len(baseBehavior.__maki_feedback_values) == 0) or not ( str(_prefix) in baseBehavior.__maki_feedback_values ):
+			## if no _prefix entry exists in the dictionary, add new
+			baseBehavior.__maki_feedback_values[ str(_prefix) ] = _tmp_dict
+			rospy.loginfo( "New entry added to baseBehavior.__maki_feedback_values" + str(recv_msg) )
+
+		elif not (_tmp_dict == baseBehavior.__maki_feedback_values[ str(_prefix) ]):
+			## if _prefix entry exists, update
+			baseBehavior.__maki_feedback_values[ str(_prefix) ].update( _tmp_dict )
+			rospy.loginfo( "Updated entry in baseBehavior.__maki_feedback_values" + str(recv_msg) )
+		else:
+			pass
+
+		#print "parseMAKIFeedbackMsg: END"
+		return
 
 
 ########################
@@ -219,4 +285,5 @@ class headTiltBaseBehavior(baseBehavior):
 		## publish "reset" to /maki_command
 		baseBehavior.pubTo_maki_command( self, "reset" )
 		self.SWW_WI.sleepWhileWaitingMS( 1000, 0.05 )	## make sure command propogates and reset occurs
+
 
