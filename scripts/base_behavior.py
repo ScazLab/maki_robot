@@ -87,11 +87,10 @@ class baseBehavior(object):
 	def update( self, makiPP ):
 		self.makiPP = makiPP
 
-	def requestFeedback( self, feedback_type, time_ms=100, time_inc=0.05 ):
+	def requestFeedback( self, feedback_type, cmd_prop=True, time_ms=100, time_inc=0.05 ):
 		## check /maki_feedback_*
 		## request a feedback message
-		baseBehavior.pubTo_maki_command( self, str(SC_FEEDBACK) + str(feedback_type) + str(TERM_CHAR_SEND) )
-		self.SWW_WI.sleepWhileWaitingMS( time_ms, time_inc )	## make sure command propogates
+		baseBehavior.pubTo_maki_command( self, str(SC_FEEDBACK) + str(feedback_type) + str(TERM_CHAR_SEND), cmd_prop, time_ms, time_inc )
 
 	#####################
 	## THESE ARE COMMON FOR ALL BEHAVIORS
@@ -320,8 +319,8 @@ class headTiltBaseBehavior(baseBehavior):
 			return
 
 		## typical result
-		## enableHT duration: 0.717839002609 seconds
-		## MIN: 0.613632917404 seconds
+		## enableHT duration: 0.589332818985 seconds
+		## MIN: 0.532744884491 seconds
 		_enableHT_start_time = timer()
 
 		## re-init values
@@ -382,6 +381,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		## typical result:
 		## disableHT duration: 0.151942968369 s
+		## MAX: 0.203392982483 s
 		_disableHT_start_time = timer()
 
 		_loop_count = 0
@@ -396,7 +396,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		headTiltBaseBehavior.__ht_enabled = False
 
-		rospy.logerr(" disableHT duration: " + str( timer() - _disableHT_start_time ) + " s" )
+		rospy.logerr(" disableHT duration: " + str( timer() - _disableHT_start_time ) + " seconds" )
 		return
 
 	## TODO: bug fix -- need to replicate bug first!
