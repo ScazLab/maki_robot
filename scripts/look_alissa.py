@@ -155,27 +155,21 @@ class lookAlissa( headTiltBaseBehavior ):
 
 		if msg.data == "lookAtAlissa":
 			## try to nicely startup without jerking MAKI's head tilt servo
-			headTiltBaseBehavior.start(self, self.makiPP)
-			self.sww_wi.sleepWhileWaitingMS( 250 )
-			headTiltBaseBehavior.start(self, self.makiPP)
+			headTiltBaseBehavior.start(self)
 
 			self.macroLookAtAlissa()
 			headTiltBaseBehavior.stop(self)
 
 		elif msg.data == "lookAwayFromAlissa":
 			## try to nicely startup without jerking MAKI's head tilt servo
-			headTiltBaseBehavior.start(self, self.makiPP)
-			self.sww_wi.sleepWhileWaitingMS( 250 )
-			headTiltBaseBehavior.start(self, self.makiPP)
+			headTiltBaseBehavior.start(self)
 
 			self.macroLookAwayFromAlissa()
 			headTiltBaseBehavior.stop(self)
 
 		elif msg.data == "lookNeutral":
 			## try to nicely startup without jerking MAKI's head tilt servo
-			headTiltBaseBehavior.start(self, self.makiPP)
-			self.sww_wi.sleepWhileWaitingMS( 250 )
-			headTiltBaseBehavior.start(self, self.makiPP)
+			headTiltBaseBehavior.start(self)
 
 			self.macroLookNeutral()
 			headTiltBaseBehavior.stop(self)
