@@ -539,7 +539,8 @@ if __name__ == '__main__':
 	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
 	while ALIVE and not rospy.is_shutdown():
 		publishFeedback()	## calls recvFromArduino() and generateSIMFeedback() if SIM=True
-		sleep(0.5)	# 500ms
+		#sleep(0.5)	# 500ms		## too much latency between feedback requests and feedback responses
+		sleep(0.05)	# 50ms		## without timer(), can't tell loop speed difference between 100ms and 50ms
 
 	print str(FILENAME) + " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
 
