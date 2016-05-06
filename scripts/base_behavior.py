@@ -118,7 +118,7 @@ class baseBehavior(object):
 
 		if _pub_flag and not rospy.is_shutdown():
 			self.ros_pub.publish( commandOut )
-			if (cmd_prop):	self.SWW_WI.sleepWhileWaitingMS( time_ms, time_inc )	## make sure command propogates
+			if (cmd_prop):	self.SWW_WI.sleepWhileWaitingMS( time_ms, time_inc, end_early=False )	## make sure command propogates
 		return
 
 
