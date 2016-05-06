@@ -15,7 +15,7 @@ from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
 from head_tilt_timed_test import headTiltTimedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -49,7 +49,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 	##		reset
 	####################
 	def macroAsleep( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		self.ALIVE = True
 
 		## this is a nested while loop
@@ -64,7 +64,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 				rospy.logdebug("Entering macroAsleep outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting( 5 )
 				#print "end sleep 5"
@@ -74,19 +74,19 @@ class asleepAwakeTest( headTiltTimedTest ):
 
 			rospy.logdebug("Entering macroAsleep inner while loop")
 			_asleep_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				_asleep_count = asleepAwakeTest.helper_macroAsleep( self, _asleep_count )
 
 				## try to nicely end testing 
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_INTERRUPT
 		# end	while self.ALIVE 
 		timedTest.pubTo_maki_command( self, "reset" )
 		_sww_wi.sleepWhileWaiting(resetting_time)
@@ -95,7 +95,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 		rospy.loginfo("END: After outer while loop in macroAsleepTest()")
 
 	def helper_macroAsleep( self, asleep_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_asleep_time = None
 		_finish_asleep_time = None
@@ -252,7 +252,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 			#_sww_wi.sleepWhileWaiting( read_time, 0.5 )
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers
@@ -274,7 +274,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 	##		reset
 	####################
 	def macroAwake( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		self.ALIVE = True
 
 		## this is a nested while loop
@@ -289,7 +289,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 				rospy.logdebug("Entering macroAwake outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting( 5 )
 				#print "end sleep 5"
@@ -299,19 +299,19 @@ class asleepAwakeTest( headTiltTimedTest ):
 
 			rospy.logdebug("Entering macroAwake inner while loop")
 			_awake_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				_awake_count = asleepAwakeTest.helper_macroAwake( self, _awake_count )
 
 				## try to nicely end testing 
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_INTERRUPT
 		# end	while self.ALIVE 
 		timedTest.pubTo_maki_command( self, "reset" )
 		_sww_wi.sleepWhileWaiting(resetting_time)
@@ -320,7 +320,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 		rospy.loginfo("END: After outer while loop in macroAwakeTest()")
 
 	def helper_macroAwake( self, awake_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_awake_time = None
 		_finish_awake_time = None
@@ -448,7 +448,7 @@ class asleepAwakeTest( headTiltTimedTest ):
 			_sww_wi.sleepWhileWaiting( read_time, 0.5 )
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers

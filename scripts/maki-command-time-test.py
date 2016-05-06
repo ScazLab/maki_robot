@@ -26,7 +26,7 @@ import random
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 from saccade_test import saccadeTest
 from startle_test import startleTest
@@ -311,7 +311,7 @@ def parseMAKICommand( m_cmd ):
 #	sleepWhileWaiting( _new_ms_sleep_time, increment )
 #
 #def sleepWhileWaiting( sleep_time, increment=1 ):
-#	global PIC_INTERUPT
+#	global PIC_INTERRUPT
 #	global ALIVE
 #
 #	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
@@ -320,7 +320,7 @@ def parseMAKICommand( m_cmd ):
 #	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
 #	while ( ALIVE and
 #		not rospy.is_shutdown() and
-#		not PIC_INTERUPT and
+#		not PIC_INTERRUPT and
 #		((timer() - _start_sleep_time) < sleep_time) ):
 #		sleep(increment)
 #
@@ -473,7 +473,7 @@ if __name__ == '__main__':
 	global start_movement_time, finish_movement_time
 	global expected_movement_duration
 	global mc_count
-	global PIC_INTERUPT
+	global PIC_INTERRUPT
 	global DC_helper
 	global SWW_WI
 	global eyeSaccade, startle, blink, headNod
@@ -494,9 +494,9 @@ if __name__ == '__main__':
 	maki_command = ""
 	mc_count = 0
 	resetTimer()
-	PIC_INTERUPT = False
+	PIC_INTERRUPT = False
 	DC_helper = dynamixelConversions()
-	SWW_WI = ROS_sleepWhileWaiting_withInterupt( verbose_debug=VERBOSE_DEBUG )
+	SWW_WI = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=VERBOSE_DEBUG )
 	eyeSaccade = None
 	startle = None
 	headNod = None

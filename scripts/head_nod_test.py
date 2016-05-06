@@ -13,7 +13,7 @@ from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
 from head_tilt_timed_test import headTiltTimedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -52,7 +52,7 @@ class headNodTest( headTiltTimedTest ):
 		_v1 = False
 		_v2 = True
 
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		self.ALIVE = True
 
 
@@ -114,7 +114,7 @@ class headNodTest( headTiltTimedTest ):
 				rospy.logdebug("Entering macroHeadNod outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting(5)	# 5 seconds
 				#print "end sleep 5"
@@ -144,7 +144,7 @@ class headNodTest( headTiltTimedTest ):
 
 			rospy.logdebug("Entering macroHeadNod inner while loop")
 			_nod_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 				rospy.loginfo("-----------------")
 
 				## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
@@ -194,13 +194,13 @@ class headNodTest( headTiltTimedTest ):
 
 
 				## try to nicely end testing the headnod
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					_sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach head tilt Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach head tilt Dynamixel servo
 					headTiltTimedTest.disableHT( self )
 
-			#end	while not self.mTT_INTERUPT:
+			#end	while not self.mTT_INTERRUPT:
 			headTiltTimedTest.disableHT( self )
 
 		#end	while self.ALIVE:

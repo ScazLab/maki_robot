@@ -12,7 +12,7 @@ import random
 
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 from timed_test import timedTest
 
@@ -36,7 +36,7 @@ class saccadeTest(timedTest):
 	##	reset
 	#######################
 	def macroEyeSaccade( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		## this is a nested while loop
 		_print_once = True
@@ -48,7 +48,7 @@ class saccadeTest(timedTest):
 				rospy.logdebug("Entering macroEyeSaccade outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting( 5 )	## 5 seconds
 				#print "end sleep 5"
@@ -73,24 +73,24 @@ class saccadeTest(timedTest):
 
 			rospy.logdebug("Entering macroEyeSaccade inner while loop")
 			_saccade_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				_saccade_count = saccadeTest.helper_macroEyeSaccade( self, _saccade_count )
 
 				## try to nicely end testing the eye saccade
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_INTERRUPT
 		# end	while self.ALIVE
 		rospy.loginfo("END: After outer while loop in macroEyeSaccade()")
 
 	def helper_macroEyeSaccade( self, saccade_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_saccade_time = None
 		_start_saccade_side_time = None
@@ -152,7 +152,7 @@ class saccadeTest(timedTest):
 			rospy.loginfo("-----------------")
 
 			## try to nicely end testing the eye saccade
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers

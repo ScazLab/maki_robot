@@ -15,7 +15,7 @@ import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -29,9 +29,9 @@ class timedTest(object):
 
 	def __init__(self, verbose_debug, ros_pub):
 		self.ALIVE = True
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
-		self.SWW_WI = ROS_sleepWhileWaiting_withInterupt()
+		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		if ros_pub == None:
 			self.initROS( self )
 		else:
@@ -43,15 +43,15 @@ class timedTest(object):
 
 	def startTimedTest(self, makiPP):
 		self.ALIVE = True
-		self.mTT_INTERUPT = False
+		self.mTT_INTERRUPT = False
 		self.makiPP = makiPP
 
 	def stopTimedTest(self):
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 
 	def exitTimedTest(self):
 		self.ALIVE = False
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 
 	def update( self, makiPP ):
 		self.makiPP = makiPP
@@ -73,7 +73,7 @@ class timedTest(object):
 				rospy.logdebug("Entering macroEmptyTest outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				print "start sleep 5"
 				self.SWW_WI.sleepWhileWaiting( 5 )
 				print "end sleep 5"
@@ -83,19 +83,19 @@ class timedTest(object):
 
 			rospy.logdebug("Entering macroEmptyTest inner while loop")
 			_pass_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				_pass_count = timedTest.helper_macroEmptyTest( self, _pass_count )
 
 				## try to nicely end testing 
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					self.SWW_WI.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					self.SWW_WI.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not mTT_INTERUPT
+			# end	while not mTT_INTERRUPT
 		# end	while self.ALIVE and not rospy.is_shutdown():
 		rospy.loginfo("END: After outer while loop in macroEmptyTest()")
 
@@ -126,7 +126,7 @@ class timedTest(object):
 			self.SWW_WI.sleepWhileWaiting( read_time, 0.5 )
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers

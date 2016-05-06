@@ -12,14 +12,14 @@ import math
 from maki_robot_common import *
 
 
-class ROS_sleepWhileWaiting_withInterupt:
+class ROS_sleepWhileWaiting_withInterrupt:
 	def __init__( self, verbose_debug=False ):
-		self.PIC_INTERUPT = True
+		self.PIC_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug
 		self.step_resolution = 0.001	## nanosecond resolution	## previous values: 1.0, 0.25, 0.01 seconds
 
 	def abort( self ):
-		self.PIC_INTERUPT = True
+		self.PIC_INTERRUPT = True
 
 
 	#############################
@@ -46,7 +46,7 @@ class ROS_sleepWhileWaiting_withInterupt:
 		#print "ms_sleep_time = " + str( ms_sleep_time )
 		#print "increment = " + str( increment )
 		#print "new_ns_sleep_time = " + str( _new_ms_sleep_time )
-		ROS_sleepWhileWaiting_withInterupt.sleepWhileWaiting( self, _new_ms_sleep_time, increment, end_early )
+		ROS_sleepWhileWaiting_withInterrupt.sleepWhileWaiting( self, _new_ms_sleep_time, increment, end_early )
 
 
 	#############################
@@ -63,7 +63,7 @@ class ROS_sleepWhileWaiting_withInterupt:
 	## 	* specify if sleep should end 1 increment early (default is False)
 	#############################
 	def sleepWhileWaiting( self, sleep_time, increment=1, end_early=False ):
-		self.PIC_INTERUPT = False	## reset
+		self.PIC_INTERRUPT = False	## reset
 
 		if self.VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
 
@@ -122,7 +122,7 @@ class ROS_sleepWhileWaiting_withInterupt:
 		_start_sleep_time = rospy.get_time()
 		#rospy.sleep(increment)	# emulate a do-while
 		while (not rospy.is_shutdown() and
-			not self.PIC_INTERUPT and
+			not self.PIC_INTERRUPT and
 			(abs(rospy.get_time() - _start_sleep_time) < sleep_time) ):
 			rospy.sleep(increment)
 			#if self.VERBOSE_DEBUG:	rospy.logdebug(".")

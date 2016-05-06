@@ -12,7 +12,7 @@ from timeit import default_timer as timer	## wall clock. Unix 1/100 second granu
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -43,7 +43,7 @@ class blinkTest( timedTest ):
 	##		reset
 	#############################
 	def macroBlink( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt()
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt()
 
 		## this is a nested while loop
 		_print_once = True
@@ -56,7 +56,7 @@ class blinkTest( timedTest ):
 				rospy.logdebug("Entering macroBlink outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting(5)	# 5 seconds
 				#print "end sleep 5"
@@ -65,7 +65,7 @@ class blinkTest( timedTest ):
 
 			rospy.logdebug("Entering macroBlink inner while loop")
 			_blink_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				for _blink_rep in range (1,2):	#range(1,6):	## [1,6)
 					#_blink_count = blinkTest.helper_macroBlink( self, _blink_count, True, _blink_rep, read_time=2.0 )
@@ -76,7 +76,7 @@ class blinkTest( timedTest ):
 					rospy.logdebug("***************")
 
 					## try to nicely end testing the eye blink
-					if self.mTT_INTERUPT:
+					if self.mTT_INTERRUPT:
 						_sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach Dynamixel servo
 						timedTest.pubTo_maki_command( self, "reset" )
 						_sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach Dynamixel servo
@@ -84,11 +84,11 @@ class blinkTest( timedTest ):
 						pass
 				# end	for _blink_rep in range()
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_INTERRUPT
 		# end	while self.ALIVE 
 
 	def helper_macroBlink( self, blink_count, full_blink, blink_rep, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt()
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt()
 		#global blink_time		## list of ints
 
 		_start_blink_time = None
@@ -145,7 +145,7 @@ class blinkTest( timedTest ):
 				_finish_blink_open_time = timer()
 				_finish_blink_time = timer()
 
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					rospy.logerr("Abort blink_test")
 					break	## break out of inner for loop
 			# end	for _flutter_count in range(1, blink_rep):
@@ -165,7 +165,7 @@ class blinkTest( timedTest ):
 			rospy.loginfo("-----------------")
 
 			## try to nicely end testing the eye blink
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of outer for loop
 			else:
 				## reset timers

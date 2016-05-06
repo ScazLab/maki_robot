@@ -15,7 +15,7 @@ from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
 from head_tilt_timed_test import headTiltTimedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -54,7 +54,7 @@ class turnToScreenTest( headTiltTimedTest ):
 	##		reset
 	####################
 	def macroTurnToScreen( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		self.ALIVE = True
 
 		## this is a nested while loop
@@ -69,7 +69,7 @@ class turnToScreenTest( headTiltTimedTest ):
 				rospy.logdebug("Entering macroTurnToScreen outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_INTERRUPT:	
 				#print "start sleep 5"
 				_sww_wi.sleepWhileWaiting( 5 )
 				#print "end sleep 5"
@@ -79,19 +79,19 @@ class turnToScreenTest( headTiltTimedTest ):
 
 			rospy.logdebug("Entering macroTurnToScreen inner while loop")
 			_turn_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_INTERRUPT:
 
 				_turn_count = turnToScreenTest.helper_macroTurnToScreen( self, _turn_count )
 
 				## try to nicely end testing 
-				if self.mTT_INTERUPT:
+				if self.mTT_INTERRUPT:
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_INTERRUPT
 		# end	while self.ALIVE 
 		timedTest.pubTo_maki_command( self, "reset" )
 		_sww_wi.sleepWhileWaiting(resetting_time)
@@ -100,7 +100,7 @@ class turnToScreenTest( headTiltTimedTest ):
 		rospy.loginfo("END: After outer while loop in macroTurnToScreenTest()")
 
 	def helper_macroTurnToScreen( self, turn_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_turn_time = None
 		_finish_turn_time = None
@@ -247,7 +247,7 @@ class turnToScreenTest( headTiltTimedTest ):
 			rospy.loginfo("Done waiting for reset neutral position and speed")
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_INTERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers

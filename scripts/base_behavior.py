@@ -15,7 +15,7 @@ import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -30,9 +30,9 @@ class baseBehavior(object):
 
 	def __init__(self, verbose_debug, ros_pub):
 		self.ALIVE = True
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
-		self.SWW_WI = ROS_sleepWhileWaiting_withInterupt()
+		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		if ros_pub == None:
 			self.initROS( self )
 		else:
@@ -51,7 +51,7 @@ class baseBehavior(object):
 		_invalid_entry = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
 
 		## check to see if there is an entry with key "PP"
-		while (not rospy.is_shutdown() and self.mTT_INTERUPT):
+		while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
 			## if we were passed a valid makiPP 
 			if (makiPP != None) and (makiPP != _invalid_entry):
 				self.makiPP = makiPP
@@ -68,21 +68,21 @@ class baseBehavior(object):
 			self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
 
 		self.ALIVE = True
-		self.mTT_INTERUPT = False
+		self.mTT_INTERRUPT = False
 		return
 
 	#######################
 	# stop at a planned break point
 	#######################
 	def stop(self):
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 
 	#######################
 	# stop immediately
 	#######################
 	def abort(self):
 		self.ALIVE = False
-		self.mTT_INTERUPT = True
+		self.mTT_INTERRUPT = True
 
 	def update( self, makiPP ):
 		self.makiPP = makiPP

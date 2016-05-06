@@ -13,7 +13,7 @@ from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
 from head_tilt_timed_test import headTiltTimedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 HT_STARTLE = 525
 
@@ -40,21 +40,21 @@ class startleTest( headTiltTimedTest ):
 	## base class listing of functions and variables
 	#########################
 	#def startTimedTest(self, makiPP):
-	#	self.mTT_INTERUPT = False
+	#	self.mTT_ITERRUPT = False
 	#	self.makiPP = makiPP
 	#
 	#def stopTimedTest(self):
-	#	self.mTT_INTERUPT = True
+	#	self.mTT_ITERRUPT = True
 	#
 	#def exitTimedTest(self):
 	#	self.ALIVE = False
-	#	self.mTT_INTERUPT = True
+	#	self.mTT_ITERRUPT = True
 	#
 	#def update(self, makiPP):
 	#	self.makiPP = makiPP
 
 	def macroStartle( self ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		self.ALIVE = True
 
 		## this is a nested while loop
@@ -69,7 +69,7 @@ class startleTest( headTiltTimedTest ):
 				rospy.logdebug("Entering macroStartle outer while loop")
 				_print_once = False
 
-			if self.mTT_INTERUPT:	
+			if self.mTT_ITERRUPT:	
 				#print "start sleep 5"
 				self.SWW_WI.sleepWhileWaiting( 5 )
 				#print "end sleep 5"
@@ -79,24 +79,24 @@ class startleTest( headTiltTimedTest ):
 
 			rospy.logdebug("Entering macroStartle inner while loop")
 			_startle_count = 0
-			while not self.mTT_INTERUPT:
+			while not self.mTT_ITERRUPT:
 
 				_startle_count = startleTest.helper_macroStartle( self, _startle_count )
 
 				## try to nicely end testing 
-				if self.mTT_INTERUPT:
+				if self.mTT_ITERRUPT:
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 					timedTest.pubTo_maki_command( self, "reset" )
 					_sww_wi.sleepWhileWaiting( 1 )	## make sure to wait for message to reach Dynamixel servo
 				else:
 					pass
 
-			# end	while not self.mTT_INTERUPT
+			# end	while not self.mTT_ITERRUPT
 		# end	while self.ALIVE 
 		rospy.loginfo("END: After outer while loop in macroStartleTest()")
 
 	def helper_macroStartle( self, startle_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_lid_open_time = None
 		_finish_lid_open_time = None
@@ -177,7 +177,7 @@ class startleTest( headTiltTimedTest ):
 			_sww_wi.sleepWhileWaiting( read_time, 0.5 )
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_ITERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers
@@ -212,7 +212,7 @@ class startleTest( headTiltTimedTest ):
 
 
 	def helper_macroEmptyTest( self, pass_count, read_time=1.0 ):
-		_sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		_sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 
 		_start_pass_time = None
 		_finish_pass_time = None
@@ -240,7 +240,7 @@ class startleTest( headTiltTimedTest ):
 			_sww_wi.sleepWhileWaiting( read_time, 0.5 )
 
 			## try to nicely end test
-			if self.mTT_INTERUPT:
+			if self.mTT_ITERRUPT:
 				break	## break out of for loop
 			else:
 				## reset timers

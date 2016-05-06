@@ -12,7 +12,7 @@ from timeit import default_timer as timer	## wall clock. Unix 1/100 second granu
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from base_behavior import * 	## classes baseBehavior and headTiltBaseBehavior
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -42,7 +42,7 @@ class headNod( headTiltBaseBehavior ):
 
 		self.repetition = 5	#1
 
-		self.sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		self.sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		if self.makiPP == None:
 			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
 
@@ -111,8 +111,8 @@ class headNod( headTiltBaseBehavior ):
 			#	rospy.logdebug("Entering macroHeadNod outer while loop")
 			#	_print_once = False
 
-			if self.mTT_INTERUPT:	
-				rospy.logdebug("mTT_INTERUPT=" + str(mTT_INTERUPT))
+			if self.mTT_INTERRUPT:	
+				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				##print "start sleep 5"
 				#self.sww_wi.sleepWhileWaiting(5)	# 5 seconds
 				##print "end sleep 5"
@@ -144,7 +144,7 @@ class headNod( headTiltBaseBehavior ):
 
 			rospy.logdebug("Entering macroHeadNod inner while loop")
 			_loop_count = 0
-			while (not self.mTT_INTERUPT) and (_loop_count < self.repetition):
+			while (not self.mTT_INTERRUPT) and (_loop_count < self.repetition):
 				_loop_count = _loop_count + 1
 				rospy.loginfo("-------" + str(_loop_count) + " start ----------")
 
@@ -175,7 +175,7 @@ class headNod( headTiltBaseBehavior ):
 				if (headNod.v1 or headNod.v2 or headNod.v3) and (_loop_count < self.repetition):
 					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=IPT_NOD )
 
-			#end	while not self.mTT_INTERUPT:
+			#end	while not self.mTT_INTERRUPT:
 
 			## ALL: DOWN --> MIDDLE
 			### time_ms = IPT_NOD needed to allow head tilt to recenter to middle

@@ -12,7 +12,7 @@ from timeit import default_timer as timer	## wall clock. Unix 1/100 second granu
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from base_behavior import * 	## classes baseBehavior and headTiltBaseBehavior
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -33,7 +33,7 @@ class lookAlissa( headTiltBaseBehavior ):
 		self.DC_helper = dynamixelConversions()
 
 
-		self.sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
+		self.sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		if self.makiPP == None:
 			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
 
@@ -64,11 +64,11 @@ class lookAlissa( headTiltBaseBehavior ):
 			else:
 				return
 
-			if self.mTT_INTERUPT:	
-				rospy.logdebug("mTT_INTERUPT=" + str(mTT_INTERUPT))
+			if self.mTT_INTERRUPT:	
+				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
 
-			if not self.mTT_INTERUPT:
+			if not self.mTT_INTERRUPT:
 				rospy.loginfo("-----------------")
 
 				baseBehavior.pubTo_maki_command( self, str(self.look_at) )
@@ -76,7 +76,7 @@ class lookAlissa( headTiltBaseBehavior ):
 
 				rospy.loginfo("-----------------")
 
-			#end	if not self.mTT_INTERUPT:
+			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
 		rospy.logdebug("macroLookAtAlissa: END")
@@ -98,11 +98,11 @@ class lookAlissa( headTiltBaseBehavior ):
 			else:
 				return
 
-			if self.mTT_INTERUPT:	
-				rospy.logdebug("mTT_INTERUPT=" + str(mTT_INTERUPT))
+			if self.mTT_INTERRUPT:	
+				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
 
-			if not self.mTT_INTERUPT:
+			if not self.mTT_INTERRUPT:
 				rospy.loginfo("-----------------")
 
 				baseBehavior.pubTo_maki_command( self, str(self.look_away) )
@@ -110,7 +110,7 @@ class lookAlissa( headTiltBaseBehavior ):
 
 				rospy.loginfo("-----------------")
 
-			#end	if not self.mTT_INTERUPT:
+			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
 		rospy.logdebug("macroLookAwayFromAlissa: END")
@@ -132,11 +132,11 @@ class lookAlissa( headTiltBaseBehavior ):
 			else:
 				return
 
-			if self.mTT_INTERUPT:	
-				rospy.logdebug("mTT_INTERUPT=" + str(mTT_INTERUPT))
+			if self.mTT_INTERRUPT:	
+				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
 
-			if not self.mTT_INTERUPT:
+			if not self.mTT_INTERRUPT:
 				rospy.loginfo("-----------------")
 
 				baseBehavior.pubTo_maki_command( self, str(self.look_neutral) )
@@ -144,7 +144,7 @@ class lookAlissa( headTiltBaseBehavior ):
 
 				rospy.loginfo("-----------------")
 
-			#end	if not self.mTT_INTERUPT:
+			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
 		rospy.logdebug("macroLookNeutral: END")
