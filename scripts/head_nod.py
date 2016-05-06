@@ -27,6 +27,7 @@ class headNod( headTiltBaseBehavior ):
 	## all instances of this class share the same value
 	v1 = None
 	v2 = None
+	v3 = None
 
 	def __init__(self, verbose_debug, ros_pub):
 		## call base class' __init__
@@ -36,7 +37,10 @@ class headNod( headTiltBaseBehavior ):
 
 		## different versions of head nodding
 		headNod.v1 = False
-		headNod.v2 = True
+		headNod.v2 = False
+		headNod.v3 = True
+
+		self.repetition = 5	#1
 
 		self.sww_wi = ROS_sleepWhileWaiting_withInterupt( verbose_debug=self.VERBOSE_DEBUG )
 		if self.makiPP == None:
@@ -118,7 +122,8 @@ class headNod( headTiltBaseBehavior ):
 
 			## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
 			_ht_pp = self.makiPP["HT"]
-			_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
+			#_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
+			_delta_ht_pp = 5
 			_ht_macro_pose = HT_MIDDLE
 			if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
 				_delta_ht_pp = abs( _ht_pp - HT_UP )
@@ -126,62 +131,60 @@ class headNod( headTiltBaseBehavior ):
 			if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
 				_delta_ht_pp = abs( _ht_pp - HT_DOWN )
 				_ht_macro_pose = HT_DOWN
+			rospy.logdebug( "_ht_macro_pose = " + str(_ht_macro_pose) )
 			## publish GP of _ht_macro_pose in case in between poses
-			baseBehavior.pubTo_maki_command( self, "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND )
+			baseBehavior.pubTo_maki_command( self, "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND, cmd_prop=False )
 
 			if (_ht_macro_pose == HT_MIDDLE):	
+				## START NOD FROM HEAD UP POSITION
 				## looking up first has strongest nodding cue
-				baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up) )
-				self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_up )
+				while ( abs( self.makiPP["HT"] - HT_UP) > _delta_ht_pp ):
+					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
+					#baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up), time_ms=IPT_NOD, time_inc=0.005 )
 
-			#rospy.logdebug("Entering macroHeadNod inner while loop")
-			if not self.mTT_INTERUPT:
-				rospy.loginfo("-----------------")
+			rospy.logdebug("Entering macroHeadNod inner while loop")
+			_loop_count = 0
+			while (not self.mTT_INTERUPT) and (_loop_count < self.repetition):
+				_loop_count = _loop_count + 1
+				rospy.loginfo("-------" + str(_loop_count) + " start ----------")
 
-				## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
+				## VERSION 1: FROM UP --> MIDDLE --> DOWN --> 
 				if headNod.v1:
-					baseBehavior.pubTo_maki_command( self, str(self.nod_up_middle) )
-					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_up )
+					baseBehavior.pubTo_maki_command( self, str(self.nod_up_middle), time_ms=self.ipt_nod_middle_up, time_inc=0.001 )
 	
-					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_down) )
-					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
+					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_down), time_ms=self.ipt_nod_middle_down, time_inc=0.001 )
 
-					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_down) )
-					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
+					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_down), time_ms=self.ipt_nod_middle_down, time_inc=0.001 )
 
-					baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle) )
-					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
 		
-					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up) )
-					self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_up )
 
-				## VERSION 2: UP --> DOWN --> MIDDLE
+				## VERSION 2: UP --> DOWN --> 
 				if headNod.v2:
-					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up) )
-					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
+					#baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=IPT_NOD )
+					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=self.ipt_nod_middle_up )
 
-					baseBehavior.pubTo_maki_command( self, str(self.nod_up_down) )
-					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
-
-					baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle) )
-					#self.sww_wi.sleepWhileWaitingMS( self.ipt_nod_middle_down )
-					self.sww_wi.sleepWhileWaitingMS( IPT_NOD )
-
-				rospy.loginfo("-----------------")
+					baseBehavior.pubTo_maki_command( self, str(self.nod_up_down), time_ms=IPT_NOD )
 
 
-				### try to nicely end testing the headnod
-				#if self.mTT_INTERUPT:
-				#	self.sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-				#	baseBehavior.pubTo_maki_command( self, "reset" )
-				#	self.sww_wi.sleepWhileWaiting(1)	## make sure to wait for message to reach head tilt Dynamixel servo
-				#	headTiltBaseBehavior.disableHT( self )
+				## VERSION 3: FROM UP --> DOWN --> 
+				if headNod.v3:
+					baseBehavior.pubTo_maki_command( self, str(self.nod_up_down), time_ms=IPT_NOD )
+
+
+				## ALL: DOWN --> UP -->
+				if (headNod.v1 or headNod.v2 or headNod.v3) and (_loop_count < self.repetition):
+					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=IPT_NOD )
 
 			#end	while not self.mTT_INTERUPT:
-			#headTiltBaseBehavior.disableHT( self )
 
-		#end	while self.ALIVE:
-		#headTiltBaseBehavior.disableHT( self )
+			## ALL: DOWN --> MIDDLE
+			### time_ms = IPT_NOD needed to allow head tilt to recenter to middle
+			#baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle), time_ms=IPT_NOD )
+			while ( abs( self.makiPP["HT"] - HT_MIDDLE) > _delta_ht_pp ):
+				baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
+
+			rospy.loginfo("-----------------")
+		#end	if self.ALIVE:
 
 		rospy.logdebug("macroHeadNod: END")
 		return
@@ -191,7 +194,7 @@ class headNod( headTiltBaseBehavior ):
 
 		if msg.data == "nod":
 			### try to nicely startup headnod testing without jerking MAKI's head tilt servo
-			headTiltBaseBehavior.start(self, self.makiPP)
+			headTiltBaseBehavior.start(self)
 			self.macroHeadNod()
 			headTiltBaseBehavior.stop(self)
 		return
@@ -202,9 +205,6 @@ if __name__ == '__main__':
 
 	rospy.Subscriber( "/maki_macro", String, nod.parse_maki_macro )
         rospy.logdebug( "now subscribed to /maki_macro" )
-
-	## TODO: subscribe to /maki_feedback_pres_pos
-	## TODO: update self.makiPP from /maki_feedback_pres_pos
 
 	rospy.spin()   ## keeps python from exiting until this node is stopped
 
