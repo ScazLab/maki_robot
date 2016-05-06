@@ -32,6 +32,7 @@ class baseBehavior(object):
 		self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
+		#print ros_pub
 		if ros_pub == None:
 			self.initROS( self )
 		else:
@@ -144,7 +145,12 @@ class baseBehavior(object):
 			_tmp = re.search( _object_name_format, _tmp_nodename )
 			if _tmp != None:
 				nodename = _tmp.group(1)
-			print nodename
+				#print nodename
+			else:
+				## Actually... this is already an initialized rosnode, so quick, exit!
+				self.ros_pub = nodename
+				#print nodename
+				return
 
         	# see http://wiki.ros.org/rospy/Overview/Logging
         	if self.VERBOSE_DEBUG:
