@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
@@ -144,9 +142,9 @@ class startleTest( headTiltTimedTest ):
 
 			## publish eyelid neutral to LL_OPEN_MAX GoalPosition
 			timedTest.pubTo_maki_command( self, str(_m_cmd_lid_neutral_open + _m_cmd_head_neutral_up + _m_cmd_eye_neutral_up + TERM_CHAR_SEND) )
-			_start_lid_open_time = timer()
+			_start_lid_open_time = rospy.get_time()
 			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01 )
-			_finish_lid_open_time = timer()
+			_finish_lid_open_time = rospy.get_time()
 
 			_sww_wi.sleepWhileWaitingMS( 500, 0.01 )
 			## preset eyelid to neutral GoalSpeed
@@ -223,11 +221,11 @@ class startleTest( headTiltTimedTest ):
 
 		rospy.loginfo("-----------------")
 		for _pass_time in range(0,3):	## 0, 1, 2
-			_start_pass_time = timer()
+			_start_pass_time = rospy.get_time()
 			rospy.logdebug( "resetting..." )
 			timedTest.pubTo_maki_command( self, str(_m_cmd) )
 			_sww_wi.sleepWhileWaitingMS( (_pass_time+1)*1000, 0.01 )
-			_finish_pass_time = timer()
+			_finish_pass_time = rospy.get_time()
 			_total_pass_time = abs(_finish_pass_time - _start_pass_time)
 
 			pass_count += 1

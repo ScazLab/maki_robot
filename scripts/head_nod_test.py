@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
@@ -149,8 +147,8 @@ class headNodTest( headTiltTimedTest ):
 
 				## VERSION 1: UP --> MIDDLE --> DOWN --> MIDDLE --> UP
 				if _v1:
-					_start_headnod_time = timer()
-					_start_headnod_down_time = timer()
+					_start_headnod_time = rospy.get_time()
+					_start_headnod_down_time = rospy.get_time()
 					timedTest.pubTo_maki_command( self, str(_nod_up_middle) )
 					_sww_wi.sleepWhileWaitingMS( _ipt_nod_middle_up )
 	
@@ -159,30 +157,30 @@ class headNodTest( headTiltTimedTest ):
 
 					timedTest.pubTo_maki_command( self, str(_nod_middle_down) )
 					_sww_wi.sleepWhileWaitingMS( _ipt_nod_middle_down )
-					_finish_headnod_down_time = timer()
+					_finish_headnod_down_time = rospy.get_time()
 
-					_start_headnod_up_time = timer()
+					_start_headnod_up_time = rospy.get_time()
 					timedTest.pubTo_maki_command( self, str(_nod_down_middle) )
 					_sww_wi.sleepWhileWaitingMS( _ipt_nod_middle_down )
 		
 					timedTest.pubTo_maki_command( self, str(_nod_middle_up) )
 					_sww_wi.sleepWhileWaitingMS( _ipt_nod_middle_up )
-					_finish_headnod_up_time = timer()
-					_finish_headnod_time = timer()
+					_finish_headnod_up_time = rospy.get_time()
+					_finish_headnod_time = rospy.get_time()
 
 				## VERSION 2: UP --> DOWN --> UP
 				if _v2:
-					_start_headnod_time = timer()
-					_start_headnod_down_time = timer()
+					_start_headnod_time = rospy.get_time()
+					_start_headnod_down_time = rospy.get_time()
 					timedTest.pubTo_maki_command( self, str(_nod_up_down) )
 					_sww_wi.sleepWhileWaitingMS( IPT_NOD )
-					_finish_headnod_down_time = timer()
+					_finish_headnod_down_time = rospy.get_time()
 
-					_start_headnod_up_time = timer()
+					_start_headnod_up_time = rospy.get_time()
 					timedTest.pubTo_maki_command( self, str(_nod_down_up) )
 					_sww_wi.sleepWhileWaitingMS( IPT_NOD )
-					_finish_headnod_up_time = timer()
-					_finish_headnod_time = timer()
+					_finish_headnod_up_time = rospy.get_time()
+					_finish_headnod_time = rospy.get_time()
 
 				_nod_count += 1
 				#rospy.loginfo( "Completed " + str(_nod_count) + " full head nods" )

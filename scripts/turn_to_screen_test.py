@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 import random
 
 from maki_robot_common import *
@@ -200,10 +198,10 @@ class turnToScreenTest( headTiltTimedTest ):
 			#_pub_cmd += str(SC_SET_IPT) + str(_ms_duration)
 			_pub_cmd += str(TERM_CHAR_SEND) 
 			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
-			_start_turn_time = timer()
+			_start_turn_time = rospy.get_time()
 			rospy.logerr("Start TURN...")
 			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01, False )
-			_finish_turn_time = timer()
+			_finish_turn_time = rospy.get_time()
 			_total_turn_time = abs( _finish_turn_time - _start_turn_time )
 			turn_count += 1
 			rospy.logerr( "Turn #" + str(turn_count) 

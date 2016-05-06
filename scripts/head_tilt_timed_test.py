@@ -8,7 +8,6 @@ import math
 import sys
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
 
 

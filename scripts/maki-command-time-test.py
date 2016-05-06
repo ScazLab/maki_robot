@@ -8,12 +8,10 @@ from std_srvs.srv import Empty
 import os
 
 import math
-from time import sleep
+from time import sleep	## TODO: replace sleep() with rospy.sleep()
 import sys
 import string
 import signal 
-
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 
 import thread
 import threading
@@ -148,7 +146,7 @@ def parseRecvMsg ( recv_msg ):
 		if not init_dict[prefix]:
 			init_dict[prefix] = True
 		else:
-			finish_movement_time = timer()
+			finish_movement_time = rospy.get_time()
 			rospy.logdebug( "---- finish_movement_time = " + str(finish_movement_time) )
 
 	elif prefix=="GP":	#SC_GET_GP	# goal position
@@ -275,10 +273,10 @@ def parseMAKICommand( m_cmd ):
 	if _tmp != None:
 		## if the start_movement_timer already exists
 		if start_movement_time != None:
-			finish_movement_time = timer()
+			finish_movement_time = rospy.get_time()
 			reportMovementDuration()
 
-		start_movement_time = timer()
+		start_movement_time = rospy.get_time()
 		rospy.logdebug( "----- start_movement_time = " + str(start_movement_time) )
 		#print _tmp.group(1)
 		#print _tmp.group(2)
@@ -316,12 +314,12 @@ def parseMAKICommand( m_cmd ):
 #
 #	if VERBOSE_DEBUG: rospy.logdebug( "BEGIN: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
 #	increment = max(0.01, increment)	## previous max values: 1.0, 0.25	## in seconds
-#	_start_sleep_time = timer()
+#	_start_sleep_time = rospy.get_time()
 #	sleep(increment)	# ktsui, INSPIRE 4, pilot 2; emulate a do-while
 #	while ( ALIVE and
 #		not rospy.is_shutdown() and
 #		not PIC_INTERRUPT and
-#		((timer() - _start_sleep_time) < sleep_time) ):
+#		((rospy.get_time() - _start_sleep_time) < sleep_time) ):
 #		sleep(increment)
 #
 #	if VERBOSE_DEBUG: rospy.logdebug( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )

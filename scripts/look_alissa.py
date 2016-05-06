@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from base_behavior import * 	## classes baseBehavior and headTiltBaseBehavior

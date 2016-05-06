@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 import random
 
 from maki_robot_common import *
@@ -189,10 +187,10 @@ class asleepAwakeTest( headTiltTimedTest ):
 			_pub_cmd += str(SC_SET_IPT) + str(_ms_duration)
 			_pub_cmd += str(TERM_CHAR_SEND) 
 			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
-			_start_asleep_time = timer()
+			_start_asleep_time = rospy.get_time()
 			#rospy.logerr("Start ASLEEP...")
 			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01, False )
-			_finish_asleep_time = timer()
+			_finish_asleep_time = rospy.get_time()
 			_total_asleep_time = abs( _finish_asleep_time - _start_asleep_time )
 			asleep_count += 1
 			rospy.logerr( "Asleep #" + str(asleep_count) 
@@ -425,10 +423,10 @@ class asleepAwakeTest( headTiltTimedTest ):
 			_pub_cmd += str(SC_SET_IPT) + str(_ms_duration)
 			_pub_cmd += str(TERM_CHAR_SEND) 
 			timedTest.pubTo_maki_command( self, str(_pub_cmd) )
-			_start_awake_time = timer()
+			_start_awake_time = rospy.get_time()
 			rospy.loginfo("Start waking up")
 			_sww_wi.sleepWhileWaitingMS( _ms_duration, 0.01, False )
-			_finish_awake_time = timer()
+			_finish_awake_time = rospy.get_time()
 			rospy.loginfo("Done waking up")
 
 			_total_awake_time = abs( _finish_awake_time - _start_awake_time )

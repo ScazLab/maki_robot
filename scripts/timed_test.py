@@ -8,7 +8,6 @@ import math
 import sys
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
 
 
@@ -109,11 +108,11 @@ class timedTest(object):
 
 		rospy.loginfo("-----------------")
 		for _pass_time in range(0,3):	## 0, 1, 2
-			_start_pass_time = timer()
+			_start_pass_time = rospy.get_time()
 			rospy.logdebug( "resetting..." )
 			timedTest.pubTo_maki_command( self, str(_m_cmd) )
 			self.SWW_WI.sleepWhileWaitingMS( (_pass_time+1)*1000, 0.01 )
-			_finish_pass_time = timer()
+			_finish_pass_time = rospy.get_time()
 			_total_pass_time = abs(_finish_pass_time - _start_pass_time)
 
 			pass_count += 1

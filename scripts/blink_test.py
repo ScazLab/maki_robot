@@ -7,8 +7,6 @@ import os
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
@@ -123,33 +121,33 @@ class blinkTest( timedTest ):
 				blinkTest.presetGoalSpeed_ticks_durationMS( self, "LL", abs(LL_CLOSE_HALF - LL_OPEN_DEFAULT), _half_blink_time )
 			_blink_open = _m_cmd_prefix + str(LL_OPEN_DEFAULT) + _m_cmd_suffix
 		
-			_start_blink_time = timer()
+			_start_blink_time = rospy.get_time()
 			#for blink_rep in range(1, 6):
 			for _flutter_count in range(0, blink_rep):
 				rospy.logdebug( str(_flutter_count) )
 
 				## blink close
-				_start_blink_close_time = timer()
+				_start_blink_close_time = rospy.get_time()
 				rospy.logdebug( "blink close" )
 				timedTest.pubTo_maki_command( self, str(_blink_close) )
 				_sww_wi.sleepWhileWaitingMS( _half_blink_time, 0.01 )
 				#_sww_wi.sleepWhileWaitingMS( _close_blink_time, 0.01 )
-				_finish_blink_close_time = timer()
+				_finish_blink_close_time = rospy.get_time()
 
 				## blink open
-				_start_blink_open_time = timer()
+				_start_blink_open_time = rospy.get_time()
 				rospy.logdebug( "blink open" )
 				timedTest.pubTo_maki_command( self, str(_blink_open) )
 				_sww_wi.sleepWhileWaitingMS( _half_blink_time, 0.01 )
 				#_sww_wi.sleepWhileWaitingMS( _open_blink_time, 0.01 )
-				_finish_blink_open_time = timer()
-				_finish_blink_time = timer()
+				_finish_blink_open_time = rospy.get_time()
+				_finish_blink_time = rospy.get_time()
 
 				if self.mTT_INTERRUPT:
 					rospy.logerr("Abort blink_test")
 					break	## break out of inner for loop
 			# end	for _flutter_count in range(1, blink_rep):
-			_finish_blink_time = timer()
+			_finish_blink_time = rospy.get_time()
 
 			## make it easier to read
 			_sww_wi.sleepWhileWaiting( read_time, .5 )

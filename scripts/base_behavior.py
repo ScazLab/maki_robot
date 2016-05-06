@@ -8,7 +8,6 @@ import math
 import sys
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
 
 
@@ -321,7 +320,7 @@ class headTiltBaseBehavior(baseBehavior):
 		## typical result
 		## enableHT duration: 0.589332818985 seconds
 		## MIN: 0.532744884491 seconds
-		_enableHT_start_time = timer()
+		_enableHT_start_time = rospy.get_time()
 
 		## re-init values
 		self.makiPP = None
@@ -368,7 +367,7 @@ class headTiltBaseBehavior(baseBehavior):
 		## and status reflected in the servo motor status
 		headTiltBaseBehavior.__ht_enabled = True
 
-		rospy.logerr( "enableHT duration: " + str( timer() - _enableHT_start_time ) + " seconds" )
+		rospy.logerr( "enableHT duration: " + str( rospy.get_time() - _enableHT_start_time ) + " seconds" )
 		return
 
 	def disableHT( self ):
@@ -382,7 +381,7 @@ class headTiltBaseBehavior(baseBehavior):
 		## typical result:
 		## disableHT duration: 0.151942968369 s
 		## MAX: 0.203392982483 s
-		_disableHT_start_time = timer()
+		_disableHT_start_time = rospy.get_time()
 
 		_loop_count = 0
 		#while (self.maki_feedback_values[ str(SC_GET_TL) ]["HT"] != ht_tl_disable):
@@ -396,7 +395,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		headTiltBaseBehavior.__ht_enabled = False
 
-		rospy.logerr(" disableHT duration: " + str( timer() - _disableHT_start_time ) + " seconds" )
+		rospy.logerr(" disableHT duration: " + str( rospy.get_time() - _disableHT_start_time ) + " seconds" )
 		return
 
 	## TODO: bug fix -- need to replicate bug first!

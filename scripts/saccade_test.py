@@ -6,7 +6,6 @@ from std_msgs.msg import String
 import math
 import string
 
-from timeit import default_timer as timer	## wall clock. Unix 1/100 second granularity
 import random
 
 
@@ -115,8 +114,8 @@ class saccadeTest(timedTest):
 			## 0 = left, 1 = right
 			_rand_saccade_right = random.randint(0,1)
 
-			_start_saccade_time = timer()
-			_start_saccade_side_time = timer()
+			_start_saccade_time = rospy.get_time()
+			_start_saccade_side_time = rospy.get_time()
 			if _rand_saccade_right == 1:
 				rospy.logdebug( "saccade RIGHT" )
 				timedTest.pubTo_maki_command( self, str(_saccade_front_right) )
@@ -124,20 +123,20 @@ class saccadeTest(timedTest):
 				rospy.logdebug( "saccade LEFT" )
 				timedTest.pubTo_maki_command( self, str(_saccade_front_left) )
 			_sww_wi.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
-			_finish_saccade_side_time = timer()
-			_finish_saccade_time = timer()
+			_finish_saccade_side_time = rospy.get_time()
+			_finish_saccade_time = rospy.get_time()
 			_total_saccade_time = abs(_finish_saccade_time - _start_saccade_time)
 
 			## make it easier to read
 			_sww_wi.sleepWhileWaiting( read_time, 0.5 )
 
-			_start_saccade_time = timer()
+			_start_saccade_time = rospy.get_time()
 			## return to eye pan looking front
-			_start_saccade_front_time = timer()
+			_start_saccade_front_time = rospy.get_time()
 			timedTest.pubTo_maki_command( self, str(_saccade_front) )
 			_sww_wi.sleepWhileWaitingMS( _eye_saccade_time, 0.01 )
-			_finish_saccade_front_time = timer()
-			_finish_saccade_time = timer()
+			_finish_saccade_front_time = rospy.get_time()
+			_finish_saccade_time = rospy.get_time()
 			_total_saccade_time += abs(_finish_saccade_time - _start_saccade_time)
 
 			## make it easier to read
