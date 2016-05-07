@@ -28,6 +28,7 @@ class baseBehavior(object):
 
 
 	def __init__(self, verbose_debug, ros_pub):
+		self.count_movements = 0
 		self.ALIVE = True
 		self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
@@ -258,6 +259,93 @@ class baseBehavior(object):
 		#print "parseMAKIFeedbackMsg: END"
 		return
 
+	#####################
+	##
+	## This is blocking
+	##
+	#####################
+	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP ):
+		### SEND THE COMMAND
+		baseBehavior.pubTo_maki_command( self, gp_cmd )
+
+		_moving_flag = dict( zip(F_VAL_SEQ, [None]*len(F_VAL_SEQ)) )
+		_count_moving_flags = 0
+		if (hp_gp != None) and (hp_gp != INVALID_INT):	
+			_moving_flag["HP"] = True
+			_count_moving_flags = _count_moving_flags +1
+		if (ht_gp != None) and (ht_gp != INVALID_INT):	
+			_moving_flag["HT"] = True
+			_count_moving_flags = _count_moving_flags +1
+		if (ll_gp != None) and (ll_gp != INVALID_INT):	
+			_moving_flag["LL"] = True
+			_count_moving_flags = _count_moving_flags +1
+		if (lr_gp != None) and (lr_gp != INVALID_INT):	
+			_moving_flag["LR"] = True
+			_count_moving_flags = _count_moving_flags +1
+		if (ep_gp != None) and (ep_gp != INVALID_INT):	
+			_moving_flag["EP"] = True
+			_count_moving_flags = _count_moving_flags +1
+		if (et_gp != None) and (et_gp != INVALID_INT):	
+			_moving_flag["ET"] = True
+			_count_moving_flags = _count_moving_flags +1
+
+		if _count_moving_flags == 0:	return
+
+		self.count_movements = self.count_movements +1
+
+		_stall_count = 0
+		_old_makiPP = self.makiPP
+		_start_time = rospy.get_time()
+		### SEND THE COMMAND
+		#baseBehavior.pubTo_maki_command( self, gp_cmd )
+		while not rospy.is_shutdown():
+			## There is an implicit sleep in requestFeedback of 100ms (default)
+			baseBehavior.requestFeedback( self, SC_GET_PP ) 
+
+			if _moving_flag["HP"] and (abs(self.makiPP["HP"] - hp_gp) < delta_pp):
+				rospy.loginfo("HP done moving")
+				_moving_flag["HP"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _moving_flag["HT"] and (abs(self.makiPP["HT"] - ht_gp) < delta_pp):
+				rospy.loginfo("HT done moving")
+				_moving_flag["HT"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _moving_flag["EP"] and (abs(self.makiPP["EP"] - ep_gp) < delta_pp):
+				rospy.loginfo("EP done moving")
+				_moving_flag["EP"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _moving_flag["ET"] and (abs(self.makiPP["ET"] - et_gp) < delta_pp):
+				rospy.loginfo("ET done moving")
+				_moving_flag["ET"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _moving_flag["LL"] and (abs(self.makiPP["LL"] - ll_gp) < delta_pp):
+				rospy.loginfo("LL done moving")
+				_moving_flag["LL"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _moving_flag["LR"] and (abs(self.makiPP["LR"] - lr_gp) < delta_pp):
+				rospy.loginfo("LR done moving")
+				_moving_flag["LR"] = False
+				_count_moving_flags = _count_moving_flags -1
+
+			if _count_moving_flags == 0:	break
+
+			if (_old_makiPP == self.makiPP):
+				_stall_count = _stall_count + 1
+				rospy.logdebug("... _stall_count = " + str(_stall_count) )
+				baseBehavior.requestFeedback( self, SC_GET_PP ) 
+			if (_stall_count == 10):	
+				rospy.logerr("STALLED!!!")
+				break
+			_old_makiPP = self.makiPP
+		_duration = abs(rospy.get_time() - _start_time)
+		rospy.loginfo("**** DONE! movement took " + str(_duration) + " seconds")
+		return
+
 
 ########################
 ## All behavior macros involving head tilt (HT) will use this as base class
@@ -448,4 +536,5 @@ class headTiltBaseBehavior(baseBehavior):
 		## call base class
 		baseBehavior.parseMAKIFeedbackMsg( self, recv_msg )
 		return
+
 
