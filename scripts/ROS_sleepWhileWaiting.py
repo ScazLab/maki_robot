@@ -78,7 +78,7 @@ class ROS_sleepWhileWaiting_withInterrupt:
 		_adjust_start_time = rospy.get_time()
 		if (sleep_time < increment):
 			increment = sleep_time
-			rospy.logerr("sleepWhileWaiting: **** sleep_time is less than increment; increment adjusted from " + str(_orig_increment) + " seconds to " + str(increment))
+			rospy.logwarn("sleepWhileWaiting: **** sleep_time is less than increment; increment adjusted from " + str(_orig_increment) + " seconds to " + str(increment))
 		if end_early:
 			sleep_time = sleep_time - increment
 
@@ -101,7 +101,7 @@ class ROS_sleepWhileWaiting_withInterrupt:
 				## prevent from going beyond nanosecond resolution
 				if (increment < 2*self.step_resolution):
 					increment = self.step_resolution
-					rospy.logerr("sleepWhileWaiting: **** ADJUSTMENT CUTOFF: increment auto-adjusted from " + str(_orig_increment) + " seconds to " + str(increment) )
+					rospy.logwarn("sleepWhileWaiting: **** ADJUSTMENT CUTOFF: increment auto-adjusted from " + str(_orig_increment) + " seconds to " + str(increment) )
 					break	## exit while loop
 			else:
 				if (increment != _orig_increment):

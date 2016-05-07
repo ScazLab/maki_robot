@@ -248,7 +248,8 @@ class baseBehavior(object):
 		elif not (_tmp_dict == self.maki_feedback_values[ str(_prefix) ]):
 			## if _prefix entry exists, update
 			self.maki_feedback_values[ str(_prefix) ].update( _tmp_dict )
-			rospy.loginfo( "Updated entry in self.maki_feedback_values" + str(recv_msg) )
+			#rospy.loginfo( "Updated entry in self.maki_feedback_values" + str(recv_msg) )
+			rospy.logdebug( "Updated entry in self.maki_feedback_values" + str(recv_msg) )
 		else:
 			pass
 
@@ -303,32 +304,32 @@ class baseBehavior(object):
 			baseBehavior.requestFeedback( self, SC_GET_PP ) 
 
 			if _moving_flag["HP"] and (abs(self.makiPP["HP"] - hp_gp) < delta_pp):
-				rospy.loginfo("HP done moving")
+				rospy.logdebug("HP done moving")
 				_moving_flag["HP"] = False
 				_count_moving_flags = _count_moving_flags -1
 
 			if _moving_flag["HT"] and (abs(self.makiPP["HT"] - ht_gp) < delta_pp):
-				rospy.loginfo("HT done moving")
+				rospy.logdebug("HT done moving")
 				_moving_flag["HT"] = False
 				_count_moving_flags = _count_moving_flags -1
 
 			if _moving_flag["EP"] and (abs(self.makiPP["EP"] - ep_gp) < delta_pp):
-				rospy.loginfo("EP done moving")
+				rospy.logdebug("EP done moving")
 				_moving_flag["EP"] = False
 				_count_moving_flags = _count_moving_flags -1
 
 			if _moving_flag["ET"] and (abs(self.makiPP["ET"] - et_gp) < delta_pp):
-				rospy.loginfo("ET done moving")
+				rospy.logdebug("ET done moving")
 				_moving_flag["ET"] = False
 				_count_moving_flags = _count_moving_flags -1
 
 			if _moving_flag["LL"] and (abs(self.makiPP["LL"] - ll_gp) < delta_pp):
-				rospy.loginfo("LL done moving")
+				rospy.logdebug("LL done moving")
 				_moving_flag["LL"] = False
 				_count_moving_flags = _count_moving_flags -1
 
 			if _moving_flag["LR"] and (abs(self.makiPP["LR"] - lr_gp) < delta_pp):
-				rospy.loginfo("LR done moving")
+				rospy.logdebug("LR done moving")
 				_moving_flag["LR"] = False
 				_count_moving_flags = _count_moving_flags -1
 
