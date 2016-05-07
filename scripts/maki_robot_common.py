@@ -38,7 +38,8 @@ EP = 3	## EYE_PAN
 ET = 4	## EYE_TILT
 HT = 5	## HEAD_TILT
 HP = 6	## HEAD_PAN
-F_VAL_SEQ = [ "LR", "LL", "EP", "ET", "HT", "HP" ]
+#F_VAL_SEQ = [ "LR", "LL", "EP", "ET", "HT", "HP" ]
+F_VAL_SEQ = ( "LR", "LL", "EP", "ET", "HT", "HP" )	## tuples are immutable lists
 
 ## from MAKI-Arbotix-Interface.py
 ## servo control infix for type of feedback
@@ -101,6 +102,14 @@ LL_OPEN_MAX = 535
 LL_OPEN_DEFAULT = 500
 LL_CLOSE_HALF = 430
 LL_CLOSE_MAX = 361
+
+###################################
+SERVO_MIN = ( 484, 361, 460, 425, 442, 256 )
+SERVO_NEUTRAL = ( 525, 500, 512, 512, 512, 512 )
+SERVO_MAX = ( 666, 535, 578, 610, 582, 768 )
+
+DELTA_PP = 5
+###################################
 
 ## More MAKI related global variables from _2015_05_14_KECK_MAKIv1_4_teleop.ino
 #blink_time = [1000, 500, 250, 200, 150]	#, 100, 75]	## ms... 75ms looks even more realistic
