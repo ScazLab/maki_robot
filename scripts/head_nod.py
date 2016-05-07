@@ -18,7 +18,17 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ##
 ## Description: from neutral, MAKI nods up (HT_UP)
 ##	and  then moves to HT_DOWN
-##	TODO: Eye tilt (ET) and/or eyelid (LL) compensates for HT
+##
+## TODO: 
+##	* Eye tilt (ET) and/or eyelid (LL) compensates for HT
+##	* Change from static definitions of HT_UP, HT_DOWN. 
+##	* Use dynamixelConversions instead of IPT
+##	* Access repetion variable
+##	* Add style variable (e.g, default, full range, subtle/backchannel
+##
+## MOTION CRITIQUE:
+##	v3 motion still has slight pause when transitioning from arriving at
+##	HT_UP before going down
 ########################
 class headNod( headTiltBaseBehavior ):
 	## variables private to this class
@@ -38,7 +48,7 @@ class headNod( headTiltBaseBehavior ):
 		headNod.v2 = False
 		headNod.v3 = True
 
-		self.repetition = 5	#1
+		self.repetition = 1
 
 		self.sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		if self.makiPP == None:
@@ -118,31 +128,38 @@ class headNod( headTiltBaseBehavior ):
 				##print "shouldn't get here"
 				return
 
-			## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
-			_ht_pp = self.makiPP["HT"]
-			#_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
-			_delta_ht_pp = 5
-			_ht_macro_pose = HT_MIDDLE
-			if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
-				_delta_ht_pp = abs( _ht_pp - HT_UP )
-				_ht_macro_pose = HT_UP
-			if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
-				_delta_ht_pp = abs( _ht_pp - HT_DOWN )
-				_ht_macro_pose = HT_DOWN
-			rospy.logdebug( "_ht_macro_pose = " + str(_ht_macro_pose) )
-			## publish GP of _ht_macro_pose in case in between poses
-			baseBehavior.pubTo_maki_command( self, "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND, cmd_prop=False )
+			## ----- COMMENTED OUT ------
+			## NOTE: Maki-ro should be able to nod regardless of initial HT position
 
-			if (_ht_macro_pose == HT_MIDDLE):	
-				## START NOD FROM HEAD UP POSITION
-				## looking up first has strongest nodding cue
-				while ( abs( self.makiPP["HT"] - HT_UP) > _delta_ht_pp ):
-					baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
+			## where is MAKI's HT closest to currently? HT_UP, HT_MIDDLE, HT_DOWN
+			#_ht_pp = self.makiPP["HT"]
+			#_delta_ht_pp = abs( _ht_pp - HT_MIDDLE )
+			#_delta_ht_pp = DELTA_PP
+			#_ht_macro_pose = HT_MIDDLE
+			#if ( abs( _ht_pp - HT_UP ) < _delta_ht_pp ):
+			#	_delta_ht_pp = abs( _ht_pp - HT_UP )
+			#	_ht_macro_pose = HT_UP
+			#if ( abs( _ht_pp - HT_DOWN ) < _delta_ht_pp ):
+			#	_delta_ht_pp = abs( _ht_pp - HT_DOWN )
+			#	_ht_macro_pose = HT_DOWN
+			#rospy.logdebug( "_ht_macro_pose = " + str(_ht_macro_pose) )
+			## publish GP of _ht_macro_pose in case in between poses
+			#baseBehavior.pubTo_maki_command( self, "HT" + SC_SET_GP + str(_ht_macro_pose) + TERM_CHAR_SEND, cmd_prop=False )
+			#
+			#if (_ht_macro_pose == HT_MIDDLE):	
+			#	## START NOD FROM HEAD UP POSITION
+			#	## looking up first has strongest nodding cue
+			#	while ( abs( self.makiPP["HT"] - HT_UP) > _delta_ht_pp ):
+			#		baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
 					#baseBehavior.pubTo_maki_command( self, str(self.nod_middle_up), time_ms=IPT_NOD, time_inc=0.005 )
+
+			## START NOD FROM HEAD UP POSITION
+			## looking up first has strongest nodding cue
+			baseBehavior.monitorMoveToGP( self, str(self.nod_middle_up), ht_gp=HT_UP, delta_pp=3.5*DELTA_PP )
 
 			rospy.logdebug("Entering macroHeadNod inner while loop")
 			_loop_count = 0
-			while (not self.mTT_INTERRUPT) and (_loop_count < self.repetition):
+			while (not rospy.is_shutdown()) and (not self.mTT_INTERRUPT) and (_loop_count < self.repetition):
 				_loop_count = _loop_count + 1
 				rospy.loginfo("-------" + str(_loop_count) + " start ----------")
 
@@ -166,20 +183,22 @@ class headNod( headTiltBaseBehavior ):
 
 				## VERSION 3: FROM UP --> DOWN --> 
 				if headNod.v3:
-					baseBehavior.pubTo_maki_command( self, str(self.nod_up_down), time_ms=IPT_NOD )
-
+					#baseBehavior.pubTo_maki_command( self, str(self.nod_up_down), time_ms=IPT_NOD )
+					baseBehavior.monitorMoveToGP( self, str(self.nod_up_down), ht_gp=HT_DOWN, delta_pp=3.5*DELTA_PP )
 
 				## ALL: DOWN --> UP -->
 				if (headNod.v1 or headNod.v2 or headNod.v3) and (_loop_count < self.repetition):
-					baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=IPT_NOD )
+					#baseBehavior.pubTo_maki_command( self, str(self.nod_down_up), time_ms=IPT_NOD )
+					baseBehavior.monitorMoveToGP( self, str(self.nod_down_up), ht_gp=HT_UP, delta_pp=3.5*DELTA_PP )
 
 			#end	while not self.mTT_INTERRUPT:
 
 			## ALL: DOWN --> MIDDLE
 			### time_ms = IPT_NOD needed to allow head tilt to recenter to middle
 			#baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle), time_ms=IPT_NOD )
-			while ( abs( self.makiPP["HT"] - HT_MIDDLE) > _delta_ht_pp ):
-				baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
+			#while (not rospy.is_shutdown()) and ( abs( self.makiPP["HT"] - HT_MIDDLE) > _delta_ht_pp ):
+			#	baseBehavior.pubTo_maki_command( self, str(self.nod_down_middle), time_ms=self.ipt_nod_middle_up, time_inc=0.005 )
+			baseBehavior.monitorMoveToGP( self, str(self.nod_down_middle), ht_gp=HT_MIDDLE )
 
 			rospy.loginfo("-----------------")
 		#end	if self.ALIVE:
