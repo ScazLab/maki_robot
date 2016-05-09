@@ -380,7 +380,7 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_disable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_disable) + str(TERM_CHAR_SEND)
 
 
-	def start( self, makiPP=None ):
+	def start( self, makiPP=None, enable_ht=True ):
 		## need to call base class' start function first!!!!
 		baseBehavior.start( self, makiPP )
 
@@ -392,15 +392,15 @@ class headTiltBaseBehavior(baseBehavior):
 			else:
 				rospy.loginfo("Waiting for a message on /maki_feedback_torque_limit...")
 				## request a feedback message
-				baseBehavior.requestFeedback( self, str(SC_GET_TL) )
+				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
 
-			self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
+			#self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
 
-		#baseBehavior.start( self, makiPP )
-		self.enableHT()
+		if enable_ht:	self.enableHT()
 
 	def stop( self ):
 		rospy.logdebug( "headTiltBaseBehavior: stop()" )
+		## call base behavior first
 		baseBehavior.stop( self )
 		self.disableHT()
 		rospy.logdebug( "headTiltBaseBehavior: stop() -- END" )
@@ -409,7 +409,7 @@ class headTiltBaseBehavior(baseBehavior):
 		if headTiltBaseBehavior.__ht_enabled == True:
 			## already enabled
 			## keep enabled; head tilt servo monitor might be running, so reset timer
-			baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd), cmd_prop=False )
+			headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd), cmd_prop=False )
 			return
 
 		## typical result
@@ -425,9 +425,9 @@ class headTiltBaseBehavior(baseBehavior):
 		while (self.makiPP == None) and (not rospy.is_shutdown()):
 			if (_loop_count == 0):
 				## request current servo motor values
-				baseBehavior.requestFeedback( self, str(SC_GET_TL) )
+				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
 			elif (_loop_count == 3):
-				baseBehavior.requestFeedback( self, str(SC_GET_PP) )
+				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_PP) )
 			else:
 				self.SWW_WI.sleepWhileWaitingMS( 100, 0.05 )	## make sure command propogates
 			_loop_count = (1 + _loop_count) % 20
@@ -435,25 +435,25 @@ class headTiltBaseBehavior(baseBehavior):
 
 		if (self.maki_feedback_values[ str(SC_GET_TL) ]["HT"] == ht_tl_enable):
 			## keep enabled; head tilt servo monitor might be running, so reset timer
-			baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd), cmd_prop=False )
+			headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd), cmd_prop=False )
 			## set flag to reflect servo status
 			headTiltBaseBehavior.__ht_enabled = True
 			return
 
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+			headTiltBaseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
 		
 		## wait here until feedback is published to rostopics
 		_loop_count = 0
 		#while (self.maki_feedback_values[ str(SC_GET_TL) ]["HT"] != ht_tl_enable):
 		while (not rospy.is_shutdown()) and (not headTiltBaseBehavior.__ht_enabled):	## value set in parseMAKIFeedbackMsg
 			if (_loop_count == 0):
-				baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
+				headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
 
 			## every pass through,
 			## request current servo motor values
-			baseBehavior.requestFeedback( self, str(SC_GET_TL) )
+			headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
 
 			_loop_count = (1 + _loop_count) % 10
 			rospy.logdebug( "enable, 2nd while: " + str(_loop_count) )
@@ -470,9 +470,6 @@ class headTiltBaseBehavior(baseBehavior):
 			## already disabled
 			return
 
-		#baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_disable_cmd) )
-		#headTiltBaseBehavior.__ht_enabled = False
-
 		## typical result:
 		## disableHT duration: 0.151942968369 s
 		## MAX: 0.203392982483 s
@@ -482,8 +479,8 @@ class headTiltBaseBehavior(baseBehavior):
 		#while (self.maki_feedback_values[ str(SC_GET_TL) ]["HT"] != ht_tl_disable):
 		while (not rospy.is_shutdown()) and headTiltBaseBehavior.__ht_enabled:	## value set in parseMAKIFeedbackMsg
 			if (_loop_count % 10) == 0:
-				baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_disable_cmd) )
-				baseBehavior.requestFeedback( self, str(SC_GET_TL) )
+				headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_disable_cmd) )
+				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
 			else:
 				self.SWW_WI.sleepWhileWaitingMS( 100, 0.05 )	## make sure command propogates
 			_loop_count = 1 + _loop_count
@@ -498,14 +495,14 @@ class headTiltBaseBehavior(baseBehavior):
 
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+			headTiltBaseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
 		
 		## send enable command
-		baseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
+		headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
 		headTiltBaseBehavior.__ht_enabled = True
 
 		## publish "reset" to /maki_command
-		baseBehavior.pubTo_maki_command( self, "reset" )
+		headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
 
 	def parseMAKIFeedbackMsg ( self, recv_msg ):
 		_tmp = headTiltBaseBehavior.__maki_feedback_format.search( recv_msg.data )
