@@ -49,9 +49,14 @@ class selectiveAttention( headTiltBaseBehavior ):
 		## add anything else needed by an instance of this subclass
 		self.DC_helper = dynamixelConversions()
 
-		#self.sww_wi = ROS_sleepWhileWaiting_withInterrupt( verbose_debug=self.VERBOSE_DEBUG )
 		if self.makiPP == None:
 			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
+
+		## Does Maki-ro remain in end position (shift=True)
+		## or revert to ground position (shift=False)
+		self.shift = False	## default is False
+		self.origin_ep = EP_FRONT		## default is neutral
+		self.origin_et = ET_MIDDLE	## default is neutral
 
 		## set random range for eye pan/tilt location centered around neutral
 		## 30 ticks looks paranoid
@@ -66,17 +71,6 @@ class selectiveAttention( headTiltBaseBehavior ):
 		self.visual_scan_rest_enabled = True
 		self.visual_scan_rest_min = 100	#50	## milliseconds
 		self.visual_scan_rest_max = 400	#300	## milliseconds
-		self.ep_rand_min = EP_FRONT - self.ep_delta_range
-		self.ep_rand_max = EP_FRONT + self.ep_delta_range
-		self.et_rand_min = ET_MIDDLE - self.et_delta_range
-		self.et_rand_max = ET_MIDDLE + self.et_delta_range
-		## check rand range values
-		if self.ep_rand_min < EP_LEFT:	self.ep_rand_min = EP_LEFT
-		if self.ep_rand_max > EP_RIGHT:	self.ep_rand_max = EP_RIGHT
-		if self.et_rand_min < ET_DOWN:	self.et_rand_min = ET_DOWN
-		if self.et_rand_max > ET_UP:	self.et_rand_max = ET_UP
-		rospy.logdebug("EPan range: (" + str(self.ep_rand_min) + ", " + str(self.ep_rand_max) + ")")
-		rospy.logdebug("ETilt range: (" + str(self.et_rand_min) + ", " + str(self.et_rand_max) + ")")
 
 		self.ALIVE = True
 		return
@@ -91,21 +85,32 @@ class selectiveAttention( headTiltBaseBehavior ):
 	##		visualScan stop
 	##
 	###########################
-	def macroVisualScan( self ):
+	def macroVisualScan( self, shift=False ):
 		rospy.logdebug("macroVisualScan: BEGIN")
 
-		## this is a nested while loop
+		## Does Maki-ro remain in end position (shift=True)
+		## or revert to ground position (shift=False)
+		self.shift = shift
+
 		selectiveAttention.requestFeedback( self, SC_GET_PP )
 		_previous_ep = self.makiPP["EP"]
 		_previous_et = self.makiPP["ET"]
+		if not shift:
+			## when visualScan ends, revert to starting eye pan/tilt
+			self.origin_ep = _previous_ep
+			self.origin_et = _previous_et
+		## set ranges for visual scanning
+		selectiveAttention.setVisualScanRange( self, _previous_ep, _previous_et)
+
 		_loop_count = 0
 		_start_time = rospy.get_time()
+		## this is a nested while loop
 		while self.ALIVE and not rospy.is_shutdown():
 
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(self.mTT_INTERRUPT))
 				##print "start sleep 5"
-				#self.sww_wi.sleepWhileWaiting(5)	# 5 seconds
+				#self.SWW_WI.sleepWhileWaiting(5)	# 5 seconds
 				##print "end sleep 5"
 				#continue	## begin loop again from the beginning skipping below
 				##print "shouldn't get here"
@@ -156,6 +161,10 @@ class selectiveAttention( headTiltBaseBehavior ):
 			## store previous values
 			_previous_ep = self.makiPP["EP"]
 			_previous_et = self.makiPP["ET"]
+			if shift:
+				## if shift==True, Maki-ro's eyes will remain in end position
+				self.origin_ep = _previous_ep
+				self.origin_et = _previous_et
 
 			_loop_count = _loop_count +1
 			_duration = abs(rospy.get_time() - _start_time)
@@ -165,6 +174,41 @@ class selectiveAttention( headTiltBaseBehavior ):
 		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
 		return
 
+	def setVisualScanRange( self, ep, et, ep_delta=None, et_delta=None):
+		if ep_delta == None:	ep_delta=self.ep_delta_range	
+		if et_delta == None:	et_delta=self.et_delta_range	
+
+		self.ep_rand_min = ep - ep_delta
+		self.ep_rand_max = ep + ep_delta
+		self.et_rand_min = et - et_delta
+		self.et_rand_max = et + et_delta
+
+		## check rand range values
+		if self.ep_rand_min < EP_LEFT:	self.ep_rand_min = EP_LEFT
+		if self.ep_rand_max > EP_RIGHT:	self.ep_rand_max = EP_RIGHT
+		if self.et_rand_min < ET_DOWN:	self.et_rand_min = ET_DOWN
+		if self.et_rand_max > ET_UP:	self.et_rand_max = ET_UP
+		rospy.logdebug("EPan range: (" + str(self.ep_rand_min) + ", " + str(self.ep_rand_max) + ")")
+		rospy.logdebug("ETilt range: (" + str(self.et_rand_min) + ", " + str(self.et_rand_max) + ")")
+		return
+
+	def setVisualScanTargetPose( self, ep, et):
+		self.origin_ep = ep
+		self.origin_et = et
+
+		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) + str(TERM_CHAR_SEND) 
+		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
+
+	def stopVisualScan( self ):
+		## set eye pan and tilt  
+		## if shift==False, Maki-ro's eyes will return to where they were when
+		## visual scan started
+		## if shift==True, Maki-ro's eyes will remain (not move)
+
+		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) + str(TERM_CHAR_SEND) 
+		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
+		headTiltBaseBehavior.stop(self)
+
 	def parse_maki_macro( self, msg ):
 		print msg.data
 
@@ -173,7 +217,7 @@ class selectiveAttention( headTiltBaseBehavior ):
 			headTiltBaseBehavior.start(self, enable_ht=False)
 			self.macroVisualScan()
 		elif msg.data == "visualScan stop":
-			headTiltBaseBehavior.stop(self)
+			self.stopVisualScan()
 		else:
 			pass
 
