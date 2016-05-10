@@ -543,3 +543,92 @@ class headTiltBaseBehavior(baseBehavior):
 		return
 
 
+########################
+## All behavior macros involving eyelids (LL) will use this as base class
+##
+## TODO: Incorporate LR even though doesn't exist in our Maki-ro
+########################
+class eyelidBaseBehavior( baseBehavior ):
+	## variables private to this class
+	## all instances of this class share the same value
+	# none
+
+
+	def __init__(self, verbose_debug, ros_pub):
+		## call base class' __init__
+		baseBehavior.__init__( self, verbose_debug, ros_pub )
+		## add anything else needed by an instance of this subclass
+
+		if self.makiPP == None:
+			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
+
+		self.origin_ll = LL_OPEN_DEFAULT		## default is neutral
+		self.ll_open = LL_OPEN_DEFAULT
+		self.ll_close = LL_CLOSE_MAX
+		self.ll_delta_range = abs(self.ll_open - self.ll_close)	## ticks
+
+		self.ALIVE = True
+		return
+
+	def setEyelidRange( self, ll, ll_delta=None, ll_close=None):
+		if ll_delta == None and ll_close == None:	
+			ll_delta = self.ll_delta_range	
+		elif ll_delta == None and ll_close != None:
+			self.ll_delta_range = abs(ll - ll_close)
+			ll_delta = self.ll_delta_range
+		else:
+			## update with new value
+			self.ll_delta_range = ll_delta
+
+		self.ll_close = ll - ll_delta
+		self.ll_open = ll	## passed position
+
+		## check range values
+		if self.ll_close < LL_CLOSE_MAX:	self.ll_close = LL_CLOSE_MAX
+		if self.ll_open > LL_OPEN_MAX:	self.ll_open = LL_OPEN_MAX
+		rospy.logdebug("Eyelid range: (" + str(self.ll_close) + ", " + str(self.ll_open) + ")")
+		return
+
+	def setEyelidNeutralPose( self, ll, monitor=False, cmd_prop=False):
+		self.origin_ll = ll
+		_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
+
+		if monitor:
+			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+		else:
+			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+
+	def eyelidClose( self, ll_close=None, monitor=False, cmd_prop=False ):
+		_pub_cmd = "LLGP" 
+		if ll_close != None:	
+			_pub_cmd += str(ll_close) 
+		else:
+			_pub_cmd += str(self.ll_close) 
+		_pub_cmd += str(TERM_CHAR_SEND) 
+
+		if monitor:
+			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_close )
+		else:
+			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+		return
+		
+	def eyelidOpen( self, ll_open=None, monitor=False, cmd_prop=False ):
+		_pub_cmd = "LLGP" 
+		if ll_open !=None:
+			_pub_cmd += str(ll_open)
+		else:
+			_pub_cmd += str(self.ll_open) 
+		_pub_cmd += str(TERM_CHAR_SEND) 
+
+		if monitor:
+			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_open )
+		else:
+			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+		return
+
+
+
+
+
+
+
