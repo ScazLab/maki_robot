@@ -33,6 +33,12 @@ class baseBehavior(object):
 		self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
+		self.DC_helper = dynamixelConversions()
+
+		## Does Maki-ro remain in end position (shift=True)
+		## or revert to ground position (shift=False)
+		self.shift = False	## default is False
+
 		#print ros_pub
 		if ros_pub == None:
 			self.initROS( self )
@@ -264,10 +270,11 @@ class baseBehavior(object):
 	##
 	## This is blocking
 	##
+	## TODO: Need to raise exception when breaks on stall
 	#####################
-	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP ):
+	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
 		### SEND THE COMMAND
-		baseBehavior.pubTo_maki_command( self, gp_cmd )
+		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=cmd_prop )
 
 		_moving_flag = dict( zip(F_VAL_SEQ, [None]*len(F_VAL_SEQ)) )
 		_count_moving_flags = 0
