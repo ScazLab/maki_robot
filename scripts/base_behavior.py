@@ -347,7 +347,8 @@ class baseBehavior(object):
 				rospy.logdebug("... _stall_count = " + str(_stall_count) )
 				baseBehavior.requestFeedback( self, SC_GET_PP ) 
 			if (_stall_count == 10):	
-				rospy.logerr("STALLED!!!")
+				#rospy.logerr("STALLED!!!")
+				raise rospy.exceptions.ROSException("STALLED!!!! self.makiPP hasn't changed... is the motor at its limit?")
 				break
 			_old_makiPP = self.makiPP
 		_duration = abs(rospy.get_time() - _start_time)
@@ -594,7 +595,10 @@ class eyelidBaseBehavior( baseBehavior ):
 		_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
 
 		if monitor:
-			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+			try:
+				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+			except rospy.exceptions.ROSException as e:
+				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 
@@ -607,7 +611,10 @@ class eyelidBaseBehavior( baseBehavior ):
 		_pub_cmd += str(TERM_CHAR_SEND) 
 
 		if monitor:
-			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_close )
+			try:
+				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_close )
+			except rospy.exceptions.ROSException as e:
+				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		return
@@ -621,7 +628,10 @@ class eyelidBaseBehavior( baseBehavior ):
 		_pub_cmd += str(TERM_CHAR_SEND) 
 
 		if monitor:
-			eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_open )
+			try:
+				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_open )
+			except rospy.exceptions.ROSException as e:
+				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		return
