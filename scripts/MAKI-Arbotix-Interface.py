@@ -8,14 +8,15 @@ from std_msgs.msg import String
 import serial
 from serial.tools import list_ports
 
-from time import sleep
+#from time import sleep
 import signal
 import sys
-from timeit import default_timer as timer
+#from timeit import default_timer as timer
 
 import random
 
 from maki_robot_common import *
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 # --------------------------------------------------------------------	
 ## ---- USER DEFINED GLOBALS ----
@@ -99,13 +100,15 @@ def sendToMAKI (message):
 	global feedback_strings
 	global maki_cmd_template
 
-	rospy.logdebug( "message received" + str(message) )
+	rospy.logdebug( "message received:\t" + str(message) )
 
 	try:
 		if not SIM and maki_serial.isOpen:
 			maki_serial.flushOutput()
-	except portNotOpenError as _e1:
-		rospy.logerr( "Unable to flush serial output: " + str(_e1) )
+	except serial.serialutil.portNotOpenError as _e1:
+		rospy.logerr( "portNotOpenError: Unable to flush serial output: " + str(_e1) )
+	except ValueError as _e1_1:
+		rospy.logerr( "ValueError: Unable to flush serial output: " + str(_e1_1) )
 	
 	#handle feedback commands
 	#feedback_strings = {'FMXZ', 'FMNZ', 'FPPZ', 'FPSZ', 'FPTZ', 'FPLZ', 'FERZ', 'FDPZ', 'FDSZ'}
@@ -125,14 +128,17 @@ def sendToMAKI (message):
 					rospy.logdebug( "resetting positions: " + str(resetPositions) )
 					maki_serial.write(resetPositions)
 					rospy.logdebug( "positions reset DONE" )
-			except portNotOpenError as _e2:
-				rospy.logerr( "Unable to write serial output: " + str(_e2) )
+			except serial.serialutil.portNotOpenError as _e2:
+				rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e2) )
+			except ValueError as _e2_1:
+				rospy.logerr( "ValueError: Unable to write serial output: " + str(_e2_1) )
 		
 	#check for valid command formatting (regex)
 	else:
 		#regex2 = re.compile('(((((HP)|(HT)|(LL)|(LR)|(EP)|(ET))((GP)|(GS)))|(IPT))\d{3,5})+Z')
 		#match = regex2.match(message.data)
 
+		_bytes_written = 0
 		match = maki_cmd_template.match( message.data )
 		if (match):
 			if SIM:
@@ -141,10 +147,12 @@ def sendToMAKI (message):
 				try:
 					if maki_serial.isOpen:
 						rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
-						maki_serial.write(message.data)
-						rospy.logdebug( "command sent" )
-				except portNotOpenError as _e3:
-					rospy.logerr( "Unable to write serial output: " + str(_e3) )
+						_bytes_written = maki_serial.write(message.data)
+						rospy.logdebug( "command sent... _bytes_written=" + str(_bytes_written) )
+				except serial.serialutil.portNotOpenError as _e3:
+					rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e3) )
+				except ValueError as _e3_1:
+					rospy.logerr( "ValueError: Unable to write serial output: " + str(_e3_1) )
 		else:
 			rospy.logerr( "invalid format: " + str(message.data) )
 			return
@@ -226,6 +234,7 @@ def requestFeedback(feedbackString):
 	global maki_serial
 
 	rospy.logdebug( "about to request feedback; feedbackString=" + str(feedbackString) )
+	_bytes_written = 0
 	_tmp = feedback_req_template.search(feedbackString)
 	## Yes, feedbackString has the expected format
 	if _tmp != None:
@@ -233,9 +242,13 @@ def requestFeedback(feedbackString):
 		if not SIM:
 			try:
 				if maki_serial._isOpen:
-					maki_serial.write(feedbackString)
-			except portNotOpenError as _e4:
-				rospy.logerr("Unable to write serial output: " + str(_e4) )
+					_bytes_written = maki_serial.write(feedbackString)
+			except serial.serialutil.portNotOpenError as _e4:
+				rospy.logerr("portNotOpenError: Unable to write serial output: " + str(_e4) )
+			except ValueError as _e4_1:
+				rospy.logerr("ValueError: Unable to write serial output: " + str(_e4_1) )
+
+			rospy.logerr("requestFeedback: _bytes_written=" + str(_bytes_written))
 		else:
 			rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to request feedback " + str(feedbackString) )
 			SIM_feedback_type = _feedback_type
@@ -401,14 +414,60 @@ def makiExit():
 			if maki_serial != None and maki_serial.isOpen():
 				rospy.loginfo( "Closing the Arduino port..." )
 				maki_serial.close()
-		except portNotOpenError as _e5:
+		except serial.serialutil.portNotOpenError as _e5:
 			rospy.logerr( str(_e5) )
+		except ValueError:
+			pass
 		except AttributeError:
 			pass
 		ALIVE = False
-		sleep(1)	# give a chance for everything else to shutdown nicely
+		rospy.sleep(1)	# give a chance for everything else to shutdown nicely
 		rospy.logdebug( "makiExit: And MAKI lived happily ever after..." )
 	exit	## meant for interactive interpreter shell; unlikely this actually exits
+
+def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
+	global maki_serial, maki_port
+
+	if maki_serial == None:
+		rospy.loginfo("Opening new serial connection to " + str(maki_port))
+		try:
+			maki_serial = serial.Serial()
+			maki_serial.baudrate = baud
+			maki_serial.timeout = timeout
+			maki_serial.port = maki_port
+			maki_serial.open()
+			rospy.loginfo( str(maki_serial) )
+		except serial.serialutil.SerialException as _e0:
+			rospy.logerr( "ERROR: " + str(_e0) )
+			return False
+	else:
+		rospy.loginfo("Attempting to reopen existing serial connection...")
+		try:
+			maki_serial.open()
+			rospy.loginfo( str(maki_serial) )
+			rospy.loginfo("SUCCESS: Reopened serial connection to " + str(maki_port))	
+		except serial.serialutil.SerialException as _e1:
+			rospy.loginfo("FAILED: Unable to reopen serial connection to " + str(maki_port))	
+			rospy.logerr( "ERROR: " + str(_e1) )
+			return False
+
+	#try:
+	#	maki_serial = serial.Serial( maki_port, int(baud), timeout=timeout) # no timeout  timeout=None
+	#	rospy.loginfo( str(maki_serial) )
+	#except serial.serialutil.SerialException as e0:
+	#	rospy.logerr( "ERROR: " + str(e0) )
+	#	return False
+	
+	if maki_serial != None and maki_serial.isOpen():
+		maki_serial.flushInput();	# clear the input buffer
+		maki_serial.flushOutput();	# clear the output buffer
+		#rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(maki_port) ) 
+		rospy.logdebug("Flushed input/output buffers")
+
+		maki_serial.write("FPPZ")
+		rospy.logdebug("Serial connection READY: flushed input/output buffers")
+
+	return maki_serial.isOpen()	## should only return True
 
 ## ------------------------------
 if __name__ == '__main__':
@@ -418,6 +477,7 @@ if __name__ == '__main__':
 	global FILENAME
 	global ALIVE
 	global TTY_PORT, BAUD_RATE, maki_serial
+	global maki_port
 
 
 	## ------------------------------
@@ -456,21 +516,23 @@ if __name__ == '__main__':
 		TTY_PORT = str(rospy.myargv()[1])
 	if ( _argc > 2 ):
 		usage(rospy.myargv()[1:])	## call sys.exit()
-	_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
-	try:
-		maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
-		rospy.loginfo( str(maki_serial) )
-	except serial.serialutil.SerialException as e0:
-		rospy.logerr( "ERROR: " + str(e0) )
+	#_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
+	maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
+	#try:
+	#	maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
+	#	rospy.loginfo( str(maki_serial) )
+	#except serial.serialutil.SerialException as e0:
+	#	rospy.logerr( "ERROR: " + str(e0) )
+	openMAKISerialPort()
 
 	## STEP 3B: ENSURE SERIAL COMMUNICATION WITH THE ROBOT
 	if maki_serial != None and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 		maki_serial.flushOutput();	# clear the output buffer
-		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(_maki_port) ) 
+		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(maki_port) ) 
 	else:
 		if not SIM:
-			rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(_maki_port) + ". Exiting..." )
+			rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(maki_port) + ". Exiting..." )
 			sys.exit()	## use this instead of exit (which is meant for interactive shells)
 		else:
 			rospy.logwarn( "SIM = " + str(SIM) + "; continuing..." )
@@ -478,26 +540,26 @@ if __name__ == '__main__':
 	## wait until Arbotix-M board transmits before continuing 
 	## THIS WHILE LOOP IS BLOCKING
 	_exit_flag = False
-	_auto_feedback_ER_timer_start = timer()
+	_auto_feedback_ER_timer_start = rospy.get_time()
 	#print "Start time: " + str(_auto_feedback_ER_timer_start)	## debugging
 	_i = 0
 	_n = 0
 	if not SIM:	_n = maki_serial.inWaiting()
-	while (_n <= 0) and (not SIM):
+	while (_n <= 0) and (not SIM) and (not rospy.is_shutdown()):
 		rospy.logdebug( str(_i) + ") maki_serial.inWaiting() = " + str(_n) )
 
-		#print "Elapsed time: " + str( int(timer() - _auto_feedback_ER_timer_start) )	## debugging
-		if ( int(timer() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
+		#print "Elapsed time: " + str( int(rospy.get_time() - _auto_feedback_ER_timer_start) )	## debugging
+		if ( int(rospy.get_time() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
 			rospy.logwarn( "WARNING: Nothing received from serial port..." )
 			print "WARNING: Nothing received from serial port..."
 			print "####################################################\n"
 			print "(Does the robot have power? Is the power switch on?)"
 			print "\n####################################################"
 			## reset the warning timer
-			_auto_feedback_ER_timer_start = timer()
+			_auto_feedback_ER_timer_start = rospy.get_time()
 			
 		if _exit_flag:
-			if ( int(timer() - _auto_feedback_ER_timer_start) > 10 ):
+			if ( int(rospy.get_time() - _auto_feedback_ER_timer_start) > 10 ):
 				rospy.logerr( "ERROR: Nothing received from serial port. Exiting..." )
 				print "ERROR: Nothing received from serial port. Exiting..."
 				print "####################################################\n"
@@ -505,7 +567,7 @@ if __name__ == '__main__':
 				print "\n####################################################"
 			sys.exit()	## use this instead of exit (which is meant for interactive shells)
 		else:
-			sleep(1)	# 1s
+			rospy.sleep(1)	# 1s
 			_i += 1
 
 		try:
@@ -539,8 +601,8 @@ if __name__ == '__main__':
 	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
 	while ALIVE and not rospy.is_shutdown():
 		publishFeedback()	## calls recvFromArduino() and generateSIMFeedback() if SIM=True
-		#sleep(0.5)	# 500ms		## too much latency between feedback requests and feedback responses
-		sleep(0.05)	# 50ms		## without timer(), can't tell loop speed difference between 100ms and 50ms
+		#rospy.sleep(0.5)	# 500ms		## too much latency between feedback requests and feedback responses
+		rospy.sleep(0.05)	# 50ms		## without rospy.get_time(), can't tell loop speed difference between 100ms and 50ms
 
 	print str(FILENAME) + " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
 
