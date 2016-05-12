@@ -270,7 +270,11 @@ class baseBehavior(object):
 	##
 	## This is blocking
 	##
-	## TODO: Need to raise exception when breaks on stall
+	## Raises rospy.exceptions.ROSException when breaks on stall
+	##
+	## TODO:
+	## *  Estimate duration based on the largest difference
+	##	between current and goal positions
 	#####################
 	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
 		### SEND THE COMMAND
@@ -412,6 +416,9 @@ class headTiltBaseBehavior(baseBehavior):
 		baseBehavior.stop( self )
 		self.disableHT()
 		rospy.logdebug( "headTiltBaseBehavior: stop() -- END" )
+
+	def isHTEnabled( self ):
+		return headTiltBaseBehavior.__ht_enabled
 
 	def enableHT( self ):
 		if headTiltBaseBehavior.__ht_enabled == True:
@@ -637,8 +644,57 @@ class eyelidBaseBehavior( baseBehavior ):
 		return
 
 
+########################
+##
+## All behavior macros involving eyelids (LL) and head tilt (HT)
+##	will use this as base class. Inherits from both
+##	eyelidBaseBehavior and headTiltBaseBehavior
+##
+########################
+class eyelidHeadTiltBaseBehavior( eyelidBaseBehavior, headTiltBaseBehavior ):
+	## variables private to this class
+	## all instances of this class share the same value
+	# none
 
 
+	def __init__(self, verbose_debug, ros_pub):
+		## call eyelid base class' __init__
+		eyelidBaseBehavior.__init__( self, verbose_debug, ros_pub )
+		## call headTilt base class' __init__
+		headTiltBaseBehavior.__init__( self, verbose_debug, self.ros_pub )
+		## add anything else needed by an instance of this subclass
+
+		return
+
+	def start( self, makiPP=None, enable_ht=True ):
+		## eyelidHeadTiltBaseBehavior inherits from both
+		## eyelidBaseBehavior and headTiltBaseBehavior,
+		## and both inherit from baseBehavior.
+		## eyelidBaseBehavior.start() defaults to
+		## baseBehavior.start(), headTiltBaseBehavior.start()
+		## overrides this, so  
+		## call headTilt base class' start()
+		return headTiltBaseBehavior.start( self, makiPP, enable_ht )
+
+	def stop( self ):
+		## eyelidHeadTiltBaseBehavior inherits from both
+		## eyelidBaseBehavior and headTiltBaseBehavior,
+		## and both inherit from baseBehavior.
+		## eyelidBaseBehavior.stop() defaults to
+		## baseBehavior.stop(), headTiltBaseBehavior.stop()
+		## overrides this, so  
+		## call headTilt base class' stop()
+		return headTiltBaseBehavior.stop( self )
+
+	def parseMAKIFeedbackMsg ( self, recv_msg ):
+		## eyelidHeadTiltBaseBehavior inherits from both
+		## eyelidBaseBehavior and headTiltBaseBehavior,
+		## and both inherit from baseBehavior.
+		## eyelidBaseBehavior.parseMAKIFeedbackMsg() defaults to
+		## baseBehavior.parseMAKIFeedbackMsg(), headTiltBaseBehavior.parseMAKIFeedbackMsg()
+		## overrides this, so  
+		## call headTilt base class' parseMAKIFeedbackMsg()
+		return headTiltBaseBehavior.parseMAKIFeedbackMsg( self, recv_msg )
 
 
 
