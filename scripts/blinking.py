@@ -127,9 +127,8 @@ class blinking( eyelidBaseBehavior ):
 
 			## Calculate goal speed
 			_distance_to_closed = abs( self.makiPP["LL"] - self.ll_close )
-			_gs_ll = int( abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_closed, _duration_to_closed ) ) )
-			if (_gs_ll > 0) and (_gs_ll < 1024):
-				blinking.pubTo_maki_command( self, "LLGS" + str(_gs_ll) + str(TERM_CHAR_SEND))
+			_gs_ll = self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_closed, _duration_to_closed ) 
+			blinking.pubTo_maki_command( self, "LLGS" + str(_gs_ll) + str(TERM_CHAR_SEND))
 
 			rospy.logdebug("SPONTANEOUS BLINK... eyelid close, GO!")
 			_spontaneous_blink_start_time = rospy.get_time()
