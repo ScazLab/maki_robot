@@ -1,3 +1,5 @@
+import rospy
+
 class dynamixelConversions(object):
 
 	## all instances of this class share the same value
@@ -16,7 +18,20 @@ class dynamixelConversions(object):
 
 	def getTurnDuration_ticks_goalSpeed( self, ticks, goalSpeed ):
 		## in seconds
+
 		ret = None
+		## check validitry of inputs
+		if (goalSpeed == 0):
+			rospy.logerr("getGoalSpeed_ticks_duration: INVALID INPUT: goalSpeed=" + str(s_duration) + "; 0 means unlimited")
+			return ret
+		else:
+			goalSpeed = abs(goalSpeed)	## do some work since we already had to do a comparison
+		if (ticks == 0):
+			rospy.logerr("getGoalSpeed_ticks_duration: INVALID INPUT: ticks=" + str(ticks))
+			return ret
+		else:
+			ticks = abs(ticks)	## do some work since we already had to do a comparison
+
 		_rpm = float(goalSpeed * dynamixelConversions.UNIT_SPEED)
 		_ticks_per_second = ( (_rpm / dynamixelConversions.SECONDS_PER_MINUTE) * dynamixelConversions.DEGREES_PER_REVOLUTION * dynamixelConversions.TICKS_PER_DEGREE )
 		ret = float( ticks / _ticks_per_second )
@@ -54,26 +69,53 @@ class dynamixelConversions(object):
 		ret = float( ret * 1000 )
 		return ret
 
-	def getGoalSpeed_ticks_duration( self, ticks, s_duration):
+	def getGoalSpeed_ticks_duration( self, ticks, s_duration, return_int=True, disable_unlimited_speed=True ):
 		## in dynamixel speed units
 		## [0, 1023], where 0 = unlimited
 		## 1 = min, 1023 = max (114 rpm)
 
 		## duration given in seconds
+
 		ret = None
+		## check validitry of inputs
+		if (s_duration < 0):
+			rospy.logerr("getGoalSpeed_ticks_duration: INVALID INPUT: s_duration=" + str(s_duration) + "; cannot have negative duration")
+			return ret
+		if (s_duration == 0):
+			rospy.logerr("getGoalSpeed_ticks_duration: INVALID INPUT: s_duration=" + str(s_duration) + "; cannot divide by zero")
+			return ret
+		if (ticks == 0):
+			rospy.logerr("getGoalSpeed_ticks_duration: INVALID INPUT: ticks=" + str(ticks))
+			return ret
+		else:
+			ticks = abs(ticks)	## do some work since we already had to do a comparison
+
 		_ticks_per_second = float( ticks / s_duration )
 		_rpm = (((_ticks_per_second * dynamixelConversions.SECONDS_PER_MINUTE) / dynamixelConversions.TICKS_PER_DEGREE) / dynamixelConversions.DEGREES_PER_REVOLUTION)
 		ret = _rpm / dynamixelConversions.UNIT_SPEED
+
+		## round so we can return int
+		if return_int:
+			ret = int(ret + 0.5)	## implicit rounding
+
+		## check computed goal speed is within bounds
+		if (ret > 1023):	ret = 1023
+		if (ret < 0):		ret = 0
+		if (ret == 0):	rospy.logwarn("getGoalSpeed_ticks_duration: WARNING: computed goal speed is 0")
+		if disable_unlimited_speed and (ret == 0):	
+			ret = 1
+			rospy.logdebug("getGoalSpeed_ticks_duration: overriding computed goal speed; change from 0 to " + str(ret))
+
 		return ret
 
-	def getGoalSpeed_ticks_durationMS( self, ticks, ms_duration):
+	def getGoalSpeed_ticks_durationMS( self, ticks, ms_duration, return_int=True, disable_unlimited_speed=True):
 		## in dynamixel speed units
 		## [0, 1023], where 0 = unlimited
 		## 1 = min, 1023 = max (114 rpm)
 
 		## duration given in milliseconds
 		_s_duration = float( ms_duration / 1000.0 )
-		ret = dynamixelConversions.getGoalSpeed_ticks_duration( self, ticks, _s_duration )
+		ret = dynamixelConversions.getGoalSpeed_ticks_duration( self, ticks, _s_duration, return_int, disable_unlimited_speed )
 		return ret
 
 	def getGoalSpeed_degrees_duration( self, degrees, s_duration ):
