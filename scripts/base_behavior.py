@@ -361,6 +361,52 @@ class baseBehavior(object):
 
 
 ########################
+## All behavior macros involving head pan (HP) will use this as base class
+########################
+class headPanBaseBehavior(baseBehavior):
+	def __init__(self, verbose_debug, ros_pub):
+		## call base class' __init__
+		baseBehavior.__init__( self, verbose_debug, ros_pub )
+		## now custom things
+		self.prefix_hpgp = "HP" + str(SC_SET_GP)
+		self.prefix_epgp = "EP" + str(SC_SET_GP)
+		self.hpgp_regex = self.prefix_hpgp + "([0-9]+)"
+		self.aCFG_coeff = 0.36		## average of 0.21 and 0.53 from Todorvic 2009
+
+	## Automatically fill in commandOut to adjust eye pan position based on head pan position
+	##	if eye pan position is missing
+	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.05 ):
+		if fixed_gaze and (self.prefix_hpgp in commandOut) and not (self.prefix_epgp in commandOut):
+			## get HPGP value
+			_tmp = re.search( self.hpgp_regex, commandOut )
+			if _tmp != None:
+				_hp_gp = int( _tmp.group(1) )
+			else:
+				return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+
+			## calculate EPGP value
+			_ep_gp = EP_FRONT	## default
+			_ep_gp = headPanBaseBehavior.autoCalculateFixedGazeFromHPGP( self, _hp_gp )
+
+			## update commandOut
+			commandOut = self.prefix_epgp + str(_ep_gp) + commandOut	
+
+		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+
+	## Todorovic 2009: "In order to maintain the perceptions of fixed gaze, every 1% shift of
+	##	the facial features from centered, corresponded to an iris shift in the lid
+	##	apertures of 0.21-0.53% depending on testing method"
+	def autoCalculateFixedGazeFromHPGP( self, hp_gp ):
+		_hp_gp_degrees = self.DC_helper.convertToDegrees_ticks( abs(hp_gp - HP_FRONT) ) 
+		_ep_gp_degrees = _hp_gp_degrees * self.aCFG_coeff
+		ret = self.DC_helper.convertToTicks_degrees( _ep_gp_degrees )
+		if (hp_gp < HP_FRONT):
+			ret = EP_FRONT - ret
+		else:
+			ret = EP_FRONT + ret
+		return ret
+
+########################
 ## All behavior macros involving head tilt (HT) will use this as base class
 ########################
 class headTiltBaseBehavior(baseBehavior):

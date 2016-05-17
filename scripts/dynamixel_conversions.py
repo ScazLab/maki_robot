@@ -16,6 +16,31 @@ class dynamixelConversions(object):
 	def __init__(self):
 		pass	## does nothing
 
+	def convertToDegrees_ticks( self, ticks ):
+		ret = None
+		if (ticks == 0):	return 0
+		if (ticks < 0):	ticks = abs(ticks)
+		ret = float(ticks / dynamixelConversions.TICKS_PER_DEGREE)
+		return ret
+
+	def convertToRadians_ticks( self, ticks ):
+		ret = dynamixelConversions.convertToDegrees( self, ticks )
+		ret = float(ret * dynamixelConversions.RADIANS_PER_DEGREE)
+		return ret
+
+	def convertToTicks_degrees( self, degrees ):
+		ret = None
+		if (degrees == 0):	return 0
+		if (degrees < 0):	degrees = abs(degrees)
+		ret = float(degrees * dynamixelConversions.TICKS_PER_DEGREE)
+		ret = int( ret + 0.5 )	## implict  rounding
+		return ret
+
+	def convertToTicks_radians( self, radians ):
+		rad = float(radians / dynamixelConversions.RADIANS_PER_DEGREE)
+		ret = dynamixelConversions.convertToTicks_degrees( self, rad )
+		return ret
+
 	def getTurnDuration_ticks_goalSpeed( self, ticks, goalSpeed ):
 		## in seconds
 
