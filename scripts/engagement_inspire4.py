@@ -37,6 +37,19 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		## add anything else needed by an instance of this subclass
 		engagementStartleGame.__is_startled = False
 
+		## taken from macroStartleRelax
+		self.HT_STARTLE = 525	#530	#525
+		self.HT_NEUTRAL = HT_MIDDLE
+		self.HT_GS_DEFAULT = 15		## as set in Arbotix-M driver
+		self.HT_GS_MAX = 75	#60	#50
+		self.HT_GS_MIN = 10
+
+		self.LL_STARTLE = LL_OPEN_MAX
+		self.LL_NEUTRAL = LL_OPEN_DEFAULT
+		self.LL_GS_DEFAULT = 100	## as set in Arbotix-M driver
+		self.LL_GS_MIN = 10
+
+
 		## Game variables
 		self.ll_startle = LL_OPEN_MAX
 
@@ -124,23 +137,10 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	##		hideFromStartle
 	##
 	############################
-	## TODO: Below is a work in progress
 	def hideFromStartle( self ):
 		if (engagementStartleGame.__is_startled == False):	
 			rospy.logerr("hideFromStartle: INVALID STATE: engagementStartleGame.__is_startled=" + str(engagementStartleGame.__is_startled))
 			return
-
-		## taken from macroStartleRelax
-		## TODO: prefix with self.
-		HT_STARTLE = 525	#530	#525
-		HT_NEUTRAL = HT_MIDDLE
-		HT_GS_DEFAULT = 15
-		HT_GS_MAX = 75	#60	#50
-		HT_GS_MIN = 10
-
-		LL_STARTLE = LL_OPEN_MAX
-		LL_NEUTRAL = LL_OPEN_DEFAULT
-		LL_GS_MIN = 10
 
 		## (_gs_ll, _gs_ht)
 		## distance covered in 200 ms timestepd
@@ -220,6 +220,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	##
 	############################
 	## TODO: Below is temporary
+## KATE
 	def unhideIntoStartle( self ):
 		rospy.logdebug("unhideIntoStartle: BEGIN")
 
@@ -259,28 +260,16 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			rospy.logwarn("macroStartleRelax(): INVALID VALUE: repetitions=" + str(repetitions) + "; updated to 1")
 			repetitions = 1
 
-		## TODO: move these variables to global scope
-		HT_STARTLE = 525	#530	#525
-		HT_NEUTRAL = HT_MIDDLE
-		HT_GS_DEFAULT = 15		## as set in Arbotix-M driver
-		HT_GS_MAX = 75	#60	#50
-		HT_GS_MIN = 10
-
-		LL_STARTLE = LL_OPEN_MAX
-		LL_NEUTRAL = LL_OPEN_DEFAULT
-		LL_GS_DEFAULT = 100	## as set in Arbotix-M driver
-		LL_GS_MIN = 10
-
 		## generate servo control command to set goal positions
 		## NOTE: on the Arbotix-M side, a sync_write function is used
 		## to simultaneously broadcast the updated goal positions
 		_startle_gp_cmd = ""
-		_startle_gp_cmd += "LL" + SC_SET_GP + str(LL_STARTLE)
-		_startle_gp_cmd += "HT" + SC_SET_GP + str(HT_STARTLE)
+		_startle_gp_cmd += "LL" + SC_SET_GP + str(self.LL_STARTLE)
+		_startle_gp_cmd += "HT" + SC_SET_GP + str(self.HT_STARTLE)
 		_startle_gp_cmd += TERM_CHAR_SEND
 		_relax_gp_cmd  = ""
-		_relax_gp_cmd += "LL" + SC_SET_GP + str(LL_NEUTRAL)
-		_relax_gp_cmd += "HT" + SC_SET_GP + str(HT_NEUTRAL)
+		_relax_gp_cmd += "LL" + SC_SET_GP + str(self.LL_NEUTRAL)
+		_relax_gp_cmd += "HT" + SC_SET_GP + str(self.HT_NEUTRAL)
 		_relax_gp_cmd += TERM_CHAR_SEND
 		_pub_cmd = ""
 
@@ -296,12 +285,12 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			## Move to neutral eyelid and head tilt pose
 			rospy.loginfo("BEFORE startle, adjust LL and HT to NeutralPose")
 			_pub_cmd = ""
-			if (abs(self.makiPP["LL"] - LL_NEUTRAL) > DELTA_PP):
-				_pub_cmd += "LLGP" + str(LL_NEUTRAL)
-			if (abs(self.makiPP["HT"] - HT_NEUTRAL) > DELTA_PP):
-				_pub_cmd += "HTGP" + str(HT_NEUTRAL) 
+			if (abs(self.makiPP["LL"] - self.LL_NEUTRAL) > DELTA_PP):
+				_pub_cmd += "LLGP" + str(self.LL_NEUTRAL)
+			if (abs(self.makiPP["HT"] - self.HT_NEUTRAL) > DELTA_PP):
+				_pub_cmd += "HTGP" + str(self.HT_NEUTRAL) 
 			if ( len(_pub_cmd) > 0 ):
-				engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=LL_NEUTRAL, ht_gp=HT_NEUTRAL )
+				engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_NEUTRAL, ht_gp=self.HT_NEUTRAL )
 				#self.SWW_WI.sleepWhileWaiting(1)	## 1 second	## debugging
 
 		_duration = abs(rospy.get_time() -_start_time)
@@ -323,17 +312,17 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 				## Calculate goal speed base on distance and duration (in milliseconds)
 				_duration_startle = 100		## millisecond
-				_distance_to_startle_ll = abs( self.makiPP["LL"] - LL_STARTLE )
+				_distance_to_startle_ll = abs( self.makiPP["LL"] - self.LL_STARTLE )
 				rospy.logdebug("_distance_startle_ll=" + str(_distance_to_startle_ll))
 				_gs_ll = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_startle_ll, _duration_startle) )
 				rospy.loginfo("_gs_ll=" + str(_gs_ll))
 
 				_duration_startle = 150	#200	#250		## millisecond
-				_distance_to_startle_ht = abs( self.makiPP["HT"] - HT_STARTLE )
+				_distance_to_startle_ht = abs( self.makiPP["HT"] - self.HT_STARTLE )
 				rospy.logdebug("_distance_startle_ht=" + str(_distance_to_startle_ht))
 				_gs_ht = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_startle_ht, _duration_startle) )
 				rospy.loginfo("_gs_ht=" + str(_gs_ht))
-				_gs_ht = min(_gs_ht, HT_GS_MAX)
+				_gs_ht = min(_gs_ht, self.HT_GS_MAX)
 				rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
 
 				## preset the desired goal speeds BEFORE sending the goal positions
@@ -356,7 +345,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					## NOTE: publish and give time for the command to propogate to the servo motors,
 					## but DO NOT MONITOR (excess overhead of minimum 200ms, which is greater
 					## than _duration_startle and will cause delay)
-					#engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=LL_STARTLE, ht_gp=HT_STARTLE)
+					#engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_STARTLE, ht_gp=self.HT_STARTLE)
 				except rospy.exceptions.ROSException as e1:
 					rospy.logerr( str(e1) )
 				_duration = abs(_start_time_startle - rospy.get_time())
@@ -382,9 +371,9 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 					## computer difference between current and goal positions
 					## TODO: do this calculation using map
-					_distance_to_relax_ll = abs( self.makiPP["LL"] - LL_NEUTRAL )
+					_distance_to_relax_ll = abs( self.makiPP["LL"] - self.LL_NEUTRAL )
 					rospy.loginfo("_distance_to_relax_ll=" + str(_distance_to_relax_ll))
-					_distance_to_relax_ht = abs( self.makiPP["HT"] - HT_NEUTRAL )
+					_distance_to_relax_ht = abs( self.makiPP["HT"] - self.HT_NEUTRAL )
 					rospy.loginfo("_distance_to_relax_ht=" + str(_distance_to_relax_ht))
 
 					## adjust duration to stay within _duration_relax
@@ -405,11 +394,11 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					## calculate new goal speeds
 					_gs_ll = self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_relax_ll, _duration_relax)
 					rospy.loginfo("_gs_ll=" + str(_gs_ll))
-					_gs_ll = max(_gs_ll, LL_GS_MIN)
+					_gs_ll = max(_gs_ll, self.LL_GS_MIN)
 					rospy.loginfo("adjusted _gs_ll=" + str(_gs_ll))
 					_gs_ht = self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_relax_ht, _duration_relax)
 					rospy.loginfo("_gs_ht=" + str(_gs_ht))
-					_gs_ht = max(_gs_ht, HT_GS_MIN)
+					_gs_ht = max(_gs_ht, self.HT_GS_MIN)
 					rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
 					#_duration_relax_wait = self.DC_helper.getTurnDurationMS_ticks_goalSpeed( _distance_to_relax, _gs_ll )
 					#rospy.loginfo("waitMS = " + str(_duration_relax_wait))
