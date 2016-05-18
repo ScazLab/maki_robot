@@ -219,20 +219,28 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	##		unhideIntoStartle
 	##
 	############################
-	## TODO: Below is temporary
-## KATE
 	def unhideIntoStartle( self ):
 		rospy.logdebug("unhideIntoStartle: BEGIN")
 
+		### resets all servo motors to neutral position
+		### resets goal speeds too
+		#engagementStartleGame.pubTo_maki_command( self, "reset" )	
+
 		## reset to neutral position
-		## resets goal speeds too
-		engagementStartleGame.pubTo_maki_command( self, "reset" )	
+		_pub_cmd = ""
+		_pub_cmd += "HT" + SC_SET_GS + str(self.HT_GS_DEFAULT)
+		_pub_cmd += "HT" + SC_SET_GP + str(self.HT_NEUTRAL)
+		_pub_cmd += "LL" + SC_SET_GS + str(self.LL_GS_DEFAULT)
+		_pub_cmd += "LL" + SC_SET_GP + str(self.LL_NEUTRAL)
+		_pub_cmd += TERM_CHAR_SEND
+		engagementStartleGame.pubTo_maki_command( self, _pub_cmd )
 		## wait for reset motion to complete
 		## meanwhile, print out the present speeds while moving
 		for _i in range(10):
 			engagementStartleGame.requestFeedback( self, SC_GET_PS )
 			self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )		
 
+		## move into startle
 		engagementStartleGame.macroStartleRelax( self, relax=False )
 
 		rospy.logdebug("unhideIntoStartle: END")
