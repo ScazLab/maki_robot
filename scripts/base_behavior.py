@@ -376,13 +376,26 @@ class headPanBaseBehavior(baseBehavior):
 	## Automatically fill in commandOut to adjust eye pan position based on head pan position
 	##	if eye pan position is missing
 	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.05 ):
+		rospy.logdebug("headPanBaseBehavior.pubTo_maki_command(): BEGIN")
+		if fixed_gaze:	commandOut = headPanBaseBehavior.amend_maki_command( self, commandOut, fixed_gaze=fixed_gaze )
+		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+
+	## Amend to adjust for fixed gaze
+	def monitorMoveToGP( self, gp_cmd, fixed_gaze=True, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
+		rospy.logdebug("headPanBaseBehavior.monitorMoveToGP(): BEGIN")
+		if fixed_gaze:	gp_cmd = headPanBaseBehavior.amend_maki_command( self, gp_cmd, fixed_gaze=fixed_gaze )
+		return baseBehavior.monitorMoveToGP( self, gp_cmd, hp_gp=hp_gp, ht_gp=ht_gp, ll_gp=ll_gp, lr_gp=lr_gp, ep_gp=ep_gp, et_gp=et_gp, delta_pp=delta_pp, cmd_prop=cmd_prop )
+
+
+	def amend_maki_command( self, commandOut, fixed_gaze=True ):
 		if fixed_gaze and (self.prefix_hpgp in commandOut) and not (self.prefix_epgp in commandOut):
+			rospy.logdebug("Need to adjust commandOut...")
 			## get HPGP value
 			_tmp = re.search( self.hpgp_regex, commandOut )
 			if _tmp != None:
 				_hp_gp = int( _tmp.group(1) )
 			else:
-				return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+				return commandOut
 
 			## calculate EPGP value
 			_ep_gp = EP_FRONT	## default
@@ -390,13 +403,15 @@ class headPanBaseBehavior(baseBehavior):
 
 			## update commandOut
 			commandOut = self.prefix_epgp + str(_ep_gp) + commandOut	
-
-		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+			rospy.loginfo("headPanBaseBehavior.pubTo_maki_command(): Update commandOut to: " + str(commandOut))
+		return commandOut
 
 	## Todorovic 2009: "In order to maintain the perceptions of fixed gaze, every 1% shift of
 	##	the facial features from centered, corresponded to an iris shift in the lid
 	##	apertures of 0.21-0.53% depending on testing method"
 	def autoCalculateFixedGazeFromHPGP( self, hp_gp ):
+		rospy.logdebug("autoCalculateFixedGazeFromHPGP(): BEGIN")
+
 		_hp_gp_degrees = self.DC_helper.convertToDegrees_ticks( abs(hp_gp - HP_FRONT) ) 
 		_ep_gp_degrees = _hp_gp_degrees * self.aCFG_coeff
 		ret = self.DC_helper.convertToTicks_degrees( _ep_gp_degrees )
@@ -404,6 +419,8 @@ class headPanBaseBehavior(baseBehavior):
 			ret = EP_FRONT - ret
 		else:
 			ret = EP_FRONT + ret
+		rospy.logdebug("given hp_gp=" + str(hp_gp) + ", computed ep_gp=" + str(ret))
+		rospy.logdebug("autoCalculateFixedGazeFromHPGP(): END")
 		return ret
 
 ########################
