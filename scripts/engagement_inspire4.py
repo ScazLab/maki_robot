@@ -142,6 +142,9 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		LL_NEUTRAL = LL_OPEN_DEFAULT
 		LL_GS_MIN = 10
 
+		## (_gs_ll, _gs_ht)
+		## distance covered in 200 ms timestepd
+		## ((50%, 20%), (50%, 40%), (0%, 25%), (0%, 10%), (0%, 5%))
 		_gs_sequence = ((192,29), (192,57), (192,36), (192,14), (192,7))
 		_duration_into_hide = 1000	## milliseconds
 		_step_duration = float( _duration_into_hide / len(_gs_sequence) )
