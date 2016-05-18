@@ -72,7 +72,7 @@ class baseBehavior(object):
 				## request a feedback message
 				baseBehavior.requestFeedback( self, str(SC_GET_PP) )
 
-			self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
+			self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )	## 0.25 second
 
 		self.ALIVE = True
 		self.mTT_INTERRUPT = False
