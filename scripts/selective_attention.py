@@ -34,6 +34,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ## TODO: 
 ##	* Eye tilt (ET) and/or eyelid (LL) compensates for HT
 ## 	* Gaussiaan distribution towards eye pan/tilt neutral
+##	* Automatically turn head (head pan) based on  eye pan position ???
 ##
 ## MOTION CRITIQUE:
 ##
@@ -69,8 +70,9 @@ class selectiveAttention( headTiltBaseBehavior ):
 		## additional rest period
 		self.visual_scan_rest_occurence_percent = 35	#25	## [1,100)
 		self.visual_scan_rest_enabled = True
-		self.visual_scan_rest_min = 100	#50	## milliseconds
-		self.visual_scan_rest_max = 400	#300	## milliseconds
+		self.visual_scan_rest_min = 250	#100	#50	## milliseconds
+		self.visual_scan_rest_max = 750	#400	#300	## milliseconds
+		## NOTE: Scaz wanted longer rest durations between visual scan movements
 
 		self.ALIVE = True
 		return
