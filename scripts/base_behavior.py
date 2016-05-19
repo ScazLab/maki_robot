@@ -444,6 +444,7 @@ class headTiltBaseBehavior(baseBehavior):
 		## subscribe to rostopic maki_feedback_torque_limit and maki_feedback_goal_pos
 		_maki_feedback_sub = {}		## init as empty dictionary
 		_maki_feedback_sub[ str(SC_GET_TL) ] = ("maki_feedback_torque_limit", String, self.parseMAKIFeedbackMsg)
+		_maki_feedback_sub[ str(SC_GET_PT) ] = ("maki_feedback_pres_temp", String, self.parseMAKIFeedbackMsg)
 		_maki_feedback_sub[ str(SC_GET_GP) ] = ("maki_feedback_goal_pos", String, self.parseMAKIFeedbackMsg)
 		baseBehavior.initROSSub( self, _maki_feedback_sub )
 
