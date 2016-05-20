@@ -7,6 +7,7 @@ import os
 import math
 import string
 import random
+import thread
 
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
@@ -35,6 +36,9 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ##	* Eye tilt (ET) and/or eyelid (LL) compensates for HT
 ## 	* Gaussiaan distribution towards eye pan/tilt neutral
 ##	* Automatically turn head (head pan) based on  eye pan position ???
+##	* in macroVisualScan, monitorMoveToGP and sleepWhileWaiting are blocking
+##		so may miss "visualScan stop" message. Change to using time delta instead
+##	* Add duration input
 ##
 ## MOTION CRITIQUE:
 ##
@@ -42,7 +46,8 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 class selectiveAttention( headTiltBaseBehavior ):
 	## variables private to this class
 	## all instances of this class share the same value
-	# none
+	__is_scanning = None
+
 
 	def __init__(self, verbose_debug, ros_pub):
 		## call base class' __init__
@@ -73,6 +78,9 @@ class selectiveAttention( headTiltBaseBehavior ):
 		self.visual_scan_rest_min = 250	#100	#50	## milliseconds
 		self.visual_scan_rest_max = 750	#400	#300	## milliseconds
 		## NOTE: Scaz wanted longer rest durations between visual scan movements
+
+		if selectiveAttention.__is_scanning == None:
+			selectiveAttention.__is_scanning = False
 
 		self.ALIVE = True
 		return
@@ -107,16 +115,16 @@ class selectiveAttention( headTiltBaseBehavior ):
 		_loop_count = 0
 		_start_time = rospy.get_time()
 		## this is a nested while loop
-		while self.ALIVE and not rospy.is_shutdown():
+		while (selectiveAttention.__is_scanning and
+			self.ALIVE and not rospy.is_shutdown()):
 
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(self.mTT_INTERRUPT))
-				##print "start sleep 5"
-				#self.SWW_WI.sleepWhileWaiting(5)	# 5 seconds
-				##print "end sleep 5"
-				#continue	## begin loop again from the beginning skipping below
-				##print "shouldn't get here"
-				return
+				break	##  break out of while loop
+
+			if not selectiveAttention.__is_scanning:
+				rospy.logdebug("selectiveAttention.__is_scanning=" + str(selectiveAttention.__is_scanning))
+				break
 
 			### FPPZ request published every 100ms (10Hz)
 			selectiveAttention.requestFeedback( self, SC_GET_PP )
@@ -202,6 +210,8 @@ class selectiveAttention( headTiltBaseBehavior ):
 		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
 
 	def stopVisualScan( self ):
+		selectiveAttention.__is_scanning = False
+
 		## set eye pan and tilt  
 		## if shift==False, Maki-ro's eyes will return to where they were when
 		## visual scan started
@@ -217,9 +227,13 @@ class selectiveAttention( headTiltBaseBehavior ):
 		if msg.data == "visualScan start":
 			## Maki-ro doesn't need head tilt for visual scanning
 			headTiltBaseBehavior.start(self, enable_ht=False)
-			self.macroVisualScan()
+			selectiveAttention.__is_scanning = True
+			try:
+				thread.start_new_thread( selectiveAttention.macroVisualScan, (self, ))
+			except:
+				rospy.logerr("Unable to start new thread for selectiveAttention.macroVisualScan()")
 		elif msg.data == "visualScan stop":
-			self.stopVisualScan()
+			selectiveAttention.stopVisualScan( self )
 		else:
 			pass
 
