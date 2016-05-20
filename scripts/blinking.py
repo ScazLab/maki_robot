@@ -7,6 +7,7 @@ import os
 import math
 import string
 import random
+import thread
 
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
@@ -54,7 +55,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 class blinking( eyelidBaseBehavior ):
 	## variables private to this class
 	## all instances of this class share the same value
-	# none
+	__is_spontaneous_blinking = None
 
 
 	def __init__(self, verbose_debug, ros_pub):
@@ -64,6 +65,9 @@ class blinking( eyelidBaseBehavior ):
 
 		if self.makiPP == None:
 			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
+
+		if blinking.__is_spontaneous_blinking == None:
+			blinking.__is_spontaneous_blinking = False
 
 		## variables relating to spontaneous blinking
 		## 10 times per minute == 0.17 times per second == 0.17 Hz
@@ -80,7 +84,7 @@ class blinking( eyelidBaseBehavior ):
 		
 		## variables relating to the duration of 1 eye blink
 		## length of time for eyelid to close and re-open
-		self.blink_action_duration = 200	## milliseconds
+		self.blink_action_duration = 300	#250	#200	## milliseconds
 		self.last_blink_time = None
 		self.next_blink_time = None
 
@@ -104,23 +108,28 @@ class blinking( eyelidBaseBehavior ):
 
 		self.count_movements = 0
 		_duration_to_closed = float( self.blink_action_duration ) * 0.5
+		_duration = 0
 		_start_time = rospy.get_time()
 		self.next_blink_time = _start_time
 		## this is a nested while loop
-		while self.ALIVE and not rospy.is_shutdown():
+		while (blinking.__is_spontaneous_blinking and 
+			self.ALIVE and not rospy.is_shutdown()):
 
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(self.mTT_INTERRUPT))
-				##print "start sleep 5"
-				#self.SWW_WI.sleepWhileWaiting(5)	# 5 seconds
-				##print "end sleep 5"
-				#continue	## begin loop again from the beginning skipping below
-				##print "shouldn't get here"
-				return
+				break
+
+			## debugging
+			#rospy.logdebug("blinking.__is_spontaneous_blinking=" + str(blinking.__is_spontaneous_blinking))
+			if not blinking.__is_spontaneous_blinking:
+				rospy.logdebug("blinking.__is_spontaneous_blinking=" + str(blinking.__is_spontaneous_blinking))
+				break
 
 			_remaining_duration = self.next_blink_time - rospy.get_time()
 			if (_remaining_duration > 0.01):	## 100 ms
-				continue
+				rospy.logdebug( str(_remaining_duration) + " seconds until next blink...")
+				self.SWW_WI.sleepWhileWaiting( 0.1, increment=0.05, end_early=False )
+				continue	## skip to the start of the while loop
 			else:
 				### FPPZ request published takes 100ms to propogate
 				blinking.requestFeedback( self, SC_GET_PP )
@@ -151,6 +160,8 @@ class blinking( eyelidBaseBehavior ):
 			_duration = abs(rospy.get_time() - _start_time)
 		#end	while self.ALIVE and not rospy.is_shutdown():
 
+		self.next_blink_time = None
+
 		rospy.loginfo( "NUMBER OF SPONTANEOUS BLINKS: " + str(self.count_movements) )
 		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
 
@@ -161,6 +172,7 @@ class blinking( eyelidBaseBehavior ):
 		rospy.logdebug("startSpontaneousBlink(): BEGIN")
 		## call base class' start function
 		eyelidBaseBehavior.start(self)
+		blinking.__is_spontaneous_blinking = True
 		rospy.logdebug("startSpontaneousBlink(): After eyelidBaseBehavior.start()")
 		self.next_blink_time = rospy.get_time()
 		rospy.logdebug("startSpontaneousBlink(): next_blink_time=" + str(self.next_blink_time))
@@ -169,23 +181,34 @@ class blinking( eyelidBaseBehavior ):
 		return
 
 	def stopSpontaneousBlink( self ):
+		rospy.logdebug("stopSpontaneousBlink(): BEGIN")
+		blinking.__is_spontaneous_blinking = False
+
 		## call base class' stop function
 		eyelidBaseBehavior.stop(self)
+
+		self.next_blink_time = None
 
 		## set eyelid  
 		_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
 		blinking.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
 
-		self.next_blink_time = None
+		rospy.logdebug("stopSpontaneousBlink(): END")
 		return
 
 	def parse_maki_macro( self, msg ):
+		#rospy.logdebug( msg.data )
 		print msg.data
 
 		if msg.data == "spontaneousBlink start":
-			self.startSpontaneousBlink()
+			## This call is blocking
+			#blinking.startSpontaneousBlink( self )
+			try:
+				thread.start_new_thread( blinking.startSpontaneousBlink, (self, ))
+			except:
+				rospy.logerr("Unable to start new thread for blinking.startSpontaneousBlink()")
 		elif msg.data == "spontaneousBlink stop":
-			self.stopSpontaneousBlink()
+			blinking.stopSpontaneousBlink( self )
 		else:
 			pass
 
