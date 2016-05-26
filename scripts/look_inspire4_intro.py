@@ -45,6 +45,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	## variables private to this class
 	## all instances of this class share the same value
 	__is_intro_running = None
+	__is_startled = None
 
 	HP_EXPERIMENTER = None
 	HT_EXPERIMENTER = None
@@ -126,6 +127,37 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		#self.delta_ht = 10	## ticks
 		#self.ht_rand_min = lookINSPIRE4Intro.HT_EXPERIMENTER - self.delta_ht
 		#self.ht_rand_max = lookINSPIRE4Intro.HT_EXPERIMENTER +- self.delta_ht
+
+		## from lookINSPIRE4Intro
+		if lookINSPIRE4Intro.__is_startled == None:
+			lookINSPIRE4Intro.__is_startled = False
+		self.HT_STARTLE = 525	#530	#525
+		self.HT_NEUTRAL = HT_MIDDLE
+		self.HT_GS_DEFAULT = 15		## as set in Arbotix-M driver
+		self.HT_GS_MAX = 75	#60	#50
+		self.HT_GS_MIN = 10
+
+		self.LL_STARTLE = LL_OPEN_MAX
+		self.LL_NEUTRAL = LL_OPEN_DEFAULT
+		self.LL_GS_DEFAULT = 100	## as set in Arbotix-M driver
+		self.LL_GS_MIN = 10
+
+		### Game variables
+		#if lookINSPIRE4Intro.__is_game_running == None:
+		#	lookINSPIRE4Intro.__is_game_running = False
+		#if lookINSPIRE4Intro.__is_game_exit == None:
+		#	lookINSPIRE4Intro.__is_game_exit = False
+		#self.ll_startle = LL_OPEN_MAX
+		#
+		#self.last_startle_time = None
+		#self.next_startle_time = None
+		#
+		#self.game_state = None
+		#
+		#self.repetitions = 6	## do 6 rounds of infant engagement behavior max
+		#
+		#self.duration_between_startle_min = 2.0	## seconds
+		#self.duration_between_startle_max = 5.0	## seconds
 
 		lookINSPIRE4Intro.calculatePose( self )
 
@@ -561,7 +593,270 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		rospy.logdebug("lookAt(): END")
 		return
 
+	## similar to the engagment game but uses current HT and LL values
+	## startle and relax are relative to the current HT and LL values
+	def macroStartleRelax( self, startle=True, relax=True, repetitions=1 ):
+		rospy.logdebug("macroStartleRelax(): BEGIN")
 
+		_start_time = rospy.get_time()
+		## check the inputs
+		if isinstance(startle, bool) and (not startle) and isinstance(relax, bool) and (not relax):	return
+		if isinstance(repetitions, int) and (repetitions > 0):
+			pass
+		else:
+			rospy.logwarn("macroStartleRelax(): INVALID VALUE: repetitions=" + str(repetitions) + "; updated to 1")
+			repetitions = 1
+
+		_expected_delta_ll = self.LL_STARTLE - self.LL_NEUTRAL
+		_expected_delta_ht = self.HT_STARTLE - self.HT_NEUTRAL
+		rospy.logdebug("_expected_delta_ll=" + str(_expected_delta_ll) + " ticks, _expected_delta_ht=" + str(_expected_delta_ht) + " ticks")
+
+		if startle:
+			## Store initial pose
+			lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
+			self.previous_ll = self.makiPP["LL"]
+			self.previous_ht = self.makiPP["HT"]
+
+		## generate servo control command to set goal positions
+		## NOTE: on the Arbotix-M side, a sync_write function is used
+		## to simultaneously broadcast the updated goal positions
+		_my_startle_ht = self.HT_STARTLE
+		_my_startle_ll = self.LL_STARTLE
+		_startle_gp_cmd = ""
+		if startle:
+			#_startle_gp_cmd += "LL" + SC_SET_GP + str(self.LL_STARTLE)
+			#_startle_gp_cmd += "HT" + SC_SET_GP + str(self.HT_STARTLE)
+
+			if (self.previous_ll >= _my_startle_ll):
+				_my_startle_ll = self.previous_ll + _expected_delta_ll
+				rospy.logdebug("adjusted _my_startle_ll to " + str(_my_startle_ll) + " ticks")
+			if (self.previous_ht >= _my_startle_ht):
+				_my_startle_ht = self.previous_ht + _expected_delta_ht
+				rospy.logdebug("adjusted _my_startle_ht to " + str(_my_startle_ht) + " ticks")
+			_startle_gp_cmd += "LL" + SC_SET_GP + str(_my_startle_ll)
+			_startle_gp_cmd += "HT" + SC_SET_GP + str(_my_startle_ht)
+			_startle_gp_cmd += TERM_CHAR_SEND
+		_relax_gp_cmd  = ""
+		if relax:
+			#_relax_gp_cmd += "LL" + SC_SET_GP + str(self.LL_NEUTRAL)
+			#_relax_gp_cmd += "HT" + SC_SET_GP + str(self.HT_NEUTRAL)
+			_relax_gp_cmd += "LL" + SC_SET_GP + str(self.previous_ll)
+			_relax_gp_cmd += "HT" + SC_SET_GP + str(self.previous_ht)
+			_relax_gp_cmd += TERM_CHAR_SEND
+		_pub_cmd = ""
+
+		## NOTE: during intro, we expect Maki-ro's head to be tilted up to 
+		##	face the experimenter
+		#
+		#if relax and (not startle):
+		#	rospy.loginfo("relax ONLY... skip alignment")
+		#	pass
+		#else:
+		#	## Move to neutral eyelid and head tilt pose
+		#	rospy.loginfo("BEFORE startle, adjust LL and HT to NeutralPose")
+		#	_pub_cmd = ""
+		#	if (abs(self.makiPP["LL"] - self.LL_NEUTRAL) > DELTA_PP):
+		#		_pub_cmd += "LLGP" + str(self.LL_NEUTRAL)
+		#	if (abs(self.makiPP["HT"] - self.HT_NEUTRAL) > DELTA_PP):
+		#		_pub_cmd += "HTGP" + str(self.HT_NEUTRAL) 
+		#	if ( len(_pub_cmd) > 0 ):
+		#		_pub_cmd += TERM_CHAR_SEND
+		#		try:
+		#			lookINSPIRE4Intro.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_NEUTRAL, ht_gp=self.HT_NEUTRAL )
+		#		except rospy.exceptions.ROSException as _e:
+		#			rospy.logerr( str(_e) )
+		#		#self.SWW_WI.sleepWhileWaiting(1)	## 1 second	## debugging
+
+		_duration = abs(rospy.get_time() -_start_time)
+		rospy.loginfo("OVERHEAD SETUP TIME: " + str(_duration) + " seconds")
+
+		## TODO: unify duration_startle
+		#_duration_startle = 100		## millisecond
+		_duration_relax = 1000		## milliseconds
+		_duration_relax_wait = 250
+		_loop_count = 0
+		_tmp_scale = 1.0
+		_start_time = rospy.get_time()
+		while (_loop_count < repetitions) and (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
+			rospy.logdebug("-------------------")
+
+			if startle:
+				rospy.loginfo("====> STARTLE")
+				lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
+				rospy.logdebug( str(self.makiPP) )
+
+				## Calculate goal speed base on distance and duration (in milliseconds)
+				_duration_startle = 100		## millisecond
+				_distance_to_startle_ll = abs( self.makiPP["LL"] - _my_startle_ll )
+				rospy.logdebug("_distance_startle_ll=" + str(_distance_to_startle_ll))
+				_tmp_duration_startle = _duration_startle
+				if (abs(_distance_to_startle_ll - _expected_delta_ll) > DELTA_PP):
+					_tmp_scale = float(_distance_to_startle_ll) / float(_expected_delta_ll) 
+					_tmp_duration_startle = _tmp_scale * _tmp_duration_startle
+				rospy.logdebug("_tmp_scale=" + str(_tmp_scale) + "; _tmp_duration_startle=" + str(_tmp_duration_startle))
+				if (_distance_to_startle_ll > 0):
+					_gs_ll = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_startle_ll, _tmp_duration_startle) )
+					rospy.loginfo("_gs_ll=" + str(_gs_ll))
+
+				_duration_startle = 150	#200	#250		## millisecond
+				_distance_to_startle_ht = abs( self.makiPP["HT"] - _my_startle_ht )
+				rospy.logdebug("_distance_startle_ht=" + str(_distance_to_startle_ht))
+				_tmp_duration_startle = _duration_startle
+				if (abs(_distance_to_startle_ht - _expected_delta_ht) > DELTA_PP):
+					_tmp_scale = float(_distance_to_startle_ht) / float(_expected_delta_ht) 
+					_tmp_duration_startle = _tmp_scale * _tmp_duration_startle
+				rospy.logdebug("_tmp_scale=" + str(_tmp_scale) + "; _tmp_duration_startle=" + str(_tmp_duration_startle))
+				if (_distance_to_startle_ht > 0):
+					_gs_ht = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_startle_ht, _tmp_duration_startle) )
+					rospy.loginfo("_gs_ht=" + str(_gs_ht))
+					_gs_ht = min(_gs_ht, self.HT_GS_MAX)
+					rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
+
+				## preset the desired goal speeds BEFORE sending the goal positions
+				_pub_cmd = ""
+				if (_distance_to_startle_ll>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+				if (_distance_to_startle_ht>0):	_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+				## NOTE: pubTo_maki_command will automatically add TERM_CHAR_SEND postfix
+
+				## publish and give time for the command to propogate to the servo motors
+				lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd), cmd_prop=True )
+
+				## set servo control command to set goal positions
+				_pub_cmd = _startle_gp_cmd
+
+				_start_time_startle = rospy.get_time()
+				try:
+					## Maki-ro open eyes wide
+					## and "jerks" head back
+					lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd )	## default 100ms to propogate
+					## NOTE: publish and give time for the command to propogate to the servo motors,
+					## but DO NOT MONITOR (excess overhead of minimum 200ms, which is greater
+					## than _duration_startle and will cause delay)
+					#lookINSPIRE4Intro.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_STARTLE, ht_gp=self.HT_STARTLE)
+					if _tmp_duration_startle > 100:
+						self.SWW_WI.sleepWhileWaitingMS( _tmp_duration_startle - 100)
+				except rospy.exceptions.ROSException as e1:
+					rospy.logerr( str(e1) )
+				_duration = abs(_start_time_startle - rospy.get_time())
+				rospy.logwarn( "Startle duration: " + str(_duration) + " seconds" )
+
+				lookINSPIRE4Intro.__is_startled = True
+				rospy.loginfo("Done: STARTLE ====")
+			#end	if startle:
+
+			if relax:
+				rospy.loginfo("====> RELAX")
+				rospy.loginfo( str(self.makiPP) )
+				_first_pass = True
+				_start_time_relax = rospy.get_time()
+
+				## own version of monitorMoveToGP
+				## adjusts speed based on difference
+				## between current position and goal
+				## position to stay within _duration_relax
+				while relax and (not rospy.is_shutdown()):
+					lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
+					rospy.loginfo( str(self.makiPP) )
+
+					## computer difference between current and goal positions
+					## TODO: do this calculation using map
+					#_distance_to_relax_ll = abs( self.makiPP["LL"] - self.LL_NEUTRAL )
+					#rospy.loginfo("_distance_to_relax_ll=" + str(_distance_to_relax_ll))
+					#_distance_to_relax_ht = abs( self.makiPP["HT"] - self.HT_NEUTRAL )
+					#rospy.loginfo("_distance_to_relax_ht=" + str(_distance_to_relax_ht))
+					_distance_to_relax_ll = abs( self.makiPP["LL"] - self.previous_ll )
+					rospy.loginfo("_distance_to_relax_ll=" + str(_distance_to_relax_ll))
+					_distance_to_relax_ht = abs( self.makiPP["HT"] - self.previous_ht )
+					rospy.loginfo("_distance_to_relax_ht=" + str(_distance_to_relax_ht))
+					#_tmp_duration_startle = _duration_startle
+					#if (abs(_distance_to_startle_ht - _expected_delta_ht) > DELTA_PP):
+					#	_tmp_scale = float( _distance_to_startle_ht / _expected_delta_ht )
+					#	_tmp_duration_startle = _tmp_scale * _tmp_duration_startle
+					#rospy.logdebug("_tmp_scale=" + str(_tmp_scale) + "_tmp_duration_startle=" + str(_tmp_duration_startle))
+
+					## adjust duration to stay within _duration_relax
+					if _first_pass:
+						rospy.logdebug("duration_relax = " + str(_duration_relax))
+						_first_pass=False
+						pass
+					elif (_distance_to_relax_ll > DELTA_PP) or (_distance_to_relax_ht > DELTA_PP):
+						_duration_relax = _duration_relax - _duration_relax_wait
+						rospy.logdebug("duration_relax = " + str(_duration_relax))
+					else:
+						rospy.logdebug("close enough...done relax while loop")
+						break
+					if (_duration_relax <= 0):
+						rospy.logdebug("negative time...done relax while loop")
+						break
+
+					## calculate new goal speeds
+					_gs_ll = self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_relax_ll, _duration_relax)
+					rospy.loginfo("_gs_ll=" + str(_gs_ll))
+					_gs_ll = max(_gs_ll, self.LL_GS_MIN)
+					rospy.loginfo("adjusted _gs_ll=" + str(_gs_ll))
+					_gs_ht = self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_relax_ht, _duration_relax)
+					rospy.loginfo("_gs_ht=" + str(_gs_ht))
+					_gs_ht = max(_gs_ht, self.HT_GS_MIN)
+					rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
+					#_duration_relax_wait = self.DC_helper.getTurnDurationMS_ticks_goalSpeed( _distance_to_relax, _gs_ll )
+					#rospy.loginfo("waitMS = " + str(_duration_relax_wait))
+			
+					## generate servo control command to set new goal speeds
+					_pub_cmd = ""
+					_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+					_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+					lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd) )
+
+					## servo control command to set goal positions
+					_pub_cmd = _relax_gp_cmd
+		
+					#_start_time_relax = rospy.get_time()
+					try:
+						## Maki-ro relaxes wide open eyes
+						## and head comes back forward to neutral
+						lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd )
+						self.SWW_WI.sleepWhileWaitingMS( _duration_relax_wait, end_early=False)
+					except rospy.exceptions.ROSException as e2:
+						rospy.logerr( str(e2) )
+				#end	while relax and (not rospy.is_shutdown()):
+
+				_duration = abs(_start_time_relax - rospy.get_time())
+				rospy.logwarn( "Relax duration: " + str(_duration) + " seconds" )
+				rospy.loginfo( str(self.makiPP) )
+
+				lookINSPIRE4Intro.__is_startled = False
+				rospy.loginfo("Done: RELAX ====")
+			#end	if relax:
+
+			_loop_count = _loop_count +1
+
+			## debugging
+			#rospy.loginfo(".............P A U S E ...")
+			#self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
+		# end	while not rospy.is_shutdown():
+
+		_duration = abs(rospy.get_time() - _start_time)
+		rospy.logdebug( "NUMBER OF STARTLE/RELAX MOVMENTS: " + str(_loop_count) )
+		rospy.logdebug( "Duration: " + str(_duration) + " seconds" )
+		return
+
+
+	def startStartle( self, relax=False ):
+		rospy.logdebug("startStartle(): BEGIN")
+		### call base class' start function
+		#eyelidHeadTiltBaseBehavior.start(self)
+		#rospy.logdebug("startStartle(): After eyelidHeadTiltBaseBehavior.start()")
+		lookINSPIRE4Intro.macroStartleRelax( self, startle=True, relax=relax )
+		rospy.logdebug("startStartle(): END")
+		return
+
+	def stopStartle( self ):
+		## shift into eyelid and headtilt neutral
+		lookINSPIRE4Intro.macroStartleRelax( self, startle=False, relax=True )
+
+		## call base class' stop function
+		eyelidHeadTiltBaseBehavior.stop(self)
+		return
 
 	def introStart( self ):
 		## try to nicely startup without jerking MAKI's head tilt servo
@@ -585,6 +880,18 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			lookINSPIRE4Intro.introStop( self, disable_ht=True )
 			## TODO: May need to change to False when whole INSPIRE4
 			##	script and control program are in place
+
+		elif msg.data == "intro startle":
+			## perform one startle then immediately relax
+			lookINSPIRE4Intro.startStartle( self, relax=True )
+
+		elif msg.data == "intro startle start":
+			## perform one startle and hold
+			lookINSPIRE4Intro.startStartle( self, relax=False )
+
+		elif msg.data == "intro startle stop":
+			## from startle, immediately relax
+			lookINSPIRE4Intro.stopStartle( self )
 
 		elif msg.data == "lookAtExperimenter":
 			#self.macroLookAtExperimenter()
@@ -621,6 +928,7 @@ if __name__ == '__main__':
 	rospy.spin()   ## keeps python from exiting until this node is stopped
 
         print "__main__: END"
+
 
 
 
