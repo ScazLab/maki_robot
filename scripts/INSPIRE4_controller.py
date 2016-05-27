@@ -106,9 +106,8 @@ class INSPIRE4Controller( object ):
 
 	def pubTo_maki_macro( self, commandOut ):
 		rospy.logdebug( commandOut )
-		## TODO: UNCOMMENT
-		#if not rospy.is_shutdown():
-		#	self.ros_pub.publish( commandOut )
+		if not rospy.is_shutdown():
+			self.ros_pub.publish( commandOut )
 		return
 
 	#####################
@@ -177,10 +176,14 @@ class INSPIRE4Controller( object ):
 		return
 
 
-	def transitionToEngagement( self ):
+	def transitionToEngagement( self, msg ):
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
-		INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
-		INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
+		INSPIRE4Controller.pubTo_maki_macro( self, msg )
+		## TODO: add timer
+		if self.state == INSPIRE4Controller.INTRO:
+			INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
+		else:
+			INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
 		self.state = INSPIRE4Controller.ENGAGEMENT
 		return
 
@@ -242,7 +245,7 @@ class INSPIRE4Controller( object ):
 				INSPIRE4Controller.setBlinkAndScan( self, scan=False )
 				## TODO: Set a timer to enable blink and scan
 				if "Infant" in _data:
-					INSPIRE4Controller.transitionToEngagement( self )
+					INSPIRE4Controller.transitionToEngagement( self, _data )
 				else:
 					self.state = INSPIRE4Controller.INTRO
 			else:
@@ -268,7 +271,7 @@ class INSPIRE4Controller( object ):
 			## TODO: Set a timer to enable blink and scan
 
 		elif _data == "turnToInfant":
-			INSPIRE4Controller.transitionToEngagement( self )
+			INSPIRE4Controller.transitionToEngagement( self, _data )
 
 		elif (_data == "outro start") or (_data == "ending start"):
 			INSPIRE4Controller.doSetup( self )
