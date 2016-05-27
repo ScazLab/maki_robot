@@ -1037,10 +1037,13 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		if msg.data == "intro start":
 			lookINSPIRE4Intro.introStart( self )
 
-		elif msg.data == "intro stop":
-			lookINSPIRE4Intro.introStop( self, disable_ht=True )
-			## TODO: May need to change to False when whole INSPIRE4
-			##	script and control program are in place
+		elif msg.data.startswith( "intro stop"):
+			if msg.data.endswith( "disable_ht=False" ):
+				lookINSPIRE4Intro.introStop( self, disable_ht=False )
+				## TODO: May need to change to False when whole INSPIRE4
+				##	script and control program are in place
+			else:
+				lookINSPIRE4Intro.introStop( self, disable_ht=True )
 
 		elif msg.data == "intro greet":
 			lookINSPIRE4Intro.macroGreeting( self )
@@ -1057,18 +1060,16 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			## from startle, immediately relax
 			lookINSPIRE4Intro.stopStartle( self )
 
-		elif msg.data == "lookAtExperimenter":
-			#self.macroLookAtExperimenter()
+		elif msg.data == "intro lookAtExperimenter":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
 
-		elif msg.data == "lookAtBallLocationUpperRight":
+		elif msg.data == "intro lookAtBallLocationUpperRight":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
 
-		elif msg.data == "lookAtBallLocationLowerRight":
-			#self.macroLookAtBallLocationLowerRight()
+		elif msg.data == "intro lookAtBallLocationLowerRight":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
-		elif msg.data == "lookAtInfant":
+		elif msg.data == "intro lookAtInfant":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
 			## TODO: Maki-ro doesn't quite return to HT_MIDDLE
 			lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )

@@ -7,6 +7,7 @@ import os
 import math
 import string
 import random
+import thread
 
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
@@ -631,7 +632,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		return
 
 	## DO NOT USE -- UNDER DEVELOPMENT -- NOT FULLY TESTED	
-	def stopStartleGame( self ):
+	def stopStartleGame( self, disable_ht=True ):
 		rospy.logdebug("stopStartleGame(): BEGIN")
 
 		## KATE -- TO TEST
@@ -663,7 +664,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				rospy.logerr("stopStartleGame(): unable to reset; " + str(_e))
 
 		## call base class' stop function
-		eyelidHeadTiltBaseBehavior.stop(self)
+		eyelidHeadTiltBaseBehavior.stop(self, disable_ht=disable_ht)
 
 		## reset to single startle values from neutral eyelid
 		engagementStartleGame.setEyelidRange( self, LL_OPEN_DEFAULT, ll_close=LL_CLOSE_MAX )
@@ -712,13 +713,20 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			engagementStartleGame.unhideIntoStartle( self )
 
 		elif (msg.data == "startleGame start"):
-			## start the infant engagement game
-			engagementStartleGame.startStartleGame( self )
+			## NOTE: This call is blocking
+			try:
+				## start the infant engagement game
+				thread.start_new_thread( engagementStartleGame.startStartleGame, (self, ))
+			except:
+				rospy.logerr("Unable to start new thread for engagementStartleGame.startStartleGame()")
 
-		elif (msg.data == "startleGame stop"):
+		elif (msg.data.startswith( "startleGame stop") ):
 			## stop the infant engagement game
-			## NOTE: Also disables HT
-			engagementStartleGame.stopStartleGame( self )
+			## NOTE: Also disables HT unless otherwise specified
+			if msg.data.endswith( "disable_ht=False" ):
+				engagementStartleGame.stopStartleGame( self, disable_ht=False )
+			else:
+				engagementStartleGame.stopStartleGame( self )
 
 		else:
 			pass

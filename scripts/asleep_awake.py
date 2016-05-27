@@ -340,12 +340,16 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			## TODO: May need to change to False when whole INSPIRE4
 			##	script and control program are in place
 
-		elif msg.data == "awake experimenter":
+		elif msg.data.startswith( "awake experimenter" ):
 			asleepAwake.start( self )
 			asleepAwake.macroAwake( self, look_experimenter=True )
-			asleepAwake.stop( self, disable_ht=True )
+
+			if msg.data.endswith( "disable_ht=False" ):
+				asleepAwake.stop( self, disable_ht=False )
 			## TODO: May need to change to False when whole INSPIRE4
 			##	script and control program are in place
+			else:
+				asleepAwake.stop( self, disable_ht=True )
 
 		else:
 			pass
