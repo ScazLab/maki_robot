@@ -132,9 +132,9 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 		return
 
 	## override base class
-	def stop( self ):
+	def stop( self, disable_ht=True ):
 		## call base class' stop
-		return headTiltBaseBehavior.stop( self )
+		return headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
 
 	###########################################
 	##
