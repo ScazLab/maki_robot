@@ -593,6 +593,167 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		rospy.logdebug("lookAt(): END")
 		return
 
+	## NOTE: during intro, we expect Maki-ro's head to be tilted up to 
+	##	face the experimenter
+	def macroGreeting( self, nod_angle=15.0, duration=600, repetitions=1 ):
+		rospy.logdebug("macroGreeting(): BEGIN")
+
+		_start_time = rospy.get_time()
+		## check the inputs
+		if isinstance(nod_angle, float) or isinstance(nod_angle, int):
+			pass
+		else:
+			rospy.logwarn("macroGreeting(): INVALID VALUE: nod_angle=" + str(nod_angle) + "; updated to 15 degrees")
+			nod_angle = 15.0	## degrees
+		if isinstance(duration, float) or isinstance(duration, int):
+			pass
+		else:
+			rospy.logwarn("macroGreeting(): INVALID VALUE: duration=" + str(duration) + "; updated to 600 milliseconds")
+			duration = 600	## milliseconds
+		if isinstance(repetitions, int) and (repetitions > 0):
+			pass
+		else:
+			rospy.logwarn("macroGreeting(): INVALID VALUE: repetitions=" + str(repetitions) + "; updated to 1")
+			repetitions = 1
+
+		_pub_ipt = False #True
+		_monitor = True	#False
+		_duration_nod = duration
+
+		_my_ticks_ht = self.DC_helper.convertToTicks_degrees( nod_angle )
+		rospy.logdebug("_my_ticks_ht: " + str(nod_angle) + " degrees is " + str(_my_ticks_ht) + " ticks")
+		_gs_ht = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _my_ticks_ht, _duration_nod) )
+		_my_ticks_ht = int( float(_my_ticks_ht * 0.5) + 0.5 )
+
+		_my_ticks_ll = self.DC_helper.convertToTicks_degrees( nod_angle * 0.36 )	## same constant Todorovic 2009
+		rospy.logdebug("_my_ticks_ll: " + str(nod_angle) + " degrees is " + str(_my_ticks_ll) + " ticks")
+		_gs_ll = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _my_ticks_ll, _duration_nod) )
+		_my_ticks_ll = int( float(_my_ticks_ll * 0.5) + 0.5 )
+		rospy.logdebug("DIVIDED IN HALF: _my_ticks_ht=" + str(_my_ticks_ht) + "; _my_ticks_ll=" + str(_my_ticks_ll))
+
+		## Store initial pose
+		lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
+		self.previous_ll = self.makiPP["LL"]
+		self.previous_ht = self.makiPP["HT"]
+
+		_my_head_nod_up_ht = self.previous_ht + int( float(_my_ticks_ht * 0.5) + 0.5 )
+		_my_head_nod_down_ht = self.previous_ht - _my_ticks_ht
+		_my_head_nod_up_ll = self.previous_ll - _my_ticks_ll	## head up, eyelids down
+		_my_head_nod_down_ll = self.previous_ll + _my_ticks_ll	## head down, eyelids up
+
+		## generate servo control command to set goal positions
+		## NOTE: on the Arbotix-M side, a sync_write function is used
+		## to simultaneously broadcast the updated goal positions
+		_duration_nod_up = float(_duration_nod) * 0.2	#0.25
+		_head_nod_up_gp_cmd = ""
+		_head_nod_up_gp_cmd += "LL" + SC_SET_GP + str(_my_head_nod_up_ll)
+		_head_nod_up_gp_cmd += "HT" + SC_SET_GP + str(_my_head_nod_up_ht)
+		if _pub_ipt:	_head_nod_up_gp_cmd += SC_SET_IPT + str( int(_duration_nod_up + 0.5) )
+		_head_nod_up_gp_cmd += TERM_CHAR_SEND
+
+		_duration_nod_down = float(_duration_nod) * 0.6	#0.5
+		_head_nod_down_gp_cmd = ""
+		_head_nod_down_gp_cmd += "LL" + SC_SET_GP + str(_my_head_nod_down_ll)
+		_head_nod_down_gp_cmd += "HT" + SC_SET_GP + str(_my_head_nod_down_ht)
+		if _pub_ipt:	_head_nod_down_gp_cmd += SC_SET_IPT + str( int(_duration_nod_down + 0.5) )
+		_head_nod_down_gp_cmd += TERM_CHAR_SEND
+
+		_duration_nod_center = float(_duration_nod) * 0.3	#0.2	#0.25
+		_head_nod_center_gp_cmd = ""
+		_head_nod_center_gp_cmd += "LL" + SC_SET_GP + str(self.previous_ll)
+		_head_nod_center_gp_cmd += "HT" + SC_SET_GP + str(self.previous_ht)
+		if _pub_ipt:	_head_nod_center_gp_cmd += SC_SET_IPT + str( int(_duration_nod_center + 0.5) )
+		_head_nod_center_gp_cmd += TERM_CHAR_SEND
+
+		_my_tuple = (("NOD UP", _duration_nod_up, _my_head_nod_up_ll, _my_head_nod_up_ht, _head_nod_up_gp_cmd), ("NOD DOWN", _duration_nod_down, _my_head_nod_down_ll, _my_head_nod_down_ht, _head_nod_down_gp_cmd), ("NOD CENTER", _duration_nod_center, self.previous_ll, self.previous_ht, _head_nod_center_gp_cmd))
+		_pub_cmd = ""
+
+		## preset the desired goal speeds BEFORE sending the goal positions
+		_pub_cmd = ""
+		_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+		_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+		## NOTE: pubTo_maki_command will automatically add TERM_CHAR_SEND postfix
+		## publish and give time for the command to propogate to the servo motors
+		lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd), cmd_prop=True )
+
+		_duration = abs(rospy.get_time() -_start_time)
+		rospy.loginfo("OVERHEAD SETUP TIME: " + str(_duration) + " seconds")
+
+		_loop_count = 0
+		_start_time = rospy.get_time()
+		while (_loop_count < repetitions) and (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
+			rospy.logdebug("-------------------")
+
+			for _print, _duration_nod, _my_ll, _my_ht, _head_nod_gp_cmd in _my_tuple:
+				rospy.loginfo("====> " + str(_print))
+				#lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
+				#rospy.logdebug( str(self.makiPP) )
+
+				#if not _pub_ipt:
+				#	## Calculate goal speed base on distance and duration (in milliseconds)
+				#	_distance_to_head_nod_ll = abs( self.makiPP["LL"] - _my_ll )
+				#	rospy.logdebug("_distance_to_head_nod_ll=" + str(_distance_to_head_nod_ll))
+				#	if (_distance_to_head_nod_ll > 0):
+				#		_gs_ll = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_head_nod_ll, _duration_nod) )
+				#		rospy.loginfo("_gs_ll=" + str(_gs_ll))
+				#
+				#	_distance_to_head_nod_ht = abs( self.makiPP["HT"] - _my_ht )
+				#	rospy.logdebug("_distance_head_nod_ht=" + str(_distance_to_head_nod_ht))
+				#	if (_distance_to_head_nod_ht > 0):
+				#		_gs_ht = abs( self.DC_helper.getGoalSpeed_ticks_durationMS( _distance_to_head_nod_ht, _duration_nod) )
+				#		rospy.loginfo("_gs_ht=" + str(_gs_ht))
+				#		_gs_ht = min(_gs_ht, self.HT_GS_MAX)
+				#		rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
+				#
+				#	## preset the desired goal speeds BEFORE sending the goal positions
+				#	_pub_cmd = ""
+				#	if (_distance_to_head_nod_ll>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+				#	if (_distance_to_head_nod_ht>0):	_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+				#	## NOTE: pubTo_maki_command will automatically add TERM_CHAR_SEND postfix
+				#
+				#	## publish and give time for the command to propogate to the servo motors
+				#	lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd), cmd_prop=True )
+
+				## set servo control command to set goal positions
+				_pub_cmd = _head_nod_gp_cmd
+
+				_start_time_head_nod = rospy.get_time()
+				try:
+					if _monitor and (_duration_nod >= 200):
+						## NOTE: publish and give time for the command to propogate to the servo motors,
+						## but DO NOT MONITOR (excess overhead of minimum 200ms, which is greater
+						## than some _duration_nod and will cause delay)
+						lookINSPIRE4Intro.monitorMoveToGP( self, _pub_cmd, ll_gp=_my_ll, ht_gp=_my_ht )
+					else:
+						lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd )	## default 100ms to propogate
+						if _duration_nod > 100:
+							self.SWW_WI.sleepWhileWaitingMS( _duration_nod - 100, end_early=False)
+				except rospy.exceptions.ROSException as e1:
+					rospy.logerr( str(e1) )
+				_duration = abs(_start_time_head_nod - rospy.get_time())
+				rospy.loginfo( str(_print) + "\tDURATION: " + str(_duration) + " seconds; EXPECTED " + str(_duration_nod))
+			#end	for _print, _duration_nod, _my_ll, _my_ht, _head_nod_gp_cmd in _my_tuple:
+
+			_loop_count = _loop_count +1
+
+			## debugging
+			#rospy.loginfo(".............P A U S E ...")
+			#self.SWW_WI.sleepWhileWaiting( 1 )	## 1 second
+		# end	while not rospy.is_shutdown():
+
+		_duration = abs(rospy.get_time() - _start_time)
+		rospy.logdebug( "NUMBER OF GREETING MOVMENTS: " + str(_loop_count) )
+		rospy.logdebug( "Duration: " + str(_duration) + " seconds" )
+		return
+
+
+	def startStartle( self, relax=False ):
+		rospy.logdebug("startStartle(): BEGIN")
+		### call base class' start function
+		#eyelidHeadTiltBaseBehavior.start(self)
+		#rospy.logdebug("startStartle(): After eyelidHeadTiltBaseBehavior.start()")
+		lookINSPIRE4Intro.macroStartleRelax( self, startle=True, relax=relax )
+		rospy.logdebug("startStartle(): END")
 	## similar to the engagment game but uses current HT and LL values
 	## startle and relax are relative to the current HT and LL values
 	def macroStartleRelax( self, startle=True, relax=True, repetitions=1 ):
@@ -880,6 +1041,9 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			lookINSPIRE4Intro.introStop( self, disable_ht=True )
 			## TODO: May need to change to False when whole INSPIRE4
 			##	script and control program are in place
+
+		elif msg.data == "intro greet":
+			lookINSPIRE4Intro.macroGreeting( self )
 
 		elif msg.data == "intro startle":
 			## perform one startle then immediately relax
