@@ -75,8 +75,8 @@ class selectiveAttention( headTiltBaseBehavior ):
 		## additional rest period
 		self.visual_scan_rest_occurence_percent = 35	#25	## [1,100)
 		self.visual_scan_rest_enabled = True
-		self.visual_scan_rest_min = 250	#100	#50	## milliseconds
-		self.visual_scan_rest_max = 750	#400	#300	## milliseconds
+		self.visual_scan_rest_min = 200	#250	#100	#50	## milliseconds
+		self.visual_scan_rest_max = 600 #750	#400	#300	## milliseconds
 		## NOTE: Scaz wanted longer rest durations between visual scan movements
 
 		if selectiveAttention.__is_scanning == None:
@@ -209,7 +209,7 @@ class selectiveAttention( headTiltBaseBehavior ):
 		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) + str(TERM_CHAR_SEND) 
 		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
 
-	def stopVisualScan( self ):
+	def stopVisualScan( self, disable_ht=True ):
 		selectiveAttention.__is_scanning = False
 
 		## set eye pan and tilt  
@@ -219,7 +219,7 @@ class selectiveAttention( headTiltBaseBehavior ):
 
 		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) + str(TERM_CHAR_SEND) 
 		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
-		headTiltBaseBehavior.stop(self)
+		headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
 
 	def parse_maki_macro( self, msg ):
 		print msg.data
@@ -232,8 +232,11 @@ class selectiveAttention( headTiltBaseBehavior ):
 				thread.start_new_thread( selectiveAttention.macroVisualScan, (self, ))
 			except:
 				rospy.logerr("Unable to start new thread for selectiveAttention.macroVisualScan()")
-		elif msg.data == "visualScan stop":
-			selectiveAttention.stopVisualScan( self )
+		elif msg.data.startswith( "visualScan stop" ):
+			if msg.data.endswith( "disable_ht=False" ):
+				selectiveAttention.stopVisualScan( self, disable_ht=False )
+			else:
+				selectiveAttention.stopVisualScan( self, disable_ht=True )
 		else:
 			pass
 
