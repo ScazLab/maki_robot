@@ -1026,8 +1026,10 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		return
 
 	def introStop( self, disable_ht=True ):
+		rospy.logdebug("introStop(): BEGIN")
 		lookINSPIRE4Intro.__is_intro_running = False
 		lookINSPIRE4Intro.stop(self, disable_ht=disable_ht)
+		rospy.logdebug("introStop(): END")
 		return
 
 

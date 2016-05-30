@@ -1,0 +1,30 @@
+/* connect/disconnect form area (vhmsg interface) ---- */
+
+#vhmsg_settings {
+	margin-left:auto;
+	margin-right:auto;
+	width:300px;
+	padding-top: 20px;
+	padding-bottom: 20px;
+}
+
+#connect_form div {
+	text-align:right;
+	margin: 10px auto;
+	width: 100%;
+}
+
+#disconnect_form {
+	display: none;
+}
+
+.vhmsg_button {
+	width: 100%;
+	/*	text-align:center; */
+}
+
+input {
+	width: 200px;
+	font-size: 12pt;
+}
+

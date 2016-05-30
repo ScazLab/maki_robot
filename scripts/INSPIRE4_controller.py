@@ -1,6 +1,8 @@
 #! /usr/bin/env python
 
-#RUN AS:	rosrun maki_robot INSPIRE4_controller.py 
+#	RUN AS:	rosrun maki_robot INSPIRE4_controller.py 
+
+# 	NOTE:	To be run in conjunction with master-table.xls
 
 import rospy
 import re
@@ -177,6 +179,7 @@ class INSPIRE4Controller( object ):
 
 
 	def transitionToEngagement( self, msg ):
+		rospy.logdebug("transitionToEngagement(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
 		INSPIRE4Controller.pubTo_maki_macro( self, msg )
 		## TODO: add timer
@@ -185,20 +188,24 @@ class INSPIRE4Controller( object ):
 		else:
 			INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
 		self.state = INSPIRE4Controller.ENGAGEMENT
+		rospy.logdebug("transitionToEngagement(): END")
 		return
 
 
 	def transitionToStimuli( self ):
+		rospy.logdebug("transitionToStimuli(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
 		INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
 		INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.state = INSPIRE4Controller.STIMULI
+		rospy.logdebug("transitionToStimuli(): END")
 		return
 
 
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
-		rospy.logdebug("received: " + str(msg))
+		#rospy.logdebug("received: " + str(msg))
+		rospy.loginfo("received: " + str(msg))
 
 		_unknown_flag = False
 		_data = str(msg.data)
@@ -230,40 +237,48 @@ class INSPIRE4Controller( object ):
 				self.state = INSPIRE4Controller.PRELUDE
 
 		elif _data.startswith( "awake" ):
+			rospy.loginfo("prefix = awake; forward the message contents to /maki_macro: " + _data)
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
 			self.state = INSPIRE4Controller.INTRO
 
 		elif _data.startswith( "intro" ):
 			if _data.endswith( "greet" ):
-				self.state = INSPIRE4Controller.INTRO
+				rospy.logdebug("\tgreet")
 				pass
 			elif _data.endswith( "startle" ):
+				rospy.logdebug("\tstartle")
 				INSPIRE4Controller.setBlinkAndScan( self, scan=True )
-				self.state = INSPIRE4Controller.INTRO
 			elif "lookAt" in _data:
 				INSPIRE4Controller.setBlinkAndScan( self, scan=False )
 				## TODO: Set a timer to enable blink and scan
 				if "Infant" in _data:
+					rospy.logdebug("\tInfant")
 					INSPIRE4Controller.transitionToEngagement( self, _data )
+					return
 				else:
-					self.state = INSPIRE4Controller.INTRO
+					rospy.logdebug( _data )
 			else:
+				rospy.logdebug("prefix = intro, SUFFIX IS UNKNOWN: " + _data)
 				_unknown_flag = True
 
 			if not _unknown_flag:
+				rospy.loginfo("prefix = intro; forward the message contents to /maki_macro: " + _data)
 				## forward the message contents
 				INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				self.state = INSPIRE4Controller.INTRO
 			
 		elif (_data.startswith( "startleGame stop" )) or (_data == "infant fixation"):
 			INSPIRE4Controller.transitionToStimuli( self )
 
 		elif ("tartle" in _data):
+			rospy.loginfo("'tartle' in _data; forward the message contents to /maki_macro: " + _data)
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
 			self.state = INSPIRE4Controller.ENGAGEMENT
 
 		elif ("turnToScreen" in _data):
+			rospy.loginfo("'turnToScreen' in _data; forward the message contents to /maki_macro: " + _data)
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
 			self.state = INSPIRE4Controller.STIMULI
