@@ -144,8 +144,9 @@ class INSPIRE4Controller( object ):
 	'''
 
 
-	def setBlinkAndScan( self, blink=False, scan=False ):
+	def setBlinkAndScan( self, blink=False, scan=False, disable_ht=False ):
 		rospy.logdebug("setBlinkAndScan(): BEGIN")
+		_pub_cmd = ""
 
 		if (isinstance(blink, bool) and blink):
 			INSPIRE4Controller.pubTo_maki_macro( self, "spontaneousBlink start" )
@@ -155,7 +156,9 @@ class INSPIRE4Controller( object ):
 		if (isinstance(scan, bool) and scan):
 			INSPIRE4Controller.pubTo_maki_macro( self, "visualScan start" )
 		else:
-			INSPIRE4Controller.pubTo_maki_macro( self, "visualScan stop" )
+			_pub_cmd = "visualScan stop"
+			if not disable_ht:	_pub_cmd += " disable_ht=False"
+			INSPIRE4Controller.pubTo_maki_macro( self, _pub_cmd )
 
 		rospy.logdebug("setBlinkAndScan(): END")
 		return
