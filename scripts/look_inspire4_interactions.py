@@ -53,14 +53,14 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 		self.DC_helper = dynamixelConversions()
 
 		if lookINSPIRE4Interaction.HP_LEFT_SCREEN == None:	
-			lookINSPIRE4Interaction.HP_LEFT_SCREEN = 620
+			lookINSPIRE4Interaction.HP_LEFT_SCREEN = 675	#650	#620
 		if lookINSPIRE4Interaction.HT_LEFT_SCREEN == None:	
 			lookINSPIRE4Interaction.HT_LEFT_SCREEN = 540
 		if lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE == None:
 			lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE = EP_RIGHT
 
 		if lookINSPIRE4Interaction.HP_RIGHT_SCREEN == None:
-			lookINSPIRE4Interaction.HP_RIGHT_SCREEN = 404
+			lookINSPIRE4Interaction.HP_RIGHT_SCREEN = 349	#404
 		if lookINSPIRE4Interaction.HT_RIGHT_SCREEN == None:
 			lookINSPIRE4Interaction.HT_RIGHT_SCREEN = lookINSPIRE4Interaction.HT_LEFT_SCREEN
 		if lookINSPIRE4Interaction.EP_RIGHT_SCREEN_SACCADE == None:
@@ -366,7 +366,24 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 			rospy.logwarn( _pub_cmd )
 			#_start_time = rospy.get_time()
 			#lookINSPIRE4Interaction.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			lookINSPIRE4Interaction.monitorMoveToGP( self, _pub_cmd, hp_gp=_hp_gp )
+
+			_try_count = 0
+			_try_max = 3
+			while (self.ALIVE and (not rospy.is_shutdown()) and 
+				(_pub_cmd != TERM_CHAR_SEND) and (_try_count <= _try_max)):
+				try:
+					## NOTE: This extra pubTo_maki_command is a bit of a cheat
+					lookINSPIRE4Interaction.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
+
+					lookINSPIRE4Interaction.monitorMoveToGP( self, _pub_cmd, hp_gp=_hp_gp )
+					break	## exit while loop
+				except rospy.exceptions.ROSException as _e:
+					_try_count += 1
+					if (_try_count < _try_max):
+						rospy.logwarn("turnToInfant(): WARNING: May not have successfully moved to face infant... TRYING AGAIN: " + str(_try_count) + " of " + str(_try_max))
+					else:
+						rospy.logerr("turnToInfant(): ERROR: Unable to face infant!!!!!!!!!!!!!!!!! " + str(_e))
+						return
 		
 			### now move eye pan back to center from saccade
 			#_ep_gp = EP_FRONT
