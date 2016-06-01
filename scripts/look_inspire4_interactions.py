@@ -422,10 +422,10 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 		elif msg.data == "interaction stop":
 			lookINSPIRE4Interaction.stop( self )
 
-		elif msg.data == "turnToScreen left":
+		elif msg.data.startswith( "turnToScreen left" ):
 			lookINSPIRE4Interaction.turnToScreen( self, right_screen=False )
 
-		elif msg.data == "turnToScreen right":
+		elif msg.data.startswith( "turnToScreen right" ):
 			lookINSPIRE4Interaction.turnToScreen( self, right_screen=True )
 
 		elif msg.data == "turnToInfant":

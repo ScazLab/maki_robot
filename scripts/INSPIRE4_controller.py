@@ -118,6 +118,14 @@ class INSPIRE4Controller( object ):
 			self.ros_pub.publish( commandOut )
 		return
 
+	## Occasionally, will need to publish to self
+	def pubTo_inspire_four_pilot_command( self, commandOut ):
+		rospy.logdebug( ">>>>> SELF PUBLISHING: " + commandOut )
+		if not rospy.is_shutdown():
+			_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
+			_ros_pub.publish( commandOut )
+		return
+
 	#####################
 	## Set up subscriber to /inspire_four_pilot_command
 	#####################
@@ -255,8 +263,9 @@ class INSPIRE4Controller( object ):
 	def stopWatchStimuli_callback( self, event ):
 		rospy.logdebug("stopWatchStimuli(): BEGIN")
 		rospy.loginfo("stopWatchStimuli_callback() called at " + str( event.current_real))
-		_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
-		_ros_pub.publish( "turnToInfant" )
+		#_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
+		#_ros_pub.publish( "turnToInfant" )
+		INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "turnToInfant" )
 		rospy.logdebug("stopWatchStimuli(): END")
 		return
 
@@ -343,8 +352,11 @@ class INSPIRE4Controller( object ):
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
 			self.state = INSPIRE4Controller.STIMULI
-			## TODO: add timer to trigger 'watch stimuli' behavior
-			#INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
+
+			if _data.endswith( "auto_return=True" ):
+				## add timed trigger 'watch stimuli' behavior 
+				## and followed by turning back to face the infant
+				INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
 			## TODO: Set a timer to enable blink and scan
 
 		elif _data == "turnToInfant":

@@ -754,6 +754,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		#rospy.logdebug("startStartle(): After eyelidHeadTiltBaseBehavior.start()")
 		lookINSPIRE4Intro.macroStartleRelax( self, startle=True, relax=relax )
 		rospy.logdebug("startStartle(): END")
+
+
 	## similar to the engagment game but uses current HT and LL values
 	## startle and relax are relative to the current HT and LL values
 	def macroStartleRelax( self, startle=True, relax=True, repetitions=1 ):
