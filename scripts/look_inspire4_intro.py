@@ -83,9 +83,9 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			lookINSPIRE4Intro.__is_intro_running = False
 
 		if lookINSPIRE4Intro.HP_EXPERIMENTER == None:	
-			lookINSPIRE4Intro.HP_EXPERIMENTER = 620	## ticks
+			lookINSPIRE4Intro.HP_EXPERIMENTER = 550	#580	#620	## ticks
 		if lookINSPIRE4Intro.HT_EXPERIMENTER == None:	
-			lookINSPIRE4Intro.HT_EXPERIMENTER = 540	## ticks
+			lookINSPIRE4Intro.HT_EXPERIMENTER = 580	#560	#540	## ticks
 
 		if lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT == None:
 			lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT = 404	## ticks
