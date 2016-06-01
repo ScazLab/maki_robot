@@ -36,6 +36,8 @@ class INSPIRE4Controller( object ):
 	END = 5
 	BREAK_DOWN = 6
 
+	NUMBER_OF_INTERACTIONS = 6
+
 	def __init__(self, verbose_debug, ros_pub):
 
 		#self.ALIVE = True
@@ -43,6 +45,8 @@ class INSPIRE4Controller( object ):
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		#self.DC_helper = dynamixelConversions()
+
+		INSPIRE4Controller.resetInteractionCount( self )
 		self.__is_game_running = False
 		self.state = None
 		self.previous_state = None
@@ -60,6 +64,9 @@ class INSPIRE4Controller( object ):
 		#INSPIRE4Controller.initROSSub( self )
 
 		return
+
+	def resetInteractionCount( self ):
+		self.interaction_count = 0
 
 	#####################
 	## Initialize ROS node 
@@ -362,6 +369,13 @@ class INSPIRE4Controller( object ):
 		elif _data == "turnToInfant":
 			rospy.logwarn("====> turnToInfant")
 			INSPIRE4Controller.transitionToEngagement( self, _data )
+			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
+			self.interaction_count += 1
+			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
+				pass
+				## TODO: automatically start playing startle game
+			else:
+				INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "ending start" )
 
 		elif (_data == "outro start") or (_data == "ending start"):
 			INSPIRE4Controller.doSetup( self )
