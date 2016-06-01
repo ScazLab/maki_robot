@@ -371,10 +371,12 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.transitionToEngagement( self, _data )
 			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
 			self.interaction_count += 1
+			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
 			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
 				pass
 				## TODO: automatically start playing startle game
 			else:
+				rospy.loginfo( "AUTOMATICALLY TERMINATE THE EXPERIMENT" )
 				INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "ending start" )
 
 		elif (_data == "outro start") or (_data == "ending start"):
