@@ -43,6 +43,7 @@ class INSPIRE4Controller( object ):
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		#self.DC_helper = dynamixelConversions()
+		self.__is_game_running = False
 		self.state = None
 		self.previous_state = None
 
@@ -215,7 +216,9 @@ class INSPIRE4Controller( object ):
 	def transitionToStimuli( self ):
 		rospy.logdebug("transitionToStimuli(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
-		INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+		if self.__is_game_running:
+			INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+			self.__is_game_running = False
 		INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.state = INSPIRE4Controller.STIMULI
 		rospy.logdebug("transitionToStimuli(): END")
@@ -329,6 +332,7 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.transitionToStimuli( self )
 
 		elif ("tartle" in _data):
+			if _data == "startleGame start":	self.__is_game_running = True
 			rospy.loginfo("'tartle' in _data; forward the message contents to /maki_macro: " + _data)
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
