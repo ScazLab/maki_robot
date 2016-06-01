@@ -474,11 +474,11 @@ class headTiltBaseBehavior(baseBehavior):
 
 		if enable_ht:	self.enableHT()
 
-	def stop( self ):
+	def stop( self, disable_ht=True ):
 		rospy.logdebug( "headTiltBaseBehavior: stop()" )
 		## call base behavior first
 		baseBehavior.stop( self )
-		self.disableHT()
+		if disable_ht:	self.disableHT()
 		rospy.logdebug( "headTiltBaseBehavior: stop() -- END" )
 
 	def isHTEnabled( self ):
@@ -740,7 +740,7 @@ class eyelidHeadTiltBaseBehavior( eyelidBaseBehavior, headTiltBaseBehavior ):
 		## call headTilt base class' start()
 		return headTiltBaseBehavior.start( self, makiPP, enable_ht )
 
-	def stop( self ):
+	def stop( self, disable_ht=True ):
 		## eyelidHeadTiltBaseBehavior inherits from both
 		## eyelidBaseBehavior and headTiltBaseBehavior,
 		## and both inherit from baseBehavior.
@@ -748,7 +748,7 @@ class eyelidHeadTiltBaseBehavior( eyelidBaseBehavior, headTiltBaseBehavior ):
 		## baseBehavior.stop(), headTiltBaseBehavior.stop()
 		## overrides this, so  
 		## call headTilt base class' stop()
-		return headTiltBaseBehavior.stop( self )
+		return headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
 
 	def parseMAKIFeedbackMsg ( self, recv_msg ):
 		## eyelidHeadTiltBaseBehavior inherits from both
