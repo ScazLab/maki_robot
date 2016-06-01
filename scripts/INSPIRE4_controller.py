@@ -43,6 +43,11 @@ class INSPIRE4Controller( object ):
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		#self.DC_helper = dynamixelConversions()
+		self.state = None
+		self.previous_state = None
+
+		self.durationHeadTurn = 1.0
+		self.durationWatchStimuli = 8.0
 
 		#print ros_pub
 		if ros_pub == None:
@@ -186,10 +191,22 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
 		INSPIRE4Controller.pubTo_maki_macro( self, msg )
 		## TODO: add timer
-		if self.state == INSPIRE4Controller.INTRO:
+		#self.SWW_WI.sleepWhileWaiting(1)	## takes 1 second to turn head
+		rospy.sleep(1.0)
+
+		if (self.state == None) or (not isinstance(self.state, int)):
+			rospy.logerr("transitionToEngagement(): ERROR: Unknown self.state: " + str(self.state))
+			rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO or STIMULI")
+			return
+
+		elif self.state == INSPIRE4Controller.INTRO:
 			INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
-		else:
+		elif self.state == INSPIRE4Controller.STIMULI:
 			INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
+		else:
+			rospy.logwarn("transitionToEngagement(): WARNING: Unexpect transition from self.state: " + str(self.state))
+			rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO or STIMULI")
+			return
 		self.state = INSPIRE4Controller.ENGAGEMENT
 		rospy.logdebug("transitionToEngagement(): END")
 		return
@@ -205,11 +222,47 @@ class INSPIRE4Controller( object ):
 		return
 
 
+	## durations in seconds
+	def setAutoTransitionWatchStimuli( self, durationTurnToScreen=1.0, durationWatchStimuli=8.0 ):
+	#def setAutoTransitionWatchStimuli( self, durationTurnToScreen=INSPIRE4Controller.durationHeadTurn, durationWatchStimuli=INSPIRE4Controller.durationWatchStimuli):
+		rospy.loginfo("setAutoTransitionFromStimuli(): BEGIN")
+		self.start_watch_timer = rospy.Timer(rospy.Duration(durationTurnToScreen), self.startWatchStimuli_callback, oneshot=True)
+		rospy.loginfo("CREATED self.start_watch_timer")
+		self.stop_watch_timer = rospy.Timer(rospy.Duration(durationTurnToScreen + durationWatchStimuli), self.stopWatchStimuli_callback, oneshot=True)
+		rospy.loginfo("CREATED self.stop_watch_timer")
+		rospy.loginfo("setAutoTransitionFromStimuli(): END")
+		return
+
+
+	def startWatchStimuli_callback( self, event ):
+		rospy.logdebug("startWatchStimuli(): BEGIN")
+		_start_time = rospy.get_time()
+		rospy.loginfo("startWatchStimuli_callback() called at " + str( event.current_real))
+		#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
+		INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
+		_elapsed_duration = rospy.get_time() - _start_time
+		while (_elapsed_duration < 8.0):
+			_elapsed_duration = rospy.get_time() - _start_time
+			rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+			rospy.sleep(1)	## sleep for 1 second
+		rospy.logdebug("startWatchStimuli(): END")
+		return
+
+
+	def stopWatchStimuli_callback( self, event ):
+		rospy.logdebug("stopWatchStimuli(): BEGIN")
+		rospy.loginfo("stopWatchStimuli_callback() called at " + str( event.current_real))
+		_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
+		_ros_pub.publish( "turnToInfant" )
+		rospy.logdebug("stopWatchStimuli(): END")
+		return
+
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
 		#rospy.logdebug("received: " + str(msg))
 		rospy.loginfo("received: " + str(msg))
 
+		self.previous_state = self.state	## for later comparison
 		_unknown_flag = False
 		_data = str(msg.data)
 		rospy.loginfo("_data = " + _data)
@@ -256,7 +309,8 @@ class INSPIRE4Controller( object ):
 				INSPIRE4Controller.setBlinkAndScan( self, scan=False )
 				## TODO: Set a timer to enable blink and scan
 				if "Infant" in _data:
-					rospy.logdebug("\tInfant")
+					#rospy.logdebug("\tInfant")
+					rospy.logwarn("\tInfant")
 					INSPIRE4Controller.transitionToEngagement( self, _data )
 					return
 				else:
@@ -286,9 +340,11 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
 			self.state = INSPIRE4Controller.STIMULI
 			## TODO: add timer to trigger 'watch stimuli' behavior
+			#INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
 			## TODO: Set a timer to enable blink and scan
 
 		elif _data == "turnToInfant":
+			rospy.logwarn("====> turnToInfant")
 			INSPIRE4Controller.transitionToEngagement( self, _data )
 
 		elif (_data == "outro start") or (_data == "ending start"):
@@ -303,7 +359,12 @@ class INSPIRE4Controller( object ):
 			_unknown_flag = True
 
 
-		if _unknown_flag:	rospy.logwarn( "UNKNOWN pilot command: " + str(_data) )
+		if _unknown_flag:	
+			rospy.logwarn( "UNKNOWN pilot command: " + str(_data) + "; REMAINS in self.state " + str(self.state) )
+
+		if self.state != self.previous_state:
+			rospy.loginfo("UPDATE self.state from previous " + str(self.previous_state) + " to " + str(self.state) + " current")
+
 		rospy.logdebug("parse_pilot_command(): END")
 		return
 
