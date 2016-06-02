@@ -230,6 +230,12 @@ class INSPIRE4Controller( object ):
 			rospy.logwarn("transitionToEngagement(): WARNING: Unexpect transition from self.state: " + str(self.state))
 			rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO or STIMULI")
 			return
+
+		## KATE LIVE HACKING: BEGIN
+		#INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
+		#INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
+		## KATE LIVE HACKING: END
+
 		self.state = INSPIRE4Controller.ENGAGEMENT
 		rospy.logdebug("transitionToEngagement(): END")
 		return
@@ -526,9 +532,17 @@ class INSPIRE4Controller( object ):
 				if "Infant" in _data:
 					rospy.logdebug("\tInfant")
 					rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+					## KATE LIVE HACKING: BEGIN
+					if (self.state != INSPIRE4Controller.INTRO):
+						INSPIRE4Controller.pubTo_maki_macro( self, "intro start" )
+						self.state = INSPIRE4Controller.INTRO
+					## KATE LIVE HACKING: END
 					INSPIRE4Controller.transitionToEngagement( self, _data )
 					return
 				else:
+					## KATE LIVE HACKING: BEGIN
+					INSPIRE4Controller.pubTo_maki_macro( self, _data )
+					## KATE LIVE HACKING: END
 					rospy.logdebug( _data )
 			else:
 				rospy.logdebug("prefix = intro, SUFFIX IS UNKNOWN: " + _data)

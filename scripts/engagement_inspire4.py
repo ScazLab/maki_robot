@@ -640,8 +640,13 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		engagementStartleGame.__is_game_running = False
 		rospy.loginfo("stopStartleGame(): break runGame while loop")
 
+		## KATE LIVE HACKING: BEGIN
+		'''
 		while (not engagementStartleGame.__is_game_exit) and (not rospy.is_shutdown()):
 			self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )
+		'''
+		self.SWW_WI.sleepWhileWaitingMS( 500, end_early=False )
+		## KATE LIVE HACKING: END
 		rospy.loginfo("stopStartleGame(): runGame complete")
 
 		## CLEAN UP and move Maki-ro into neutral eyelid (LL) and head tilt (HT) positions
@@ -669,6 +674,11 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		## reset to single startle values from neutral eyelid
 		engagementStartleGame.setEyelidRange( self, LL_OPEN_DEFAULT, ll_close=LL_CLOSE_MAX )
 		self.next_startle_time = None
+
+		## KATE LIVE HACKING: BEGIN
+		engagementStartleGame.pubTo_maki_command( self, "reset" )
+		engagementStartleGame.pubTo_maki_command( self, "reset" )
+		## KATE LIVE HACKING: END
 
 		rospy.logdebug("stopStartleGame(): BEGIN")
 		return
