@@ -7,6 +7,7 @@
 import rospy
 import re
 from std_msgs.msg import String
+from std_srvs.srv import Empty
 
 import signal
 import sys
@@ -49,6 +50,11 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.resetInteractionCount( self )
 		self.__is_setup_done = False
 		self.__is_game_running = False
+
+		self.data_logger_status = "unknown"
+		self.start_logger_timer = None
+		self.stop_logger_timer = None
+
 		self.state = None
 		self.previous_state = None
 
@@ -278,6 +284,158 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug("stopWatchStimuli(): END")
 		return
 
+
+	## ------------------------------
+	## based on MAKI-WOz-INSPIRE4.py
+	##
+	## To toggle recording, pass the opposite status
+	##
+	## To start recording, pass dl_status as "stopped"
+	## To stop recording, pass dl_status as "started"
+	def toggleDataLoggerRecording( self, dl_status ):
+		rospy.logdebug("toggleDataLoggerRecording(): BEGIN")
+
+		if ( (not dl_status.isalpha()) or (dl_status != "started") and (dl_status != "stopped") ):
+			rospy.logwarn( "toggleDataLoggerRecording(): Invalid data_logger_status (" + str( dl_status ) + "); rosnode /data_logger may not be running")
+			return
+
+		_service_exception_flag = False
+
+		if (dl_status == "started"):
+			## dl_status == "started", so stop /data_logger rosbag recording
+			try:
+				rospy.wait_for_service('/data_logger/stop', 5)	## timeout is 5 seconds
+			except rospy.exceptions.ROSException as _e0:
+				rospy.logerr( "Service /data_logger/stop not found: " + str(_e0) )
+				rospy.logwarn( "rosnode /data_logger may not be running" )
+				self.data_logger_status = "unknown"
+				return
+			dl_stop = rospy.ServiceProxy('/data_logger/stop', Empty)
+			try:
+				rospy.logdebug( "calling rosservice /data_logger/stop..." )
+				dl_stop_resp = dl_stop()
+			except rospy.ServiceException as _e1:
+				rospy.logwarn( "Service /data_logger/stop did not process request: " + str(_e1) )
+				_service_exception_flag = True
+			else:
+				rospy.logdebug( "calling rosservice /data_logger/stop... SUCCESS" )
+
+		else:
+			## dl_status == "stopped", so start /data_logger rosbag recording
+			try:
+				rospy.wait_for_service('/data_logger/start', 5) ## timeout = 5 seconds
+			except rospy.exceptions.ROSException as _e2:
+				rospy.logerr( "Service /data_logger/start not found: " + str(_e2) )
+				rospy.logwarn( "rosnode /data_logger may not be running" )
+				self.data_logger_status = "unknown"
+				return
+			dl_start = rospy.ServiceProxy('/data_logger/start', Empty)
+			try:
+				rospy.logdebug( "calling rosservice /data_logger/start..." )
+				dl_start_resp = dl_start()
+			except rospy.ServiceException as _e3:
+				rospy.logwarn( "Service /data_logger/start did not process request: " + str(_e3) )
+				_service_exception_flag = True
+			else:
+				rospy.logdebug( "calling rosservice /data_logger/start... SUCCESS" )
+
+		if _service_exception_flag:
+			if self.data_logger_status == "started":
+				rospy.logwarn( "Unable to toggle rosbag recording to ON... Recording remains " + str(self.data_logger_status) )
+			elif self.data_logger_status == "stopped":
+				rospy.logwarn( "Unable to toggle rosbag recording to OFF... Recording remains " + str(self.data_logger_status) )
+			else:
+				rospy.logwarn( "Unable to toggle rosbag recording... INVALID STATUS; self.data_logger_status = " + str(self.data_logger_status) )
+
+		rospy.logdebug("toggleDataLoggerRecording(): END")
+		return
+
+
+	## self.data_logger_status is only updated by the value
+	##	published to rostopic /data_logger/status 
+	##	by calling its start/stop services
+	def updateDataLoggerStatus_callback( self, msg ):
+		rospy.logdebug( "updateDataLoggerStatus_callback(): BEGIN" )
+		_data = str( msg.data )
+		if ((not _data.isalpha) or ((_data != "started") and (_data != "stopped"))):
+			rospy.logwarn( "updateDataLoggerStatus_callback(): INVALID INPUT: expected string 'started' or 'stopped'; received " + str( _data ) )
+			rospy.logdebug( "updateDataLoggerStatus_callback(): self.data_logger_status remains " + str(self.data_logger_status) )
+			return
+
+		if (_data != self.data_logger_status):
+			rospy.logdebug( "Updating self.data_logger_status to " + str(_data) + " (from " + str(self.data_logger_status) + ")" )
+			self.data_logger_status = _data
+
+			if self.data_logger_status == "started":
+				rospy.loginfo( "Toggle rosbag recording to ON" )
+			else:
+				rospy.loginfo( "Toggle rosbag recording to OFF" )
+
+		rospy.logdebug( "updateDataLoggerStatus_callback(): END" )
+		return
+
+
+	## durations in seconds
+	def setAutoDataLogging( self, durationToAutoOff=None, durationToAutoOn=None ):
+		rospy.logdebug( "setAutoDataLogging(): BEGIN" )
+
+		if ((durationToAutoOn != None) and (isinstance(durationToAutoOn, float) or isinstance(durationToAutoOn, int))):
+			self.start_logger_timer = rospy.Timer( rospy.Duration(durationToAutoOn), self.startAutoDataLogger_callback, oneshot=True)
+			rospy.loginfo("CREATED self.start_logger_timer; will fire in " + str(durationToAutoOn) + " seconds...")
+
+		if ((durationToAutoOff != None) and (isinstance(durationToAutoOff, float) or isinstance(durationToAutoOff, int))):
+			self.stop_logger_timer = rospy.Timer( rospy.Duration(durationToAutoOff), self.stopAutoDataLogger_callback, oneshot=True)
+			rospy.loginfo("CREATED self.stop_logger_timer; will fire in " + str(durationToAutoOff) + " seconds")
+
+		rospy.logdebug( "setAutoDataLogging(): END" )
+		return
+
+
+	def startAutoDataLogger_callback( self, event ):
+		rospy.logdebug("startAutoDataLogger_callback(): BEGIN")
+		if self.start_logger_timer != None:
+			rospy.loginfo("startAutoDataLogger_callback() called at " + str( event.current_real))
+			## Synthesize a button press by publishing message
+			#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "log record start" )
+			INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+		else:
+			rospy.logdebug("INVALID ACTION: self.start_logger_timer = " + str(self.start_logger_timer))
+		rospy.logdebug("startAutoDataLogger_callback(): END")
+		return
+
+
+	def stopAutoDataLogger_callback( self, event ):
+		rospy.logdebug("stopAutoDataLogger_callback(): BEGIN")
+		if self.stop_logger_timer != None:
+			rospy.loginfo("stopAutoDataLogger_callback() called at " + str( event.current_real))
+			## Synthesize a button press by publishing message
+			#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "log record stop" )
+			INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+		else:
+			rospy.logdebug("INVALID ACTION: self.stop_logger_timer = " + str(self.stop_logger_timer))
+		rospy.logdebug("stopAutoDataLogger_callback(): END")
+		return
+
+
+	def cancelAutoDataLoggerCallbacks( self ):
+		rospy.logdebug("cancelAutoDataLoggerCallbacks(): BEGIN")
+
+		## neutralize outstanding timers
+		if self.stop_logger_timer != None:
+			self.stop_logger_timer.shutdown()
+			self.stop_logger_timer = None
+			rospy.loginfo("CANCELLED self.stop_logger_timer")
+
+		if self.start_logger_timer != None:
+			self.start_logger_timer.shutdown()
+			self.start_logger_timer = None
+			rospy.loginfo("CANCELLED self.start_logger_timer")
+
+		rospy.logdebug("cancelAutoDataLoggerCallbacks(): END")
+		return
+
+
+	## ------------------------------
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
 		rospy.logdebug("received: " + str(msg))
@@ -293,11 +451,44 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.doSetup( self )
 			self.state = INSPIRE4Controller.SETUP
 
+		elif _data.startswith( "log record" ):
+			## logic for managing start/stop log recording
+			if _data.endswith( "start" ):
+				INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start the recording
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )	## add AFTER start recording
+
+			elif _data.endswith( "stop" ):
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )	## add BEFORE stop recording
+				INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop the rcording
+				INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
+
+			else:
+				_unknown_flag = True
+
 		elif _data.startswith( "sync" ):
 			if _data.endswith( "Tobii calibration start" ):
 				## If the 'setup' button hadn't been pressed prior to this, fake it
 				if (self.__is_setup_done == None) or (not self.__is_setup_done):
 					INSPIRE4Controller.doSetup( self )
+
+				if self.data_logger_status == "started":
+					## There is an actively recording rosbag,
+					##	so close the existing one and start a new one
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+					rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+					## resend this message for synchronization purposes
+					_msg = _data + " (resend to mark the new rosbag)"
+					INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, _msg )
+				else:
+					## There is no actively recording rosbag, 
+					##	so start a new one
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+					rospy.sleep(0.5)	## 0.5 second delay to allow time to open rosbag
+					## resend this message for synchronization purposes
+					_msg = _data + " (resend to mark the new rosbag)"
+					INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, _msg )
+
 			elif _data.endswith( "Tobii calibration done" ):
 				pass
 			elif _data.endswith( "visual clap" ):
@@ -313,6 +504,7 @@ class INSPIRE4Controller( object ):
 				_unknown_flag = True
 
 			if not _unknown_flag:
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.PRELUDE
 
 		elif _data.startswith( "awake" ):
@@ -332,8 +524,8 @@ class INSPIRE4Controller( object ):
 				INSPIRE4Controller.setBlinkAndScan( self, scan=False )
 				## TODO: Set a timer to enable blink and scan
 				if "Infant" in _data:
-					#rospy.logdebug("\tInfant")
-					rospy.logwarn("\tInfant")
+					rospy.logdebug("\tInfant")
+					rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 					INSPIRE4Controller.transitionToEngagement( self, _data )
 					return
 				else:
@@ -347,8 +539,10 @@ class INSPIRE4Controller( object ):
 				## forward the message contents
 				INSPIRE4Controller.pubTo_maki_macro( self, _data )
 				self.state = INSPIRE4Controller.INTRO
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 			
 		elif (_data.startswith( "startleGame stop" )) or (_data == "infant fixation"):
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 			INSPIRE4Controller.transitionToStimuli( self )
 
 		elif ("tartle" in _data):
@@ -359,6 +553,8 @@ class INSPIRE4Controller( object ):
 			self.state = INSPIRE4Controller.ENGAGEMENT
 
 		elif ("turnToScreen" in _data):
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+
 			rospy.loginfo("'turnToScreen' in _data; forward the message contents to /maki_macro: " + _data)
 			## forward the message contents
 			INSPIRE4Controller.pubTo_maki_macro( self, _data )
@@ -371,6 +567,8 @@ class INSPIRE4Controller( object ):
 			## TODO: Set a timer to enable blink and scan
 
 		elif _data == "turnToInfant":
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+
 			rospy.logwarn("====> turnToInfant")
 			INSPIRE4Controller.transitionToEngagement( self, _data )
 			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
@@ -380,16 +578,20 @@ class INSPIRE4Controller( object ):
 				pass
 				## TODO: automatically start playing startle game
 			else:
-				rospy.loginfo( "AUTOMATICALLY TERMINATE THE EXPERIMENT" )
+				rospy.loginfo( "NOW BEGIN AUTOMATICALLY TERMINATING THE EXPERIMENT" )
 				INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "ending start" )
 
 		elif (_data == "outro start") or (_data == "ending start"):
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+
 			INSPIRE4Controller.doSetup( self )
 			self.state = INSPIRE4Controller.END
+			if self.data_logger_status == "started":
+				INSPIRE4Controller.setAutoDataLogging( self, durationToAutoOff=float(60.0 * 5) )
+
 
 		## TODO: Add logic for participant ID
 
-		## TODO: Add logic for managing start/stop log recording
 
 		else:
 			_unknown_flag = True
@@ -414,6 +616,9 @@ if __name__ == '__main__':
 
 	rospy.Subscriber( "/inspire_four_pilot_command", String, controller.parse_pilot_command )
         rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
+
+	rospy.Subscriber( "/data_logger/status", String, controller.updateDataLoggerStatus_callback )
+	rospy.logdebug( "now subscribed to /data_logger/status" )
 
 	rospy.spin()   ## keeps python from exiting until this node is stopped
 
