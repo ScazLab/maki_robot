@@ -82,10 +82,12 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		if lookINSPIRE4Intro.__is_intro_running == None:
 			lookINSPIRE4Intro.__is_intro_running = False
 
+		## These values should match asleep_awake.py
+		##	HP_AWAKE_EXP and HT_AWAKE_EXP
 		if lookINSPIRE4Intro.HP_EXPERIMENTER == None:	
-			lookINSPIRE4Intro.HP_EXPERIMENTER = 550	#580	#620	## ticks
+			lookINSPIRE4Intro.HP_EXPERIMENTER = 620	## ticks
 		if lookINSPIRE4Intro.HT_EXPERIMENTER == None:	
-			lookINSPIRE4Intro.HT_EXPERIMENTER = 580	#560	#540	## ticks
+			lookINSPIRE4Intro.HT_EXPERIMENTER = 570	## ticks
 
 		if lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT == None:
 			lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT = 404	## ticks
