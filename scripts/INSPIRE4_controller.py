@@ -278,15 +278,16 @@ class INSPIRE4Controller( object ):
 
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
-		#rospy.logdebug("received: " + str(msg))
-		rospy.loginfo("received: " + str(msg))
+		rospy.logdebug("received: " + str(msg))
 
 		self.previous_state = self.state	## for later comparison
 		_unknown_flag = False
 		_data = str(msg.data)
 		rospy.loginfo("_data = " + _data)
 	
-		if _data == "setup":
+		if _data == "init pilot GUI":
+			rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
+		elif _data == "setup":
 			INSPIRE4Controller.doSetup( self )
 			self.state = INSPIRE4Controller.SETUP
 
