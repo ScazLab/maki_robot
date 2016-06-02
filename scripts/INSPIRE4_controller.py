@@ -47,6 +47,7 @@ class INSPIRE4Controller( object ):
 		#self.DC_helper = dynamixelConversions()
 
 		INSPIRE4Controller.resetInteractionCount( self )
+		self.__is_setup_done = False
 		self.__is_game_running = False
 		self.state = None
 		self.previous_state = None
@@ -197,7 +198,7 @@ class INSPIRE4Controller( object ):
 		## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
 		INSPIRE4Controller.pubTo_maki_macro( self, "asleep" )
 
-		INSPIRE4Controller.__is_setup_done = True
+		self.__is_setup_done = True
 		rospy.logdebug("doSetup(): END")	
 		return
 
@@ -240,6 +241,7 @@ class INSPIRE4Controller( object ):
 		return
 
 
+	## ------------------------------
 	## durations in seconds
 	def setAutoTransitionWatchStimuli( self, durationTurnToScreen=1.0, durationWatchStimuli=8.0 ):
 	#def setAutoTransitionWatchStimuli( self, durationTurnToScreen=INSPIRE4Controller.durationHeadTurn, durationWatchStimuli=INSPIRE4Controller.durationWatchStimuli):
@@ -293,7 +295,8 @@ class INSPIRE4Controller( object ):
 
 		elif _data.startswith( "sync" ):
 			if _data.endswith( "Tobii calibration start" ):
-				if not INSPIRE4Controller.__is_setup_done:
+				## If the 'setup' button hadn't been pressed prior to this, fake it
+				if (self.__is_setup_done == None) or (not self.__is_setup_done):
 					INSPIRE4Controller.doSetup( self )
 			elif _data.endswith( "Tobii calibration done" ):
 				pass
