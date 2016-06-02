@@ -7,7 +7,7 @@ import os
 import math
 import sys
 import string
-
+import thread
 import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-parse-a-string-in-python
 
 
@@ -454,8 +454,130 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_enable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_enable) + str(TERM_CHAR_SEND)
 		if headTiltBaseBehavior.__ht_disable_cmd == None:
 			headTiltBaseBehavior.__ht_disable_cmd = "HT" + str(SC_SET_TL) + str(ht_tl_disable) + str(TERM_CHAR_SEND)
+		try:
+			thread.start_new_thread( headTiltBaseBehavior.monitorMotorTemperature, ( self, ) )
+		except Exception as _e:
+			rospy.logwarn("Unable to start a new thread for headTiltBaseBehavior.monitorMotorTemperature(): " + str(_e))
+
+		return
 
 
+	def monitorMotorTemperature( self ):
+		rospy.logdebug("Start a new thread to monitor the motors' present temperature...")
+		_start_time = rospy.get_time()
+
+		## init as empty dictionaries
+		_start_pt = {}
+		_current_pt = {}
+		_previous_pt = {}
+		_running_sum_pt = {}
+		_delta_pt = {}
+		_average_pt = {}	
+
+		headTiltBaseBehavior.requestFeedback( self, SC_GET_PT )
+		## check to see if there is an entry with key "PT"
+		while (not rospy.is_shutdown()):
+			## if we got a message on /maki_feedback_pres_temp
+			if ( str(SC_GET_PT) in self.maki_feedback_values ):
+				break	## break the while loop
+			else:
+				rospy.loginfo("Waiting for a message on /maki_feedback_pres_temp...")
+				## request a feedback message
+				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_PT) )
+				rospy.sleep(30)	## wait for 30 seconds
+
+		## save our initial state
+		_start_pt.update( self.maki_feedback_values[ SC_GET_PT ] )
+		_current_pt.update( self.maki_feedback_values[ SC_GET_PT ] )
+		_previous_pt.update( self.maki_feedback_values[ SC_GET_PT ] )
+		_running_sum_pt.update( self.maki_feedback_values[ SC_GET_PT ] )
+		_running_average_pt = dict( zip(F_VAL_SEQ, [ 0 ] * len(F_VAL_SEQ) ) )
+		_delta_pt.update( headTiltBaseBehavior.computeTemperature( self, _current_pt, _previous_pt, "delta" ) )
+		_average_pt.update( headTiltBaseBehavior.computeTemperature( self, _current_pt, _previous_pt, "average" ) )
+		## TODO
+		_average_delta_pt = _running_average_pt
+		## TODO: max
+		## TODO: min
+		## TODO: median
+
+		_loop_count = 1
+		_ht_pt = _current_pt["HT"]
+		while (not rospy.is_shutdown()):
+			_loop_count += 1
+			rospy.sleep(60.0 * 2.5)	## sample motors' present temperature every 2.5 minutes
+			#rospy.sleep(30.0)	## faster for debugging
+			headTiltBaseBehavior.requestFeedback( self, SC_GET_PT )
+			_current_pt.update( self.maki_feedback_values[ SC_GET_PT ] )
+
+			## Calculate some statistics
+			_delta_pt = headTiltBaseBehavior.computeTemperature( self, _current_pt, _previous_pt, "delta" )
+			_average_pt = headTiltBaseBehavior.computeTemperature( self, _current_pt, _previous_pt, "average" )
+			_running_sum_pt = headTiltBaseBehavior.computeTemperature( self, _running_sum_pt, _current_pt, "add" )
+			_running_average_pt = headTiltBaseBehavior.computeTemperature( self, _running_sum_pt, _loop_count, "running_average" )
+
+
+			if not (_previous_pt == _current_pt):
+				rospy.loginfo("monitorMotorTemperature(): -------- Temperature change detected --------")
+				rospy.logdebug("Previous temp (Celsius): " + str(_previous_pt))
+				rospy.logdebug("Current temp (Celsius): " + str(_current_pt))
+				rospy.logdebug("Change of 2 most recent readings: " + str(_delta_pt))
+				rospy.logdebug("Average of 2 most recent readings: " + str(_average_pt))
+				rospy.logdebug("Running average (n=" + str(_loop_count) + "): " + str(_running_average_pt))
+
+			## Post information about heat tilt motor's temperature
+			_previous_ht_pt = _ht_pt
+			_ht_pt = _current_pt["HT"]
+			if _ht_pt >= 70:
+				rospy.logerr("!!!!!!!! ERROR: Head tilt motor is OVERHEATED. Turn off Maki-ro IMMEDIATELY and leave off for 20 minutes !!!!!!!")
+			elif _ht_pt > 65:
+				rospy.logwarn("**** DANGER: Head tilt motor will soon OVERHEAT ( " + str(_ht_pt) + " C ) ****")
+			elif _ht_pt > 55:
+				if (_ht_pt != _previous_ht_pt):
+					rospy.logwarn("**** WARNING: Head tilt motor is HEATING UP ( " + str(_ht_pt) + " C ) ****")
+			elif _ht_pt >= 50:
+				if (_ht_pt != _previous_ht_pt):
+					rospy.logwarn("**** NOTIFICATION: Head tilt motor is getting WARM ( " + str(_ht_pt) + " C ) ****")
+			else:
+				pass
+
+			## update
+			_previous_pt.update( _current_pt )
+		#end	while (not rospy.is_shutdown()):
+		return
+
+	def computeTemperature( self, pt_1, pt_2, op ):
+		## check the validity of the inputs
+		if ((not isinstance(op, basestring)) or
+			((op != "delta") and
+			(op != "add") and
+			(op != "average") and
+			(op != "running_average")) ):
+			rospy.logwarn("computeTemperature(): INVALID INPUT: op given as " + str(op))
+			return None
+
+		_ret_pt = dict( zip(F_VAL_SEQ, [ 0 ] * len(F_VAL_SEQ) ) )
+	
+		for _servo in F_VAL_SEQ:
+			if _servo == "LR":	
+				_ret_pt[ _servo ] = pt_1[ _servo ]
+				continue
+
+			if op == "delta":
+				_ret_pt[ _servo ] = float(pt_1[ _servo ]) - float(pt_2[ _servo ])
+			elif op == "add":
+				_ret_pt[ _servo ] = float(pt_1[ _servo ]) + float(pt_2[ _servo ])
+			elif op == "average":
+				_ret_pt[ _servo ] = float( pt_1[ _servo ] + pt_2[ _servo ]) * 0.5
+			elif op == "running_average":
+				_ret_pt[ _servo ] = float( pt_1[ _servo ] / float(pt_2) )
+			else:
+				rospy.logwarn("INVALID OP: " + str(op))
+				return None
+
+		return _ret_pt
+
+
+	## override base class
 	def start( self, makiPP=None, enable_ht=True ):
 		## need to call base class' start function first!!!!
 		baseBehavior.start( self, makiPP )
@@ -474,6 +596,8 @@ class headTiltBaseBehavior(baseBehavior):
 
 		if enable_ht:	self.enableHT()
 
+
+	## override base class
 	def stop( self, disable_ht=True ):
 		rospy.logdebug( "headTiltBaseBehavior: stop()" )
 		## call base behavior first
@@ -481,8 +605,10 @@ class headTiltBaseBehavior(baseBehavior):
 		if disable_ht:	self.disableHT()
 		rospy.logdebug( "headTiltBaseBehavior: stop() -- END" )
 
+
 	def isHTEnabled( self ):
 		return headTiltBaseBehavior.__ht_enabled
+
 
 	def enableHT( self ):
 		if headTiltBaseBehavior.__ht_enabled == True:
@@ -544,6 +670,7 @@ class headTiltBaseBehavior(baseBehavior):
 		rospy.logerr( "enableHT duration: " + str( rospy.get_time() - _enableHT_start_time ) + " seconds" )
 		return
 
+
 	def disableHT( self ):
 		if headTiltBaseBehavior.__ht_enabled == False:
 			## already disabled
@@ -569,6 +696,7 @@ class headTiltBaseBehavior(baseBehavior):
 		rospy.logerr(" disableHT duration: " + str( rospy.get_time() - _disableHT_start_time ) + " seconds" )
 		return
 
+
 	## TODO: bug fix -- need to replicate bug first!
 	def reset( self ):
 
@@ -583,6 +711,8 @@ class headTiltBaseBehavior(baseBehavior):
 		## publish "reset" to /maki_command
 		headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
 
+
+	## override base class
 	def parseMAKIFeedbackMsg ( self, recv_msg ):
 		_tmp = headTiltBaseBehavior.__maki_feedback_format.search( recv_msg.data )
 		if _tmp != None:
@@ -608,7 +738,6 @@ class headTiltBaseBehavior(baseBehavior):
 						rospy.loginfo("TL feedback received; enable headTiltBaseBehavior.__ht_enabled flag: " + str(headTiltBaseBehavior.__ht_enabled))
 				else:
 					rospy.logerr( "Invalid head tilt torque limit: " + str(_ht_tl_val) )
-
 
 		## call base class
 		baseBehavior.parseMAKIFeedbackMsg( self, recv_msg )
