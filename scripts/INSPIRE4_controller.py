@@ -13,6 +13,7 @@ import signal
 import sys
 import string
 import random
+import thread
 
 from maki_robot_common import *
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
@@ -436,6 +437,30 @@ class INSPIRE4Controller( object ):
 
 
 	## ------------------------------
+	## stand alone timed skit
+	## "Friend" actor will adapt to Maki-ro's skit
+	def runFamiliarizationSkit( self ):
+## KATE
+		rospy.logdebug("runFamiliarizationSkit(): BEGIN")
+
+		_verbose = True
+
+		AA = asleepAwake( _verbose, self.ros_pub )
+		lookIntro = lookINSPIRE4Intro( _verbose, self.ros_pub )
+
+		## Assumes that Maki-ro begins in the asleep position
+		rospy.logdebug( "AA.asleep_p() = " + str( AA.asleep_p() ) )
+		if AA.asleep_p():
+			pass
+		else:
+			## blocking until Maki-ro is in the asleep position
+			AA.runAsleep()
+
+		rospy.logdebug("runFamiliarizationSkit(): END")
+		return
+
+
+	## ------------------------------
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
 		rospy.logdebug("received: " + str(msg))
@@ -506,6 +531,13 @@ class INSPIRE4Controller( object ):
 			if not _unknown_flag:
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.PRELUDE
+
+## KATE
+		elif _data == "runFamiliarizationSkit":
+			try:
+				thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
+			except Exception as _e_rFS:
+				rospy.logerror("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
 
 		elif _data.startswith( "awake" ):
 			rospy.loginfo("prefix = awake; forward the message contents to /maki_macro: " + _data)
