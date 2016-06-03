@@ -89,7 +89,7 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		if asleepAwake.HP_AWAKE_EXP == None:
 			asleepAwake.HP_AWAKE_EXP = 620	#HP_RIGHT was too far; experimenter would have had to be standing behind left_screen
 		if asleepAwake.HT_AWAKE_EXP == None:
-			asleepAwake.HT_AWAKE_EXP = 570	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response
+			asleepAwake.HT_AWAKE_EXP = 565	#562	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response ==> 20 ticks
 		if asleepAwake.LL_AWAKE_EXP == None:
 			asleepAwake.LL_AWAKE_EXP = asleepAwake.LL_AWAKE
 		if asleepAwake.EP_AWAKE_EXP == None:
