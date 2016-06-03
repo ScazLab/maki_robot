@@ -89,7 +89,7 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		if asleepAwake.HP_AWAKE_EXP == None:
 			asleepAwake.HP_AWAKE_EXP = 620	#HP_RIGHT was too far; experimenter would have had to be standing behind left_screen
 		if asleepAwake.HT_AWAKE_EXP == None:
-			asleepAwake.HT_AWAKE_EXP = 570	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response
+			asleepAwake.HT_AWAKE_EXP = 565	#562	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response ==> 20 ticks
 		if asleepAwake.LL_AWAKE_EXP == None:
 			asleepAwake.LL_AWAKE_EXP = asleepAwake.LL_AWAKE
 		if asleepAwake.EP_AWAKE_EXP == None:
@@ -114,6 +114,20 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	## specify base class
 	def monitorMoveToGP( self, commandOut, hp_gp=None, ht_gp=None, ep_gp=None, et_gp=None, ll_gp=None, lr_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
 		return headPanBaseBehavior.monitorMoveToGP( self, gp_cmd=commandOut, hp_gp=hp_gp, ht_gp=ht_gp, ep_gp=ep_gp, et_gp=et_gp, ll_gp=ll_gp, lr_gp=lr_gp, delta_pp=delta_pp, cmd_prop=cmd_prop )
+
+
+	## --------------------------
+	def asleep_p( self ):
+		if (isinstance( asleepAwake.__is_asleep, bool )):
+			return asleepAwake.__is_asleep
+		else:
+			return False
+
+	def awake_p( self ):
+		if (isinstance( asleepAwake.__is_awake, bool )):
+			return asleepAwake.__is_awake
+		else:
+			return False
 
 	####################
 	##
@@ -205,6 +219,9 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		_duration = rospy.get_time() - _start_time
 		rospy.loginfo( "DURATION: " + str(_duration) + " seconds" )
+
+		asleepAwake.__is_asleep = True
+		asleepAwake.__is_awake = False
 
 		rospy.logdebug("macroAsleep(): END")
 		return 
@@ -300,6 +317,9 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if _pub_ep:	_pub_cmd += "EP" + SC_SET_GP + str(EP_AWAKE)
 			if _pub_ipt:	_pub_cmd += SC_SET_IPT + str(_ms_duration)
 			_pub_cmd += TERM_CHAR_SEND
+
+## KATE
+			## TODO: Try uncommented to see if Maki-ro responds more quickly to the issued command
 			#asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
 			try:
 				asleepAwake.monitorMoveToGP( self, str(_pub_cmd), hp_gp=HP_AWAKE, ht_gp=HT_AWAKE, ll_gp=LL_AWAKE )
@@ -317,39 +337,56 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		_duration = rospy.get_time() - _start_time
 		rospy.loginfo( "DURATION: " + str(_duration) + " seconds" )
 
+		asleepAwake.__is_awake = True
+		asleepAwake.__is_asleep = False
+
 		rospy.logdebug("macroAwake(): END")
 		return 
+
+
+	def runAsleep( self ):
+		asleepAwake.start( self )
+		asleepAwake.macroAsleep( self )
+		asleepAwake.stop( self, disable_ht=True )
+		## TODO: May need to change to False when whole INSPIRE4
+		##	script and control program are in place
+		return
+
+
+	def runAwake( self ):
+		asleepAwake.start( self )
+		asleepAwake.macroAwake( self, look_experimenter=False )
+		## TODO: Maki-ro doesn't quite return to HT_MIDDLE
+		asleepAwake.pubTo_maki_command( self, "reset" )
+		asleepAwake.stop( self, disable_ht=True )
+		## TODO: May need to change to False when whole INSPIRE4
+		##	script and control program are in place
+		return
+
+
+	def runAwakeExperimenter( self, disable_ht=True ):
+		asleepAwake.start( self )
+		asleepAwake.macroAwake( self, look_experimenter=True )
+		asleepAwake.stop( self, disable_ht=disable_ht )
+		return
 
 
 	def parse_maki_macro( self, msg ):
 		print msg.data
 
 		if msg.data == "asleep":
-			asleepAwake.start( self )
-			asleepAwake.macroAsleep( self )
-			asleepAwake.stop( self, disable_ht=True )
-			## TODO: May need to change to False when whole INSPIRE4
-			##	script and control program are in place
+			asleepAwake.runAsleep( self )
 
 		elif msg.data == "awake":
-			asleepAwake.start( self )
-			asleepAwake.macroAwake( self, look_experimenter=False )
-			## TODO: Maki-ro doesn't quite return to HT_MIDDLE
-			asleepAwake.pubTo_maki_command( self, "reset" )
-			asleepAwake.stop( self, disable_ht=True )
-			## TODO: May need to change to False when whole INSPIRE4
-			##	script and control program are in place
+			asleepAwake.runAwake( self )
 
 		elif msg.data.startswith( "awake experimenter" ):
-			asleepAwake.start( self )
-			asleepAwake.macroAwake( self, look_experimenter=True )
-
 			if msg.data.endswith( "disable_ht=False" ):
-				asleepAwake.stop( self, disable_ht=False )
+				asleepAwake.runAwakeExperimenter( self, disable_ht=False )
 			## TODO: May need to change to False when whole INSPIRE4
 			##	script and control program are in place
 			else:
-				asleepAwake.stop( self, disable_ht=True )
+				asleepAwake.runAwakeExperimenter( self, disable_ht=True )
 
 		else:
 			pass
