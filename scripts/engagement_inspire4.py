@@ -69,8 +69,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		self.repetitions = 6	## do 6 rounds of infant engagement behavior max
 
-		self.duration_between_startle_min = 2.0	## seconds
-		self.duration_between_startle_max = 5.0	## seconds
+		self.duration_between_startle_min = 1.0		#2.0	## seconds
+		self.duration_between_startle_max = 2.5		#5.0	## seconds
 
 		return
 
@@ -89,30 +89,37 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		## duration in seconds
 		rospy.logdebug("runGame: BEGIN")
 
+		rospy.logwarn("runGame: BEGIN STATUS CHECKS...")
+		## --- CHECK IF GAME IS ALREADY RUNNING ---
 		if engagementStartleGame.__is_game_running:
-			rospy.logerr("runGame: GAME IS ALREADY RUNNING")
+			rospy.logerr("runGame: ERROR: GAME IS ALREADY RUNNING... Unable to begin a new game...")
 			return False
 
+		## --- CHECK INPUT ---
 		if repetitions == None and duration == None:	
 			repetitions = self.repetitions
+			rospy.logwarn("runGame(): WARNING: NO INPUTS SPECIFIED... Defaulting to " + str(repetitions) + " repetitions MAXIMUM")
+
 		elif (isinstance(repetitions, int)):
 			if (repetitions > 0):
 				pass
 			else:
-				rospy.logerr("runGame: INVALID INPUT: repetitions must be interger of minimum 1")
+				rospy.logerr("runGame: INVALID INPUT: repetitions must be interger of minimum 1.... Unable to begin a new game...")
 				return False
+
 		elif (isinstance(duration, int) or isinstance(duration, float)):
 			if (duration > 0):
 				## estimate the maximum number of repetitions
 				repetitions = float( duration / self.duration_between_startle_min )
 				repetitions = int( repetitions + 0.5 )	## implicit rounding
 			else:
-				rospy.logerr("runGame: INVALID INPUT: duration must be a positive float (units in seconds)")
+				rospy.logerr("runGame: INVALID INPUT: duration must be a positive float (units in seconds)... Unable to begin a new game...")
 				return False
 		else:
-			rospy.logerr("runGame: INVALID INPUT: repetitions is a non-integer value AND/OR duration is a non-integer/non-float value")
+			rospy.logerr("runGame: INVALID INPUT: repetitions is a non-integer value AND/OR duration is a non-integer/non-float value... Unable to begin a new game...")
 			return False
 
+		rospy.logwarn("runGame: SUCCESS: Initializing a new game... One moment please!...")
 		engagementStartleGame.requestFeedback( self, SC_GET_PT )
 
 		self.game_state = 0
@@ -124,6 +131,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		##	5: perform unhideIntoStartle
 		##	9: perform startle relax
 
+		## TODO: May have to adjust _wait_attend value
 		_wait_attend = 5	## wait 500 ms after arriving in startle position
 		self.count_movements = 0
 		_initial_startle = True
@@ -132,88 +140,125 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		self.next_startle_time = _start_time
 		engagementStartleGame.__is_game_running = True
 		engagementStartleGame.__is_game_exit = False
+		_break_flag = False
 
+		rospy.logwarn("runGame: NEW GAME CREATED... Welcome!! Let's play a game...")
 		## this is a nested while loop
-		while engagementStartleGame and self.ALIVE and (not rospy.is_shutdown()):
+		## A Python error was VERY PROBABLY being thrown here
+		##while engagementStartleGame and self.ALIVE and (not rospy.is_shutdown()):
+		while (engagementStartleGame.__is_game_running and (not engagementStartleGame.__is_game_exit) and 
+			(not _break_flag) and self.ALIVE and (not rospy.is_shutdown())):
 			_duration = abs(rospy.get_time() - _start_time)
+
+			## NOTE: This outer while loop will cease IF:
+			##	1) __is_game_running is toggled to False
+			##	2) __is_game_exit is toggled to True -- Finish cleaning up from the game	
+			##	3) self.mTT_INTERRUPT is toggled to True -- engagementStartleGame.stop() is called
+			##	4) The duration of the game has been exceeded, if a duration was specified
 
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(self.mTT_INTERRUPT))
+				_break_flag = True
 				break	## exit the while loop
 			elif (duration != None) and ((rospy.get_time() - _start_time) > duration):
-				rospy.loginfo("runGame(): TIME's UP!!")
-				break
+				## TODO: How to clean up from this???
+				rospy.logwarn(">>>>>>>>> runGame: The End... TIME's UP!!")
+				_break_flag = True
+				break	## exit the while loop
 			else:
 				## FPTZ request published takes 100ms to propogate
 				engagementStartleGame.requestFeedback( self, SC_GET_PT )
 
 			## STEP 0: begin the game with a startle
 			if _initial_startle and (self.game_state == 0):
+				rospy.logdebug("runGame(): STATE 0: BEGIN")
+				rospy.logwarn("runGame(): STATE 0: Begin the game with a startle first -- ALWAYS...")
 				engagementStartleGame.macroStartleRelax( self, startle=True, relax=False )
 				self.last_startle_time = rospy.get_time()
 				_initial_startle = False
 				self.game_state = 1
+				rospy.logdebug("runGame(): STATE 0: Initial startle complete, END... Changing to STATE 1...")
 				continue	## start fresh at the top of the while loop
+			#end	if _initial_startle and (self.game_state == 0):
 
 
 			## STEP 1: wait for a moment to see if infant attends or not
 			if (self.game_state == 1):
-				rospy.logdebug("runGame(): STATE 1: wait after startle: BEGIN")
+				rospy.logdebug("runGame(): wait after startle: BEGIN")
+				rospy.logwarn("runGame(): STATE 1: Pausing... waiting to see if infant attends or not...")
+
+				## Toggle _initial startle off; only happens once per game
 				if _initial_startle:
 					_initial_startle = False
 
-				## did self.repetitions rounds of infant engagement behavior max
-				elif  (self.count_movements >= self.repetitions):
+				## did self.repetitions rounds of infant engagement behavior max?
+				elif  (self.count_movements >= repetitions):
+					rospy.logwarn(">>>>>>>>> runGame: The End... " + str(repetitions) + " IS THE MAXIMUM GAME ROUNDS PLAYED IN A SINGLE GAME!!... We could play again later...")
 					self.game_state = 9
+					## this exit condition is self-terminating
+					engagementStartleGame.__is_game_running = False
+					_break_flag = True
 					break	## jump out of the while loop
 
 				else:
-					rospy.loginfo("ROUND #" + str(self.count_movements))
-					for _c in range(_wait_attend):
+					rospy.logwarn("runGame(): STATE 1: Now playing ROUND #" + str(self.count_movements) + " of " + str(repetitions))
+					_default_cmd_prop_duration = 100
+					_c_duration = _wait_attend * _default_cmd_prop_duration
+					for _c in range(_wait_attend):	## 0, 1, 2, 3, 4
+						rospy.logdebug("runGame(): STATE 1: Duration remaining while waiting for infant to attend: " + str(_c_duration) + " milliseconds...")
 						if self.mTT_INTERRUPT:	return
 						#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )
 						## FPTZ request published takes 100ms to propogate
 						engagementStartleGame.requestFeedback( self, SC_GET_PT )
+						_c_duration = _c_duration - _default_cmd_prop_duration
 					self.game_state = 2
-				rospy.logdebug("runGame(): STATE 1: wait after startle: END")
+					rospy.logwarn("runGame(): STATE 1: Infant did NOT attend while Maki-ro remained in startle expression...")
+				rospy.logdebug("runGame(): STATE 1: wait after startle: END... Changing to STATE 2...")
 				continue	## start fresh at the top of the while loop
+			#end	if (self.game_state == 1):
 
 
 			## STEP 2: if infant doesn't attend, hide before repeating
 			if (self.game_state == 2):
 				rospy.logdebug("runGame(): STATE 2: move into hide: BEGIN")
+				rospy.logwarn("runGame(): STATE 2: Now Maki-ro will hide before repeating startle... If I can't see you, you can't see me!!")
 				engagementStartleGame.hideFromStartle( self )
 				self.game_state = 3
-				rospy.logdebug("runGame(): STATE 2: move into hide: END")
+				rospy.logdebug("runGame(): STATE 2: Hide from startle completed, END... Changing to STATE 3...")
 				continue	## start fresh at the top of the while loop
+			#end	if (self.game_state == 2):
 
 
 			## STEP 3: choose some random amout of time before trying again
 			if (self.game_state == 3):
 				rospy.logdebug("runGame(): STATE 3: choose next startle time: BEGIN")
-				#_next_seconds = random.randrange( self.duration_between_startle_min, self.duration_between_startle_max, 1 )
+				rospy.logwarn("runGame(): STATE 3: How long should Maki-ro stay hidden?...")
+				## random.uniform yeilds a float
 				_next_seconds = random.uniform( self.duration_between_startle_min, self.duration_between_startle_max )
+				rospy.logwarn("runGame(): STATE 3: I'm thinking of a (floating point) number between " + str(self.duration_between_startle_min) + " and " + str(self.duration_between_startle_max) + "... Yup, you guessed it!! Maki-ro stay hidden for " + str(_next_seconds) + " seconds" )
 				self.next_startle_time = rospy.get_time() + _next_seconds
 				rospy.loginfo("runGame(): next startle in " + str(_next_seconds) + " seconds at time " + str(self.next_startle_time))
 				self.game_state = 4
 				_state4_first_pass = True
-				rospy.logdebug("runGame(): STATE 3: choose next startle time: END")
+				rospy.logdebug("runGame(): STATE 3: choose next startle time: END... Changing to STATE 4")
 				continue	## start fresh at the top of the while loop
+			#end	if (self.game_state == 3):
 
 
 			## STEP 4: wait until self.next_startle_time time before trying again
 			if (self.game_state == 4):
 				if _state4_first_pass:
 					rospy.logdebug("runGame(): STATE 4: wait while hiding: BEGIN")
+					rospy.logwarn("runGame(): STATE 4: Keeping hidden... No peaking!!")
 					_state4_first_pass = False
 
 				_remaining_hide_duration = self.next_startle_time - rospy.get_time()
 				if (_remaining_hide_duration > 0.01):	## 100 ms
-					rospy.logdebug("STATE 4: _remaining_hide_duration is " + str(_remaining_hide_duration) + " seconds")
+					rospy.loginfo("STATE 4: _remaining_hide_duration is " + str(_remaining_hide_duration) + " seconds")
 
 					### FPTZ request published takes 100ms to propogate
 					engagementStartleGame.requestFeedback( self, SC_GET_PT )
-					self.SWW_WI.sleepWhileWaiting( 0.25, time_inc=0.05 )
+					self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
 
 					## TODO: SHOULD DO SOMETHING TO MAKE SURE HT IS NOT OVERHEATING
 
@@ -222,30 +267,89 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					### FPPZ request published takes 100ms to propogate
 					engagementStartleGame.requestFeedback( self, SC_GET_PP )
 					self.game_state = 5
-				rospy.logdebug("runGame(): STATE 4: wait while hiding: END")
+					rospy.logwarn("runGame(): STATE 4: Hiding time's up... Let's see if Maki-ro can surprise the infant next!!")
+				rospy.logdebug("runGame(): STATE 4: wait while hiding: END... Changing to STATE 5...")
 				continue	## start fresh at the top of the while loop
+			#end	if (self.game_state == 4):
 
 
 			## STEP 5: try again! pop up from hiding
 			if (self.game_state == 5):
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: BEGIN")
+				rospy.logwarn("runGame(): STATE 5: Ready or not, here goes... Destination: Bugged Out Face!!")
 				engagementStartleGame.unhideIntoStartle( self )
 				self.game_state = 1
 				self.count_movements = self.count_movements +1
-				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: END")
+				rospy.logwarn("runGame(): STATE 5: Maki-ro popped up so FAST... hopefully without whiplash!!!")
+				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: END... Changing back to STATE 1")
+				rospy.logerr("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(self.count_movements) + " >>>>>>>>>>>>>>>>>>>>")
 				continue	## start fresh at the top of the while loop
+			#end	if (self.game_state == 5):
 
 
 		#end	while self.ALIVE and not rospy.is_shutdown():
-
 
 		_duration = rospy.get_time() - _start_time
 		rospy.loginfo( "NUMBER OF STARTLE/HIDE ROUNDS: " + str(self.count_movements) )
 		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
 
+		rospy.logwarn("runGame(): Main game complete after playing " + str(self.count_movements) + " rounds... but wait!! There's more... Cleanup from STATE " + str(self.game_state) + "...")
 		engagementStartleGame.__is_game_exit = True
+		engagementStartleGame.__is_game_running = False		## for good measure
 		rospy.logdebug("runGame: END")
 		return
+
+	def cleanupGame( self ):
+		rospy.logdebug("cleanupGame(): BEGIN")
+		## KATE -- TO TEST
+		## break the while loop in runGame()
+		rospy.loginfo("cleanupGame(): BEFORE: __is_game_running=" + str(engagementStartleGame.__is_game_running))
+		engagementStartleGame.__is_game_running = False
+		rospy.loginfo("cleanupGame(): BEFORE: __is_game_running=" + str(engagementStartleGame.__is_game_running))
+		rospy.logwarn("cleanupGame(): Attempting to break runGame while loop... toggle __is_game_running to " + str(engagementStartleGame.__is_game_running) + "...")
+
+		rospy.logwarn("cleanupGame(): Now waiting for paint to dry... Kidding... maybe...")
+		_start_wait_time = rospy.get_time()
+		## the following while loop will terminate when runGame() returns
+		while (not engagementStartleGame.__is_game_exit) and (not rospy.is_shutdown()):
+			#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )
+			rospy.loginfo("cleanupGame(): Are we there yet? Been waiting " + str( rospy.get_time() - _start_wait_time ) + " seconds... __is_game_running=" + str(engagementStartleGame.__is_game_running) + " and __is_game_exit=" + str(engagementStartleGame.__is_game_exit))
+		rospy.logwarn("cleanupGame(): FINALLY!! It took " + str( rospy.get_time() - _start_wait_time ) + " seconds before runGame() returned... and in a fine STATE " + str(self.game_state))
+
+		rospy.logwarn("cleanupGame(): Alrighty, let's get to work putting Maki-ro's head back on straight... I hear there's a good movie playing soon...")
+		## CLEAN UP and move Maki-ro into neutral eyelid (LL) and head tilt (HT) positions
+		if (self.game_state == 9):
+			## the game ended after max repetitions
+			rospy.logwarn("cleanupGame(): runGame was in STATE 9: repetitions exceeded... Awwwwwww, guess Maki-ro needs to relax from startle")
+			engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
+			rospy.logwarn("cleanupGame(): Relaxed Maki-ro is going to see the movie, even if no one else is interested...")
+
+		elif (self.game_state == 1):
+			## Maki-ro is in startle position
+			rospy.logwarn("cleanupGame(): runGame was in STATE 1: wait while loop interrupted with Maki-ro still in startle position, so relax... INFANT ENGAGED WITH EYE CONTACT!!!!!!!!!!!")
+			engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
+			rospy.logwarn("cleanupGame(): Relaxed Maki-ro and new pal are going together to see movie...") 
+
+		else:
+			## Maki-ro is in hiding position
+			rospy.logwarn("cleanupGame(): runGame was in STATE " + str(self.game_state) + ": while loop interrupted with Maki-ro in sleepy-head hide position...")
+			try:
+				## THIS IS CUSTOM RESET
+				##	reset goal speeds and goal positions
+				##	and monitor moving into goal positions
+				engagementStartleGame.monitorMoveToGP( self, "reset", ht_gp=self.HT_NEUTRAL, ll_gp=self.LL_NEUTRAL )
+				rospy.logwarn("cleanupGame(): POKE!! Wake up sleepy-head Maki-ro... Infant either likes your hair, or wants to see a movie...")
+			except rospy.exceptions.ROSException as _e:
+				rospy.logerr("cleanupGame(): ERROR: UNABLE TO RESET MAKI-RO TO NEUTRAL POSITIONS: " + str(_e))
+				### Uh-oh... this is a last ditch effort
+				#engagementStartleGame.pubTo_maki_command( self, "reset" )
+				#return False
+
+				### Workaround is to use only the first half of unhideIntoStartle
+				engagementStartleGame.unhideIntoStartle( self, unhide=True, startle=False )
+
+		rospy.logdebug("cleanupGame(): END")
+		return True
 
 	############################
 	##
@@ -357,31 +461,46 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	##		unhideIntoStartle
 	##
 	############################
-	def unhideIntoStartle( self ):
+	def unhideIntoStartle( self, unhide=True, startle=True ):
 		rospy.logdebug("unhideIntoStartle: BEGIN")
 
-		### resets all servo motors to neutral position
-		### resets goal speeds too
-		#engagementStartleGame.pubTo_maki_command( self, "reset" )	
+		## Check to make sure that both inputs are boolean, 
+		##	and at least one has the value True
+		if ((isinstance(unhide, bool)) and (isinstance(startle, bool)) and
+			(unhide or startle)):
+			pass
+		else:
+			rospy.logerror("unhideIntoStartle(): INVALID INPUTS")
+			return False
 
-		## reset to neutral position
-		_pub_cmd = ""
-		_pub_cmd += "HT" + SC_SET_GS + str(self.HT_GS_DEFAULT)
-		_pub_cmd += "HT" + SC_SET_GP + str(self.HT_NEUTRAL)
-		_pub_cmd += "LL" + SC_SET_GS + str(self.LL_GS_DEFAULT)
-		_pub_cmd += "LL" + SC_SET_GP + str(self.LL_NEUTRAL)
-		_pub_cmd += TERM_CHAR_SEND
-		engagementStartleGame.pubTo_maki_command( self, _pub_cmd )
-		## wait for reset motion to complete
-		## meanwhile, print out the present speeds while moving
-		#for _i in range(10):
-		for _i in range(4):
-			engagementStartleGame.requestFeedback( self, SC_GET_PS )
-			#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )		
-			self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )		
+		if unhide:
+			### resets all servo motors to neutral position
+			### resets goal speeds too
+			#engagementStartleGame.pubTo_maki_command( self, "reset" )	
 
-		## move into startle
-		engagementStartleGame.macroStartleRelax( self, relax=False )
+			## reset to neutral position
+			_pub_cmd = ""
+			_pub_cmd += "HT" + SC_SET_GS + str(self.HT_GS_DEFAULT)
+			_pub_cmd += "HT" + SC_SET_GP + str(self.HT_NEUTRAL)
+			_pub_cmd += "LL" + SC_SET_GS + str(self.LL_GS_DEFAULT)
+			_pub_cmd += "LL" + SC_SET_GP + str(self.LL_NEUTRAL)
+			_pub_cmd += TERM_CHAR_SEND
+			engagementStartleGame.pubTo_maki_command( self, _pub_cmd )
+			
+			## NOTE: The following was emperically determined
+			## wait for reset motion to complete
+			## meanwhile, print out the present speeds while moving
+			#for _i in range(10):
+			for _i in range(4):
+				engagementStartleGame.requestFeedback( self, SC_GET_PS )
+				#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )		
+				self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )		
+			rospy.logdebug("unhideIntoStartle(): unhide behavior executed")
+
+		if startle:
+			## move into startle
+			engagementStartleGame.macroStartleRelax( self, relax=False )
+			rospy.logdebug("unhideIntoStartle(): startle behavior executed")
 
 		rospy.logdebug("unhideIntoStartle: END")
 		return
@@ -635,38 +754,15 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	def stopStartleGame( self, disable_ht=True ):
 		rospy.logdebug("stopStartleGame(): BEGIN")
 
-		## KATE -- TO TEST
-		## break the while loop in runGame()
-		engagementStartleGame.__is_game_running = False
-		rospy.loginfo("stopStartleGame(): break runGame while loop")
-
-		## KATE LIVE HACKING: BEGIN
-		'''
-		while (not engagementStartleGame.__is_game_exit) and (not rospy.is_shutdown()):
-			self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )
-		'''
-		self.SWW_WI.sleepWhileWaitingMS( 500, end_early=False )
-		## KATE LIVE HACKING: END
-		rospy.loginfo("stopStartleGame(): runGame complete")
-
-		## CLEAN UP and move Maki-ro into neutral eyelid (LL) and head tilt (HT) positions
-		if (self.game_state == 9):
-			## the game ended after max repetitions
-			rospy.logdebug("runGame was in STATE 9: repetitions exceeded, relax from startle")
-			engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
-
-		elif (self.game_state == 1):
-			## Maki-ro is in startle position
-			rospy.loginfo("runGame was in STATE 1: while loop interrupted in startle position, relax... INFANT ENGAGED")
-			engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
-
+		## NOTE: cleanupGame() is blocking -- CAREFUL
+		if engagementStartleGame.cleanupGame( self ):
+			rospy.logdebug("stopStartleGame(): cleanupGame was SUCCESSFUL")
 		else:
-			## Maki-ro is in hiding position
-			rospy.loginfo("runGame was in STATE " + str(self.game_state) + ": while loop interrupted in hide position")
-			try:
-				engagementStartleGame.monitorMoveToGP( self, "reset", ht_gp=self.HT_NEUTRAL, ll_gp=self.LL_NEUTRAL )
-			except rospy.exceptions.ROSException as _e:
-				rospy.logerr("stopStartleGame(): unable to reset; " + str(_e))
+			## trying to signal the MAKI PILOT for HELP
+			rospy.logerr("stopStartleGame():\t!!!!!!!!!!!!!!  HELP   HELP   HELP   HELP   HELP   !!!!!!!!!!!")
+			for _c in range(10):
+				rospy.logerr("stopStartleGame(): cleanupGame either FAILED or is INCOMPLETE... !!!!!!!!!!!!! SHOULD THE MAKI PILOT INTERVENE ?")
+			rospy.logerr("stopStartleGame():\t!!!!!!!!!!!!!!  HELP   HELP   HELP   HELP   HELP   !!!!!!!!!!!")
 
 		## call base class' stop function
 		eyelidHeadTiltBaseBehavior.stop(self, disable_ht=disable_ht)
@@ -675,12 +771,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		engagementStartleGame.setEyelidRange( self, LL_OPEN_DEFAULT, ll_close=LL_CLOSE_MAX )
 		self.next_startle_time = None
 
-		## KATE LIVE HACKING: BEGIN
-		engagementStartleGame.pubTo_maki_command( self, "reset" )
-		engagementStartleGame.pubTo_maki_command( self, "reset" )
-		## KATE LIVE HACKING: END
-
-		rospy.logdebug("stopStartleGame(): BEGIN")
+		rospy.logdebug("stopStartleGame(): END")
 		return
 
 	## override
