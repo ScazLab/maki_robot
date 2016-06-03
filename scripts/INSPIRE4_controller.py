@@ -491,7 +491,7 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug("...\tMaki-ro should now be awake... AA.awake_p()=" + str( AA.awake_p() ))
 
 		## STEP 3: Experimenter greets Maki-ro
-		rospy.sleep(0.5)	## 500 ms
+		rospy.sleep(0.75)	## 750 ms
 
 		## STEP 4: Maki-ro acknowledges greeting
 		_thought = "Maki-ro, mind your manners and say hello..."
@@ -506,34 +506,30 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro is startled!!! Peek-a-boo does that..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.startStartle()
-		rospy.logdebug("Maki-ro doesn't quiet fully relax, so adjust gaze to look at Friend again...")
-		rospy.sleep(0.25)	## need a brief moment before executing next motion
-		## Maki-ro doesn't quiet come back to relax position
-		lookIntro.macroLookAtExperimenter()
+		lookIntro.startStartle( relax=True )
+		### KATE HACKING: BEGIN...
+		#rospy.logdebug("Maki-ro doesn't quiet fully relax, so adjust gaze to look at Friend again...")
+		#rospy.sleep(0.5)	## need a brief moment before executing next motion
+		### Maki-ro doesn't quiet come back to relax position
+		#lookIntro.macroLookAtExperimenter()
+		### More insurance that eyelids return to neutral
+		#lookIntro.setEyelidNeutralPose( lookIntro.LL_NEUTRAL, cmd_prop=True )
+		### KATE HACKING: END
 
 		## STEP 7: Friend show Maki-ro the flashing ball
 		rospy.sleep(0.5)	## 500 ms
 
 		## TODO: Insert agentic behaviors where appropriate
-		#INSPIRE4Controller.setBlinkAndScan( self, scan=True )
+		INSPIRE4Controller.setBlinkAndScan( self, blink=True )
 
 		## STEP 8: Maki-ro nods
 		_thought = "Oooo a blinky... Maki-ro tries to nod enthusiastically..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		_nano_nap = 0.1	#0.01	## seconds
-		_deci_nap = 0.4	#0.3	## seconds
-		_nod_count = 0
-		_repetitions = 2
-		while ((_nod_count < _repetitions) and (not rospy.is_shutdown())):
-			_nod_count += 1
-			lookIntro.macroGreeting( nod_angle=20.0 )	## do this instead of specifying input repetition
-			_micro_nap_duration = random.uniform( _nano_nap, _deci_nap )
-			_thought = "Enthsiastic nod #" + str(_nod_count) + " is now followed by a micro nap (AKA pause) of " + str(_micro_nap_duration) + " seconds... Don't blink or you might miss it, HA, HA!"
-			INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-			rospy.logdebug("...\t" + _thought)
-			rospy.sleep( _micro_nap_duration )
+		## This hack works better than specifying repetitions as optional input parameter
+		lookIntro.macroGreeting()
+		rospy.sleep(0.5)
+		lookIntro.macroGreeting()
 		_thought = "Maki-ro might be a little dizzy now..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logdebug("...\t" + _thought)

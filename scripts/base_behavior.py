@@ -57,8 +57,12 @@ class baseBehavior(object):
 	def start(self, makiPP=None):
 		_invalid_entry = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
 
+		## request a feedback message
+		baseBehavior.requestFeedback( self, str(SC_GET_PP) )
+
 		## check to see if there is an entry with key "PP"
 		while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
+			## LEGACY CHECK
 			## if we were passed a valid makiPP 
 			if (makiPP != None) and (makiPP != _invalid_entry):
 				self.makiPP = makiPP
@@ -67,12 +71,16 @@ class baseBehavior(object):
 			## if we got a message on /maki_feedback_pres_pos
 			if (self.makiPP != None) and (self.makiPP != _invalid_entry):
 				break	## break the while loop
-			else:
-				rospy.loginfo("Waiting for a message on /maki_feedback_pres_pos...")
-				## request a feedback message
-				baseBehavior.requestFeedback( self, str(SC_GET_PP) )
+			#else:
+			#	rospy.loginfo("Waiting for a message on /maki_feedback_pres_pos...")
+			#	## request a feedback message
+			#	baseBehavior.requestFeedback( self, str(SC_GET_PP) )
 
-			self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )	## 0.25 second
+			#self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )	## 0.25 second
+
+			rospy.loginfo("Waiting for a message on /maki_feedback_pres_pos...")
+			baseBehavior.requestFeedback( self, str(SC_GET_PP), time_ms=500 )
+		#end	while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
 
 		self.ALIVE = True
 		self.mTT_INTERRUPT = False
@@ -94,15 +102,17 @@ class baseBehavior(object):
 	def update( self, makiPP ):
 		self.makiPP = makiPP
 
-	def requestFeedback( self, feedback_type, cmd_prop=True, time_ms=100, time_inc=0.05 ):
+	def requestFeedback( self, feedback_type, cmd_prop=True, time_ms=100, time_inc=0.01 ):
 		## check /maki_feedback_*
 		## request a feedback message
-		baseBehavior.pubTo_maki_command( self, str(SC_FEEDBACK) + str(feedback_type) + str(TERM_CHAR_SEND), cmd_prop, time_ms, time_inc )
+		#baseBehavior.pubTo_maki_command( self, str(SC_FEEDBACK) + str(feedback_type) + str(TERM_CHAR_SEND), cmd_prop, time_ms, time_inc )
+		baseBehavior.pubTo_maki_command( self, str(SC_FEEDBACK) + str(feedback_type) + str(TERM_CHAR_SEND), cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+		return
 
 	#####################
 	## THESE ARE COMMON FOR ALL BEHAVIORS
 	#####################
-	def pubTo_maki_command( self, commandOut, cmd_prop=True, time_ms=100, time_inc=0.05 ):
+	def pubTo_maki_command( self, commandOut, cmd_prop=True, time_ms=100, time_inc=0.01 ):
 		_pub_flag = False
 
 		## make sure that commandOut ends in only one TERM_CHAR_SEND
@@ -229,9 +239,9 @@ class baseBehavior(object):
 		return
 
 	def parseMAKIFeedbackMsg ( self, recv_msg ):
-		if self.VERBOSE_DEBUG:
-			#rospy.logdebug( "parseMAKIFeedbackMsg: BEGIN" )
-			rospy.logdebug( "Received: " + str(recv_msg.data) )
+		#if self.VERBOSE_DEBUG:
+		#	#rospy.logdebug( "parseMAKIFeedbackMsg: BEGIN" )
+		#	rospy.logdebug( "Received: " + str(recv_msg.data) )
 
 		_tmp = baseBehavior.__maki_feedback_format.search( recv_msg.data )
 		if _tmp != None:
@@ -308,11 +318,21 @@ class baseBehavior(object):
 		_stall_count = 0
 		_old_makiPP = self.makiPP
 		_start_time = rospy.get_time()
-		### SEND THE COMMAND
-		#baseBehavior.pubTo_maki_command( self, gp_cmd )
+		### REPEAT SENDING THE COMMAND
+		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=False )
 		while not rospy.is_shutdown():
 			## There is an implicit sleep in requestFeedback of 100ms (default)
 			baseBehavior.requestFeedback( self, SC_GET_PP ) 
+
+			### TODO: THIS WOULD BE A NICE OPTIMIZATION
+			### Check to see if the goal position command has propogated
+			### 	If so, there should be changes in PP
+			###	Otherwise, catch a breath... continue
+			###	instead of inflating _stall_count
+			#if (_old_makiPP == self.makiPP):
+			#	rospy.logwarn("baseBehavior.monitorMoveToGP(): CONTINUE!!!")
+			#	continue	## jump back to the top of the loop
+			
 
 			if _moving_flag["HP"] and (abs(self.makiPP["HP"] - hp_gp) < delta_pp):
 				rospy.logdebug("HP done moving")
@@ -375,7 +395,7 @@ class headPanBaseBehavior(baseBehavior):
 
 	## Automatically fill in commandOut to adjust eye pan position based on head pan position
 	##	if eye pan position is missing
-	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.05 ):
+	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.01 ):
 		rospy.logdebug("headPanBaseBehavior.pubTo_maki_command(): BEGIN")
 		if fixed_gaze:	commandOut = headPanBaseBehavior.amend_maki_command( self, commandOut, fixed_gaze=fixed_gaze )
 		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
@@ -634,7 +654,7 @@ class headTiltBaseBehavior(baseBehavior):
 			elif (_loop_count == 3):
 				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_PP) )
 			else:
-				self.SWW_WI.sleepWhileWaitingMS( 100, 0.05 )	## make sure command propogates
+				self.SWW_WI.sleepWhileWaitingMS( 100, 0.01 )	## make sure command propogates
 			_loop_count = (1 + _loop_count) % 20
 			rospy.logdebug( "enable, 1st while: " + str(_loop_count) )
 
@@ -688,7 +708,7 @@ class headTiltBaseBehavior(baseBehavior):
 				headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_disable_cmd) )
 				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
 			else:
-				self.SWW_WI.sleepWhileWaitingMS( 100, 0.05 )	## make sure command propogates
+				self.SWW_WI.sleepWhileWaitingMS( 100, 0.01 )	## make sure command propogates
 			_loop_count = 1 + _loop_count
 
 		headTiltBaseBehavior.__ht_enabled = False
@@ -799,8 +819,10 @@ class eyelidBaseBehavior( baseBehavior ):
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
 			except rospy.exceptions.ROSException as e:
 				raise e
+				#eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+		return
 
 	def eyelidClose( self, ll_close=None, monitor=False, cmd_prop=False ):
 		_pub_cmd = "LLGP" 

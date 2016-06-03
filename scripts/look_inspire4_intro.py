@@ -139,7 +139,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		self.HT_GS_MAX = 75	#60	#50
 		self.HT_GS_MIN = 12	##10	## too slow, stall out when moving too slow
 
-## KATE
 		self.LL_STARTLE = LL_OPEN_MAX
 		self.LL_NEUTRAL = LL_OPEN_DEFAULT
 		self.LL_GS_DEFAULT = 100	## as set in Arbotix-M driver
@@ -355,7 +354,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				if lower:	lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
 				rospy.loginfo("-----------------")
-## KATE
 
 			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
@@ -782,6 +780,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	def macroStartleRelax( self, startle=True, relax=True, repetitions=1 ):
 		rospy.logdebug("macroStartleRelax(): BEGIN")
 		_start_time = rospy.get_time()
+		_safe_distance_check = True
 
 		## check the inputs
 		if (isinstance(startle, bool) and (not startle) and 
@@ -794,7 +793,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			rospy.logwarn("macroStartleRelax(): INVALID VALUE: repetitions=" + str(repetitions) + "; updated to 1")
 			repetitions = 1
 
-		## KATE
 		_expected_delta_ll = self.LL_STARTLE - self.LL_NEUTRAL	## 535 - 500 = 35 ticks
 		_expected_delta_ht = self.HT_STARTLE - self.HT_NEUTRAL	## 525 - 505 = 20 ticks
 		rospy.logdebug("_expected_delta_ll=" + str(_expected_delta_ll) + " ticks, _expected_delta_ht=" + str(_expected_delta_ht) + " ticks")
@@ -1052,7 +1050,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 					_distance_to_relax_ll = abs( self.makiPP["LL"] - self.previous_ll )
 					rospy.loginfo("_distance_to_relax_ll=" + str(_distance_to_relax_ll))
 					_distance_to_relax_ht = abs( self.makiPP["HT"] - self.previous_ht )
-## KATE
 					rospy.loginfo("_distance_to_relax_ht=" + str(_distance_to_relax_ht))
 
 					## Add some error checking
@@ -1109,6 +1106,13 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 						rospy.loginfo("_gs_ll=" + str(_gs_ll))
 						_gs_ll = max(_gs_ll, self.LL_GS_MIN)
 						rospy.loginfo("adjusted _gs_ll=" + str(_gs_ll))
+
+					elif _safe_distance_check:
+						_gs_ll = self.LL_GS_MIN
+
+					else:
+						## BE CAREFUL!!! _gs_ll could be 0
+						pass
 					#end	if (_distance_to_relax_ll > 0):
 
 					## STEP 4B: HEAD TILT
@@ -1134,24 +1138,57 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 						rospy.loginfo("adjusted _gs_ht=" + str(_gs_ht))
 						#_duration_relax_wait = self.DC_helper.getTurnDurationMS_ticks_goalSpeed( _distance_to_relax, _gs_ll )
 						#rospy.loginfo("waitMS = " + str(_duration_relax_wait))
+
+					elif _safe_distance_check:
+						_gs_ht = self.HT_GS_MIN
+
+					else:
+						## BE CAREFUL!!! _gs_ht could be 0
+						pass
 					#end	if (_distance_to_relax_ht > 0):
 			
 
 					## STEP 5: Generate servo control command to set new goal speeds
 					##	BEFORE sending goal positions
+					## At the very least, set new goal speeds of self.LL_GS_MIN and self.HT_GS_MIN
 					_pub_cmd = ""
-					if (_distance_to_relax_ll>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
-					if (_distance_to_relax_ht>0):	_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+					if _safe_distance_check:
+						## Only build _pub_cmd if the distance is more that 0
+						## 	and if _gs_* is greater than 0 (unlimited speed)
+						if (_distance_to_relax_ll>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+						if (_distance_to_relax_ht>0):	_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+					else:
+						_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+						_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+						_pub_cmd += TERM_CHAR_SEND
 					lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd) )	## 100 ms command propogation delay
+
+					## On the first time through the whole relax loop, do
+					##	a couple of housekeeping things: 1) start a timer,
+					##	2) publish the new goal speeds again
+					if _first_pass:	
+						#lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd), time_ms=50 )	
+						_start_time_relax = rospy.get_time()
+						
+						## Formulate special mixed goal speed and goal position servo 
+						##	command. goal speeds should be set as they are parsed,
+						##	and goal positions are queued until TERM_CHAR_SEND
+						##	is encountered
+						_pub_cmd = ""
+						_pub_cmd += "LL" + SC_SET_GS + str(_gs_ll)
+						_pub_cmd += "HT" + SC_SET_GS + str(_gs_ht)
+						_pub_cmd += _relax_gp_cmd
+						rospy.logwarn("Secret sauce is... " + _pub_cmd )
+						lookINSPIRE4Intro.pubTo_maki_command( self, str(_pub_cmd) )	
+
+						_first_pass = False
+
 
 					## STEP 6: Publish servo control command to set goal positions
 					##	The goal positions will be published EVERY pass through
 					##	the inner relax while loop
 					_pub_cmd = _relax_gp_cmd
 		
-					if _first_pass:	
-						_start_time_relax = rospy.get_time()
-						_first_pass = False
 					try:
 						## BEHAVIOR DESCRIPTION:
 						## 	Maki-ro relaxes wide open eyes
@@ -1181,6 +1218,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				##	specified duration
 				lookINSPIRE4Intro.__is_startled = False
 
+				## STEP 8: Insurance to make Maki-ro's eyelids reset to neutral
+				lookINSPIRE4Intro.setEyelidNeutralPose( self, self.previous_ll, cmd_prop=True )
 				rospy.loginfo("Done: RELAX ====")
 			#end	if relax:
 
@@ -1206,7 +1245,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		rospy.logdebug("startStartle(): END")
 		return
 
-## KATE
 	def stopStartle( self, disable_ht=True ):
 		## shift into eyelid and headtilt neutral
 		lookINSPIRE4Intro.macroStartleRelax( self, startle=False, relax=True )
@@ -1263,7 +1301,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		elif msg.data == "intro lookAtExperimenter":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
 			#lookINSPIRE4Intro.macroLookAtExperimenter( self )
-## KATE
 
 		elif msg.data == "intro lookAtBallLocationUpperRight":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
