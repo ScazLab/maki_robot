@@ -283,11 +283,11 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	###########################
 	##
 	##	To run, publish to /maki_macro
-	##		lookAtExperimenter
+	##		intro lookAtExperimenter
 	##
 	###########################
 	def macroLookAtExperimenter( self ):
-		rospy.logdebug("macrolookAtExperimenter: BEGIN")
+		rospy.logdebug("macrolookAtExperimenter(): BEGIN")
 
 		if self.ALIVE:
 			if not rospy.is_shutdown():
@@ -299,29 +299,38 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
-
-			if not self.mTT_INTERRUPT:
+			else:
 				rospy.loginfo("-----------------")
 
-				baseBehavior.pubTo_maki_command( self, str(self.look_at) )
-				self.sww_wi.sleepWhileWaitingMS( 2000 )
+				lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
+				#baseBehavior.pubTo_maki_command( self, str(self.look_at) )
+				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
 				rospy.loginfo("-----------------")
 
 			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
-		rospy.logdebug("macroLookAtExperimenter: END")
+		rospy.logdebug("macroLookAtExperimenter(): END")
 		return
 
 	###########################
 	##
 	##	To run, publish to /maki_macro
-	##		lookAtBallLocationLowerRight
+	##		intro lookAtBallLocationRight lower
+	##		intro lookAtBallLocationRight upper
 	##
 	###########################
-	def macroLookAtBallLocationLowerRight( self, shift=True ):
-		rospy.logdebug("macroLookAtBallLocationLowerRight: BEGIN")
+	#def macroLookAtBallLocationRight( self, lower=False, upper=False, shift=True ):
+	def macroLookAtBallLocationRight( self, lower=False, upper=False ):
+		rospy.logdebug("macroLookAtBallLocationRight(): BEGIN")
+
+		## check inputs
+		if not ((isinstance( lower, bool )) and 
+			(isinstance( upper, bool )) and
+			(lower or upper)):
+			rospy.logwarn("macroLookAtBallLocationRight(): INVALID INPUT: expected lower and upper to be of type bool, with at least one True")
+			return
 
 		if self.ALIVE:
 			if not rospy.is_shutdown():
@@ -333,29 +342,34 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
-
-			if not self.mTT_INTERRUPT:
+			else:
 				rospy.loginfo("-----------------")
+				#baseBehavior.pubTo_maki_command( self, str(self.look_ball_loc_lower_right) )
+				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
-				baseBehavior.pubTo_maki_command( self, str(self.look_ball_loc_lower_right) )
-				self.sww_wi.sleepWhileWaitingMS( 2000 )
+				## From facing the Friend, Maki-ro looks at UPPER RIGHT first
+				if upper:	lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
+
+				## Then from facing upper right, Maki-ro looks at LOWER RIGHT
+				if lower:	lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
 				rospy.loginfo("-----------------")
+## KATE
 
 			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
-		rospy.logdebug("macroLookAtBallLocationLowerRight: END")
+		rospy.logdebug("macroLookAtBallLocationRight(): END")
 		return
 
 	###########################
 	##
 	##	To run, publish to /maki_macro
-	##		lookNeutral
+	##		intro lookAtInfant
 	##
 	###########################
-	def macroLookNeutral( self ):
-		rospy.logdebug("macroNeutral: BEGIN")
+	def macroLookAtInfant( self ):
+		rospy.logdebug("macroAtInfant(): BEGIN")
 
 		if self.ALIVE:
 			if not rospy.is_shutdown():
@@ -367,19 +381,23 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if self.mTT_INTERRUPT:	
 				rospy.logdebug("mTT_INTERRUPT=" + str(mTT_INTERRUPT))
 				return
-
-			if not self.mTT_INTERRUPT:
+			else:
 				rospy.loginfo("-----------------")
+				#baseBehavior.pubTo_maki_command( self, str(self.look_neutral) )
+				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
-				baseBehavior.pubTo_maki_command( self, str(self.look_neutral) )
-				self.sww_wi.sleepWhileWaitingMS( 2000 )
+				## Maki-ro should have been previously looking at the lower right
+				##	calibration point
+				lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
+				## TODO: Maki-ro doesn't quite return to HT_MIDDLE
+				lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
 
 				rospy.loginfo("-----------------")
 
 			#end	if not self.mTT_INTERRUPT:
 		#end	if self.ALIVE:
 
-		rospy.logdebug("macroLookNeutral: END")
+		rospy.logdebug("macroLookAtInfant(): END")
 		return
 
 	###########################################
@@ -1068,6 +1086,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		elif msg.data == "intro lookAtExperimenter":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
+			#lookINSPIRE4Intro.macroLookAtExperimenter( self )
+## KATE
 
 		elif msg.data == "intro lookAtBallLocationUpperRight":
 			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
@@ -1080,6 +1100,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			## TODO: Maki-ro doesn't quite return to HT_MIDDLE
 			lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
 
+		## TODO: Remove since no longer exists
 		elif msg.data == "lookNeutral":
 			#self.macroLookNeutral()
 			pass

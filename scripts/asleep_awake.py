@@ -116,9 +116,16 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		return headPanBaseBehavior.monitorMoveToGP( self, gp_cmd=commandOut, hp_gp=hp_gp, ht_gp=ht_gp, ep_gp=ep_gp, et_gp=et_gp, ll_gp=ll_gp, lr_gp=lr_gp, delta_pp=delta_pp, cmd_prop=cmd_prop )
 
 
+	## --------------------------
 	def asleep_p( self ):
 		if (isinstance( asleepAwake.__is_asleep, bool )):
 			return asleepAwake.__is_asleep
+		else:
+			return False
+
+	def awake_p( self ):
+		if (isinstance( asleepAwake.__is_awake, bool )):
+			return asleepAwake.__is_awake
 		else:
 			return False
 
@@ -310,6 +317,9 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if _pub_ep:	_pub_cmd += "EP" + SC_SET_GP + str(EP_AWAKE)
 			if _pub_ipt:	_pub_cmd += SC_SET_IPT + str(_ms_duration)
 			_pub_cmd += TERM_CHAR_SEND
+
+## KATE
+			## TODO: Try uncommented to see if Maki-ro responds more quickly to the issued command
 			#asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
 			try:
 				asleepAwake.monitorMoveToGP( self, str(_pub_cmd), hp_gp=HP_AWAKE, ht_gp=HT_AWAKE, ll_gp=LL_AWAKE )
