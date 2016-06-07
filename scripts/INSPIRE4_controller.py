@@ -30,6 +30,10 @@ from look_inspire4_interactions import *
 class INSPIRE4Controller( object ):
 	## all instances of this class will share the same value
 	## variables private to this class
+	READY = 10	## will be 0 after testing; TODO
+	SYNC = 11	## will be 1 after testing; TODO
+	INIT_GUI = 7
+## KATE
 	SETUP = 0
 	PRELUDE = 1
 	INTRO = 2
@@ -249,9 +253,10 @@ class INSPIRE4Controller( object ):
 	def transitionToStimuli( self ):
 		rospy.logdebug("transitionToStimuli(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
-		if self.__is_game_running:
-			INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
-			self.__is_game_running = False
+		#if self.__is_game_running:
+		#	INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+		#	self.__is_game_running = False
+		INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
 		INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.state = INSPIRE4Controller.STIMULI
 		rospy.logdebug("transitionToStimuli(): END")
@@ -603,6 +608,7 @@ class INSPIRE4Controller( object ):
 
 
 	## ------------------------------
+	'''
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
 		rospy.logdebug("received: " + str(msg))
@@ -767,6 +773,211 @@ class INSPIRE4Controller( object ):
 
 
 		## TODO: Add logic for participant ID
+
+
+		else:
+			_unknown_flag = True
+
+
+		if _unknown_flag:	
+			rospy.logwarn( "UNKNOWN pilot command: " + str(_data) + "; REMAINS in self.state " + str(self.state) )
+
+		if self.state != self.previous_state:
+			rospy.loginfo("UPDATE self.state from previous " + str(self.previous_state) + " to " + str(self.state) + " current")
+
+		rospy.logdebug("parse_pilot_command(): END")
+		return
+	'''
+
+
+## KATE
+	def transitionToReady( self, msg=None ):
+		rospy.logdebug("transitionToReady: BEGIN")
+		## STEP 0: Fall asleep
+		INSPIRE4Controller.doSetup( self )
+
+		## STEP 1: Stop logging
+		if msg != None:	rospy.loginfo( "ADD SYNC MARKER: " + str(msg) )	## add BEFORE stop recording
+		INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop the rcording
+		INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
+
+		## STEP 2: Reset number of interactions
+		INSPIRE4Controller.resetInteractionCount( self )
+
+		## STEP 3: Update state
+		self.state = INSPIRE4Controller.READY
+		rospy.logdebug("transitionToReady: END")
+		return
+
+	def transitionToIntro( self ):
+		try:
+			thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
+			self.state = INSPIRE4Controller.INTRO
+		except Exception as _e_rFS:
+				rospy.logerror("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
+		return
+
+	def parse_pilot_command( self, msg ):
+		rospy.logdebug("parse_pilot_command(): BEGIN")
+		rospy.logdebug("received: " + str(msg))
+
+		self.previous_state = self.state	## for later comparison
+		_unknown_flag = False
+		_data = str(msg.data)
+		rospy.loginfo("_data = " + _data)
+	
+		if _data == "init pilot GUI":
+			rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
+			self.state = INSPIRE4Controller.INIT_GUI
+			
+		elif _data == "reset experiment":
+			## STEP 0:
+			## We should always be able to get to this controller state from ANY other
+			## TODO: Could depend on previous state
+
+			## STEP 1: Move to ready state
+			INSPIRE4Controller.transitionToReady( self, msg=_data )
+
+		elif _data == "get ready":
+			## We should always be able to get to this controller state from ANY other
+			INSPIRE4Controller.transitionToReady( self, msg=_data )
+
+		elif _data.startswith( "sync" ):
+			## We should only be able to get to this controller state from READY
+			##	or if in SYNC state since there are multiple sync points to ePrime
+			if ((self.previous_state != INSPIRE4Controller.READY) and
+				(self.previous_state != INSPIRE4Controller.SYNC)):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + str(self.state))
+				_unknown_flag = True
+				## TODO: auto fix prior state
+
+			elif (self.previous_state == INSPIRE4Controller.READY):
+				if self.data_logger_status == "started":
+					## There is an actively recording rosbag,
+					##	so close the existing one and start a new one
+					rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )	## add BEFORE stop recording
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+					INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
+					rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+					## resend this message for synchronization purposes
+					_msg = _data + " (resend to mark the new rosbag)"
+					INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, _msg )
+				else:
+					## There is no actively recording rosbag, 
+					##	so start a new one
+					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+					rospy.sleep(0.5)	## 0.5 second delay to allow time to open rosbag
+					## resend this message for synchronization purposes
+					_msg = _data + " (resend to mark the new rosbag)"
+					INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, _msg )
+
+			else:
+				pass
+
+			if _unknown_flag:
+				pass	## jump past this logic
+			elif _data.endswith( "Tobii calibration start" ):
+				pass
+			elif _data.endswith( "Tobii calibration done" ):
+				pass
+			elif _data.endswith( "visual clap" ):
+				pass
+			elif _data.endswith( "Tobii verify left screen" ):
+				pass
+			elif _data.endswith( "Tobii verify maki" ):
+				### enable head tilt and get ready for MAKI's introduction
+				#INSPIRE4Controller.pubTo_maki_macro( self, "intro start" )
+				pass
+			elif _data.endswith( "Tobii verify right screen" ):
+				pass
+			else:
+				_unknown_flag = True
+
+			if not _unknown_flag:
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+				self.state = INSPIRE4Controller.SYNC
+
+## KATE
+		elif _data == "runFamiliarizationSkit":
+			## We should only be able to get to this controller state from SYNC
+			if (self.previous_state != INSPIRE4Controller.SYNC):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + str(self.state))
+				_unknown_flag = True
+				## TODO: auto fix prior state
+
+			if not _unknown_flag:	
+			#	INSPIRE4Controller.transitionToIntro( self )
+				rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
+				self.state = INSPIRE4Controller.INTRO
+				pass	## FOR STATE MACHINE TESTIN ONLY
+
+
+		elif (_data == "startleGame start" ):
+			## We should only be able to get to this controller state from INTRO
+			if ((self.previous_state != INSPIRE4Controller.INTRO) and 
+				(self.previous_state != INSPIRE4Controller.STIMULI)):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO or STIMULI...\tcurrent STATE = " + str(self.state))
+				_unknown_flag = True
+				## TODO: auto fix prior state
+
+			if not _unknown_flag:
+				#self.__is_game_running = True
+
+				rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
+				## forward the message contents
+				INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				self.state = INSPIRE4Controller.ENGAGEMENT
+
+		elif ("turnToScreen" in _data):
+			## We should only be able to get to this controller state from ENGAGEMENT
+			if (self.previous_state != INSPIRE4Controller.ENGAGEMENT):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + str(self.state))
+				_unknown_flag = True
+				## TODO: auto fix prior state
+
+			if not _unknown_flag:
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+				INSPIRE4Controller.transitionToStimuli( self )
+## KATE
+
+				rospy.loginfo("'turnToScreen' in _data; forward the message contents to /maki_macro: " + _data)
+				## forward the message contents
+				INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				self.state = INSPIRE4Controller.STIMULI
+
+				if _data.endswith( "auto_return=True" ):
+					## add timed trigger 'watch stimuli' behavior 
+					## and followed by turning back to face the infant
+					INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
+				## TODO: Set a timer to enable blink and scan
+
+		elif _data == "turnToInfant":
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+
+			rospy.logwarn("====> turnToInfant")
+			INSPIRE4Controller.transitionToEngagement( self, _data )
+			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
+			self.interaction_count += 1
+			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
+			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
+				pass
+				## TODO: automatically start playing startle game????
+			else:
+				rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
+				## TODO: automatically end????
+
+		elif _data == "the end":
+			## We should be able to get to this state from ANY other
+			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+			INSPIRE4Controller.transitionToReady(self, _data)
+			self.state = INSPIRE4Controller.END
+
+			#INSPIRE4Controller.doSetup( self )
+			#self.state = INSPIRE4Controller.END
+			#if self.data_logger_status == "started":
+			#	INSPIRE4Controller.setAutoDataLogging( self, durationToAutoOff=float(60.0 * 5) )
+
 
 
 		else:
