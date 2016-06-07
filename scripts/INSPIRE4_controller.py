@@ -450,7 +450,6 @@ class INSPIRE4Controller( object ):
 	## stand alone timed skit
 	## "Friend" actor will adapt to Maki-ro's skit
 	def runFamiliarizationSkit( self ):
-## KATE
 		rospy.logdebug("runFamiliarizationSkit(): BEGIN")
 
 		_verbose = True
@@ -595,8 +594,8 @@ class INSPIRE4Controller( object ):
 		_thought = "<<<< END SCENE >>>>"
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.stop( disable_ht=True )
-		## TODO: disable_ht might have to change once in the
+		lookIntro.stop( disable_ht=False )
+		## disable_ht might have to change to False once in the
 		##	larger context of the experiment
 
 		rospy.logdebug("runFamiliarizationSkit(): END")
@@ -642,7 +641,9 @@ class INSPIRE4Controller( object ):
 				if self.data_logger_status == "started":
 					## There is an actively recording rosbag,
 					##	so close the existing one and start a new one
+					rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )	## add BEFORE stop recording
 					INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+					INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
 					rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
 					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
 					## resend this message for synchronization purposes
