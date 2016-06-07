@@ -40,9 +40,7 @@ class INSPIRE4Controller( object ):
 
 	NUMBER_OF_INTERACTIONS = 6
 
-	state_dict = {INSPIRE4Controller.INIT_GUI: 'init gui', INSPIRE4Controller.READY: 'ready', INSPIRE4Controller.SYNC: 'sync', ...
-	INSPIRE4Controller.INTRO: 'intro', INSPIRE4Controller.ENGAGEMENT: 'engagement', INSPIRE4Controller.STIMULI: 'stimuli', ...
-	INSPIRE4Controller.END: 'end'} #cmhuang: TODO from here
+	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end'} #cmhuang: TODO from here
 
 	def __init__(self, verbose_debug, ros_pub):
 
@@ -666,6 +664,7 @@ class INSPIRE4Controller( object ):
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
 			self.exp_pub.publish('[state] get ready')
+			print 'llllallllalallalalala'
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data.startswith( "sync" ):
@@ -771,7 +770,7 @@ class INSPIRE4Controller( object ):
 				## TODO: auto fix prior state
 
 			if not _unknown_flag:
-				self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
+				#self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				INSPIRE4Controller.transitionToStimuli( self )
 ## KATE
