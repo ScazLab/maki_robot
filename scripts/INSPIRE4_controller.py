@@ -30,17 +30,13 @@ from look_inspire4_interactions import *
 class INSPIRE4Controller( object ):
 	## all instances of this class will share the same value
 	## variables private to this class
-	READY = 10	## will be 0 after testing; TODO
-	SYNC = 11	## will be 1 after testing; TODO
-	INIT_GUI = 7
-## KATE
-	SETUP = 0
-	PRELUDE = 1
-	INTRO = 2
-	ENGAGEMENT = 3
-	STIMULI = 4
-	END = 5
-	BREAK_DOWN = 6
+	INIT_GUI = 0
+	READY = 1	
+	SYNC = 2	
+	INTRO = 3
+	ENGAGEMENT = 4
+	STIMULI = 5
+	END = 6
 
 	NUMBER_OF_INTERACTIONS = 6
 
