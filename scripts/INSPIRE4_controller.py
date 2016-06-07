@@ -40,7 +40,8 @@ class INSPIRE4Controller( object ):
 
 	NUMBER_OF_INTERACTIONS = 6
 
-	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end'} #cmhuang: TODO from here
+	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end'}
+
 
 	def __init__(self, verbose_debug, ros_pub):
 
@@ -646,10 +647,11 @@ class INSPIRE4Controller( object ):
 		_data = str(msg.data)
 		rospy.loginfo("_data = " + _data)
 	
-		if _data == "init pilot GUI":
+		if _data == "init pilot GUI": #cmhuang: dont need this anymore...
 			rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
 			self.state = INSPIRE4Controller.INIT_GUI
-			self.exp_pub.publish('[state] init pilot GUI')
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[state detail] init pilot GUI')
 			
 		elif _data == "reset experiment":
 			## STEP 0:
@@ -663,8 +665,12 @@ class INSPIRE4Controller( object ):
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
-			self.exp_pub.publish('[state] get ready')
-			print 'llllallllalallalalala'
+			if self.state != None:
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			else:
+				self.exp_pub.publish('[state] None' 
+			self.exp_pub.publish('[state detail] get ready')
+			
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data.startswith( "sync" ):
