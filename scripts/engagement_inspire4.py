@@ -277,9 +277,14 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			if (self.game_state == 5):
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: BEGIN")
 				rospy.logwarn("runGame(): STATE 5: Ready or not, here goes... Destination: Bugged Out Face!!")
-				engagementStartleGame.unhideIntoStartle( self )
-				self.game_state = 1
 				self.count_movements = self.count_movements +1
+				## FIXED: Only do full unhideIntoStartle while less than the number of repetitions
+				if (self.count_movements < repetitions):
+					engagementStartleGame.unhideIntoStartle( self )
+				else:
+					## Hit MAX reptitions... only unhide. DO NOT startle again...
+					engagementStartleGame.unhideIntoStartle( self, unhide=True, startle=False )
+				self.game_state = 1
 				rospy.logwarn("runGame(): STATE 5: Maki-ro popped up so FAST... hopefully without whiplash!!!")
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: END... Changing back to STATE 1")
 				rospy.logerr("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(self.count_movements) + " >>>>>>>>>>>>>>>>>>>>")
