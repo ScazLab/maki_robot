@@ -647,31 +647,27 @@ class INSPIRE4Controller( object ):
 		_data = str(msg.data)
 		rospy.loginfo("_data = " + _data)
 	
-		if _data == "init pilot GUI": #cmhuang: dont need this anymore...
-			rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
-			self.state = INSPIRE4Controller.INIT_GUI
-			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			self.exp_pub.publish('[state detail] init pilot GUI')
+		#if _data == "init pilot GUI": #cmhuang: dont need this anymore...
+		#	rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
+		#	self.state = INSPIRE4Controller.INIT_GUI
+		#	self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+		#	self.exp_pub.publish('[state detail] init pilot GUI')
 			
-		elif _data == "reset experiment":
+		if _data == "reset experiment":
 			## STEP 0:
 			## We should always be able to get to this controller state from ANY other
 			## TODO: Could depend on previous state
 			## need to issue '* stop'
 
 			## STEP 1: Move to ready state
-			self.exp_pub.publish('[RESET] reset experiment')
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
+			self.exp_pub.publish('[RESET] reset experiment')
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
-			if self.state != None:
-				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			else:
-				self.exp_pub.publish('[state] None' 
-			self.exp_pub.publish('[state detail] get ready')
-			
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[state][detail] ' + _data)
 
 		elif _data.startswith( "sync" ):
 			## We should only be able to get to this controller state from READY
@@ -709,24 +705,18 @@ class INSPIRE4Controller( object ):
 			if _unknown_flag:
 				pass	## jump past this logic
 			elif _data.endswith( "Tobii calibration start" ):
-				self.exp_pub.publish('[state] Tobii calibration start')
 				pass
 			elif _data.endswith( "Tobii calibration done" ):
-				self.exp_pub.publish('[state] Tobii calibration done')
 				pass
 			elif _data.endswith( "visual clap" ):
-				self.exp_pub.publish('[state] visual clap')
 				pass
 			elif _data.endswith( "Tobii verify left screen" ):
-				self.exp_pub.publish('[state] Tobii verify left screen')
 				pass
 			elif _data.endswith( "Tobii verify maki" ):
 				### enable head tilt and get ready for MAKI's introduction
 				#INSPIRE4Controller.pubTo_maki_macro( self, "intro start" )
-				self.exp_pub.publish('[state] Tobii verify maki')
 				pass
 			elif _data.endswith( "Tobii verify right screen" ):
-				self.exp_pub.publish('[state] Tobii verify right screen')
 				pass
 			else:
 				_unknown_flag = True
@@ -734,6 +724,8 @@ class INSPIRE4Controller( object ):
 			if not _unknown_flag:
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.SYNC
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+				self.exp_pub.publish('[state][detail] ' + _data)
 
 ## KATE
 		elif _data == "runFamiliarizationSkit":
@@ -749,6 +741,8 @@ class INSPIRE4Controller( object ):
 				INSPIRE4Controller.transitionToIntro( self )
 				rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
 				self.state = INSPIRE4Controller.INTRO
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+				self.exp_pub.publish('[state][detail] ' + _data)
 				pass	## FOR STATE MACHINE TESTIN ONLY
 
 
@@ -767,6 +761,8 @@ class INSPIRE4Controller( object ):
 				## forward the message contents
 				INSPIRE4Controller.pubTo_maki_macro( self, _data )
 				self.state = INSPIRE4Controller.ENGAGEMENT
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+				self.exp_pub.publish('[state][detail] ' + _data)
 
 		elif ("turnToScreen" in _data):
 			## We should only be able to get to this controller state from ENGAGEMENT
@@ -785,6 +781,8 @@ class INSPIRE4Controller( object ):
 				## forward the message contents
 				INSPIRE4Controller.pubTo_maki_macro( self, _data )
 				self.state = INSPIRE4Controller.STIMULI
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+				self.exp_pub.publish('[state][detail] ' + _data)
 
 				if _data.endswith( "auto_return=True" ):
 					## add timed trigger 'watch stimuli' behavior 
@@ -798,8 +796,11 @@ class INSPIRE4Controller( object ):
 
 			rospy.logwarn("====> turnToInfant")
 			INSPIRE4Controller.transitionToEngagement( self, _data )
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[state][detail] ' + _data)
 			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
 			self.interaction_count += 1
+			self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
 			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
 			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
 				pass
@@ -813,6 +814,8 @@ class INSPIRE4Controller( object ):
 			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 			INSPIRE4Controller.transitionToReady(self, _data)
 			self.state = INSPIRE4Controller.END	## override state
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[state][detail] ' + _data)
 
 			#INSPIRE4Controller.doSetup( self )
 			#self.state = INSPIRE4Controller.END
