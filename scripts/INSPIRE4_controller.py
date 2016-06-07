@@ -49,8 +49,8 @@ class INSPIRE4Controller( object ):
 		#self.DC_helper = dynamixelConversions()
 
 		INSPIRE4Controller.resetInteractionCount( self )
-		self.__is_setup_done = False
-		self.__is_game_running = False
+		#self.__is_setup_done = False
+		#self.__is_game_running = False
 
 		self.data_logger_status = "unknown"
 		self.start_logger_timer = None
@@ -215,7 +215,7 @@ class INSPIRE4Controller( object ):
 		## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
 		INSPIRE4Controller.pubTo_maki_macro( self, "asleep" )
 
-		self.__is_setup_done = True
+		#self.__is_setup_done = True
 		rospy.logdebug("doSetup(): END")	
 		return
 
