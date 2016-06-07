@@ -4,7 +4,7 @@ import rospy
 from std_msgs.msg import String
 
 class InputSimulator(object):
-	gui_items = {'0': 'init pilot GUI', '1': 'setup', '2': 'log record', '3': 'runFamiliarizationSkit'} #TODO: complete this list
+	gui_items = {'0': 'init pilot GUI', '1': 'get ready', '2': 'sync Tobii calibration start', '3': 'runFamiliarizationSkit', '4': 'startleGame start', '5': 'turnToScreen left auto_return=True', '6': 'turnToScreen right auto_return=True', '7': 'the end', '8': 'reset experiment'} #TODO: complete this list
 
 	def __init__(self):
 		rospy.init_node('input_simulator', anonymous=True)
@@ -15,9 +15,14 @@ class InputSimulator(object):
 	def print_menu(self):
 		print '-------------------------'
 		print '0: init pilot GUI'
-		print '1: setup'
-		print '2: log record'
+		print '1: get ready'
+		print '2: sync Tobii calibration start'
 		print '3: runFamiliarizationSkit'
+		print '4: startleGame start'
+		print '5: turnToScreen left auto_return=True'
+		print '6: turnToScreen right auto_return=True'
+		print '7: the end' 
+		print '8: reset experiment'
 		print '-------------------------'
 
 	def manual_test(self):
