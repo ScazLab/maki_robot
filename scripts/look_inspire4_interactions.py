@@ -419,8 +419,11 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 			## try to nicely startup without jerking MAKI's head tilt servo
 			lookINSPIRE4Interaction.start( self )
 
-		elif msg.data == "interaction stop":
-			lookINSPIRE4Interaction.stop( self )
+		elif msg.data.startswith( "interaction stop" ):
+			if msg.data.endswith( "disable_ht=False" ):
+				lookINSPIRE4Interaction.stop( self, disable_ht=False )
+			else:
+				lookINSPIRE4Interaction.stop( self )
 
 		elif msg.data.startswith( "turnToScreen left" ):
 			lookINSPIRE4Interaction.turnToScreen( self, right_screen=False )
