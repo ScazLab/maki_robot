@@ -40,6 +40,10 @@ class INSPIRE4Controller( object ):
 
 	NUMBER_OF_INTERACTIONS = 6
 
+	state_dict = {INSPIRE4Controller.INIT_GUI: 'init gui', INSPIRE4Controller.READY: 'ready', INSPIRE4Controller.SYNC: 'sync', ...
+	INSPIRE4Controller.INTRO: 'intro', INSPIRE4Controller.ENGAGEMENT: 'engagement', INSPIRE4Controller.STIMULI: 'stimuli', ...
+	INSPIRE4Controller.END: 'end'} #cmhuang: TODO from here
+
 	def __init__(self, verbose_debug, ros_pub):
 
 		#self.ALIVE = True
@@ -74,6 +78,10 @@ class INSPIRE4Controller( object ):
 		## secondarily may publish to /maki_internal_monologue when fancied
 		self.ros_pub_MIM = rospy.Publisher( "maki_internal_monologues", String, queue_size = 10)
 		self.MIM_count = 0
+
+		## publisher for the experimenter 
+		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
+
 		return
 
 
@@ -643,6 +651,7 @@ class INSPIRE4Controller( object ):
 		if _data == "init pilot GUI":
 			rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
 			self.state = INSPIRE4Controller.INIT_GUI
+			self.exp_pub.publish('[state] init pilot GUI')
 			
 		elif _data == "reset experiment":
 			## STEP 0:
@@ -651,10 +660,12 @@ class INSPIRE4Controller( object ):
 			## need to issue '* stop'
 
 			## STEP 1: Move to ready state
+			self.exp_pub.publish('[RESET] reset experiment')
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
+			self.exp_pub.publish('[state] get ready')
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data.startswith( "sync" ):
@@ -693,18 +704,24 @@ class INSPIRE4Controller( object ):
 			if _unknown_flag:
 				pass	## jump past this logic
 			elif _data.endswith( "Tobii calibration start" ):
+				self.exp_pub.publish('[state] Tobii calibration start')
 				pass
 			elif _data.endswith( "Tobii calibration done" ):
+				self.exp_pub.publish('[state] Tobii calibration done')
 				pass
 			elif _data.endswith( "visual clap" ):
+				self.exp_pub.publish('[state] visual clap')
 				pass
 			elif _data.endswith( "Tobii verify left screen" ):
+				self.exp_pub.publish('[state] Tobii verify left screen')
 				pass
 			elif _data.endswith( "Tobii verify maki" ):
 				### enable head tilt and get ready for MAKI's introduction
 				#INSPIRE4Controller.pubTo_maki_macro( self, "intro start" )
+				self.exp_pub.publish('[state] Tobii verify maki')
 				pass
 			elif _data.endswith( "Tobii verify right screen" ):
+				self.exp_pub.publish('[state] Tobii verify right screen')
 				pass
 			else:
 				_unknown_flag = True
@@ -723,6 +740,7 @@ class INSPIRE4Controller( object ):
 
 			if not _unknown_flag:	
 ## KATE
+				self.exp_pub.publish('[state] run familiarization skit')
 				INSPIRE4Controller.transitionToIntro( self )
 				rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
 				self.state = INSPIRE4Controller.INTRO
@@ -739,7 +757,7 @@ class INSPIRE4Controller( object ):
 
 			if not _unknown_flag:
 				#self.__is_game_running = True
-
+				self.exp_pub.publish('[state] startle game start')
 				rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
 				## forward the message contents
 				INSPIRE4Controller.pubTo_maki_macro( self, _data )
@@ -753,6 +771,7 @@ class INSPIRE4Controller( object ):
 				## TODO: auto fix prior state
 
 			if not _unknown_flag:
+				self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				INSPIRE4Controller.transitionToStimuli( self )
 ## KATE
