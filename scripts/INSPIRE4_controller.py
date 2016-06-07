@@ -641,7 +641,9 @@ class INSPIRE4Controller( object ):
 				if self.data_logger_status == "started":
 					## There is an actively recording rosbag,
 					##	so close the existing one and start a new one
+					rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )	## add BEFORE stop recording
 					INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+					INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
 					rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
 					INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
 					## resend this message for synchronization purposes
