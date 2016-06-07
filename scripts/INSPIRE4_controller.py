@@ -450,7 +450,6 @@ class INSPIRE4Controller( object ):
 	## stand alone timed skit
 	## "Friend" actor will adapt to Maki-ro's skit
 	def runFamiliarizationSkit( self ):
-## KATE
 		rospy.logdebug("runFamiliarizationSkit(): BEGIN")
 
 		_verbose = True
@@ -595,8 +594,8 @@ class INSPIRE4Controller( object ):
 		_thought = "<<<< END SCENE >>>>"
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.stop( disable_ht=True )
-		## TODO: disable_ht might have to change once in the
+		lookIntro.stop( disable_ht=False )
+		## disable_ht might have to change to False once in the
 		##	larger context of the experiment
 
 		rospy.logdebug("runFamiliarizationSkit(): END")
