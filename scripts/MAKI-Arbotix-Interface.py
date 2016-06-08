@@ -49,6 +49,8 @@ resetPositions = ""				## init as empty string; dynamically populated
 resetSpeeds = ""				## init as empty string; dynamically populated
 SIM_feedback_type = None
 
+exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
+
 # --------------------------------------------------------------------
 def usage(cmd_line_args):
 	rospy.loginfo( "Usage: rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>" )
@@ -446,6 +448,7 @@ def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
 if __name__ == '__main__':
 	global maki_serial
 	global maki_port
+	global exp_pub
 
 	## ------------------------------
 	## BEGIN INITIALIZATION
@@ -558,6 +561,8 @@ if __name__ == '__main__':
 	# Reset MAKI to default position and speed
 	defReset()
 	rospy.loginfo( "SUCCESS: Robot successfully connected.")
+	exp_pub.publish('Robot is ready.')
+
 	## ------------------------------
 	## END OF INITIALIZATION
 	## ------------------------------
