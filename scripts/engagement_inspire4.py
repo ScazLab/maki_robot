@@ -220,7 +220,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 				else:
 					rospy.logwarn("runGame(): STATE 1: Now playing ROUND #" + str(self.count_movements) + " of " + str(repetitions))
-					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(self.count_movements) + '' of '' + str(repetitions))
+					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(self.count_movements) + ' of ' + str(repetitions))
 					_default_cmd_prop_duration = 100
 					_c_duration = _wait_attend * _default_cmd_prop_duration
 					for _c in range(_wait_attend):	## 0, 1, 2, 3, 4

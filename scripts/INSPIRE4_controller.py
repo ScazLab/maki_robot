@@ -284,6 +284,7 @@ class INSPIRE4Controller( object ):
 		#INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.lookStimuli.start()
 		self.state = INSPIRE4Controller.STIMULI
+		self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 		rospy.logdebug("transitionToStimuli(): END")
 		return
 
@@ -348,8 +349,8 @@ class INSPIRE4Controller( object ):
 			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
 ## KATE
 			INSPIRE4Controller.transitionToEngagement( self, _data )
-			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			self.exp_pub.publish('[state][detail] ' + _data)
+			self.exp_pub.publish('[YALE][state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[button pressed][detail] ' + _data)
 			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
 			self.interaction_count += 1
 			self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
@@ -703,6 +704,7 @@ class INSPIRE4Controller( object ):
 
 		## STEP 3: Update state
 		self.state = INSPIRE4Controller.READY
+		self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 		rospy.logdebug("transitionToReady: END")
 		return
 
@@ -711,12 +713,14 @@ class INSPIRE4Controller( object ):
 			try:
 				thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
 				self.state = INSPIRE4Controller.INTRO
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 			except Exception as _e_rFS:
 				rospy.logerr("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
 		else:
 			## BLOCKING!!!!
 			INSPIRE4Controller.runFamiliarizationSkit( self )
 			self.state = INSPIRE4Controller.INTRO
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 
 		return
 
@@ -727,7 +731,8 @@ class INSPIRE4Controller( object ):
 		self.previous_state = self.state	## for later comparison
 		_unknown_flag = False
 		_data = str(msg.data)
-		rospy.loginfo("_data = " + _data)
+		rospy.logdebug("_data = " + _data)
+		self.exp_pub.publish('[button pressed] ' + _data)
 	
 		#if _data == "init pilot GUI": #cmhuang: dont need this anymore...
 		#	rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
@@ -742,14 +747,12 @@ class INSPIRE4Controller( object ):
 			## need to issue '* stop'
 
 			## STEP 1: Move to ready state
-			INSPIRE4Controller.transitionToReady( self, msg=_data )
 			self.exp_pub.publish('[RESET] reset experiment')
+			INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
 			INSPIRE4Controller.transitionToReady( self, msg=_data )
-			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			self.exp_pub.publish('[state][detail] ' + _data)
 
 		elif _data.startswith( "sync" ):
 			## We should only be able to get to this controller state from READY
@@ -808,7 +811,6 @@ class INSPIRE4Controller( object ):
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.SYNC
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-				self.exp_pub.publish('[state][detail] ' + _data)
 
 ## KATE
 		elif _data == "runFamiliarizationSkit":
@@ -825,8 +827,6 @@ class INSPIRE4Controller( object ):
 				INSPIRE4Controller.transitionToIntro( self, self.blocking_gui )
 				#rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
 				#self.state = INSPIRE4Controller.INTRO
-				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-				self.exp_pub.publish('[state][detail] ' + _data)
 				pass	## FOR STATE MACHINE TESTIN ONLY
 
 
@@ -848,7 +848,6 @@ class INSPIRE4Controller( object ):
 				self.startleGame.startStartleGame()	## runs game in new thread
 				self.state = INSPIRE4Controller.ENGAGEMENT
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-				self.exp_pub.publish('[state][detail] ' + _data)
 
 		elif ("turnToScreen" in _data):
 			## We should only be able to get to this controller state from ENGAGEMENT
@@ -880,9 +879,6 @@ class INSPIRE4Controller( object ):
 
 				## NOTE: This has blocking call (monitorMoveToGP)
 				self.lookStimuli.turnToScreen( right_screen=_right_screen )
-
-				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-				self.exp_pub.publish('[state][detail] ' + _data)
 
 				if _data.endswith( "auto_return=True" ):
 					if self.blocking_gui:
@@ -918,7 +914,6 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.transitionToReady(self, _data)
 			self.state = INSPIRE4Controller.END	## override state
 			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			self.exp_pub.publish('[state][detail] ' + _data)
 
 			#INSPIRE4Controller.doSetup( self )
 			#self.state = INSPIRE4Controller.END
@@ -987,8 +982,7 @@ def signal_handler(signal, frame):
 
 
 if __name__ == '__main__':
-    print "__main__: BEGIN"
-    self.exp_pub.publish('----- BEGIN INSPIRE4 EXPERIMENT -----')
+	print "__main__: BEGIN"
 
 	global controller 
 	controller = INSPIRE4Controller( True, None )
@@ -999,14 +993,14 @@ if __name__ == '__main__':
 	rospy.on_shutdown(controller.controllerExit)
 
 	rospy.Subscriber( "/inspire_four_pilot_command", String, controller.parse_pilot_command )
-        rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
+	rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
 
 	rospy.Subscriber( "/data_logger/status", String, controller.updateDataLoggerStatus_callback )
 	rospy.logdebug( "now subscribed to /data_logger/status" )
 
 	rospy.spin()   ## keeps python from exiting until this node is stopped
 
-        print "__main__: END"
+	print "__main__: END"
 
 
 	'''
