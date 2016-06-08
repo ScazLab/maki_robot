@@ -663,12 +663,18 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug("transitionToReady: END")
 		return
 
-	def transitionToIntro( self ):
-		try:
-			thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
-			self.state = INSPIRE4Controller.INTRO
-		except Exception as _e_rFS:
+	def transitionToIntro( self, blocking=False ):
+		if not blocking:
+			try:
+				thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
+				self.state = INSPIRE4Controller.INTRO
+			except Exception as _e_rFS:
 				rospy.logerr("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
+		else:
+			## BLOCKING!!!!
+			INSPIRE4Controller.runFamiliarizationSkit( self )
+			self.state = INSPIRE4Controller.INTRO
+
 		return
 
 	def parse_pilot_command( self, msg ):
@@ -771,9 +777,9 @@ class INSPIRE4Controller( object ):
 			if not _unknown_flag:	
 ## KATE
 				self.exp_pub.publish('[state] run familiarization skit')
-				INSPIRE4Controller.transitionToIntro( self )
-				rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
-				self.state = INSPIRE4Controller.INTRO
+				INSPIRE4Controller.transitionToIntro( self, blocking=True )
+				#rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
+				#self.state = INSPIRE4Controller.INTRO
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 				self.exp_pub.publish('[state][detail] ' + _data)
 				pass	## FOR STATE MACHINE TESTIN ONLY
