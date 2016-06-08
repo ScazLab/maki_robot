@@ -1,4 +1,6 @@
 <launch>
+    <env name="ROSCONSOLE_CONFIG_FILE" value="$(find maki_robot)/rosconsole.conf"/>
+
 	<arg name="behaviors" default="false" />
 	<arg name="exp_controller" default="true" />
 	<arg name="arbotix" default="true" />
