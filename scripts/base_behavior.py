@@ -790,7 +790,21 @@ class headTiltBaseBehavior(baseBehavior):
 
 		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
 
+
+	## override base class
+	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
+		rospy.loginfo("gp_cmd=" + str(gp_cmd) + ", hp_gp=" + str(hp_gp) + "ht_gp=" + str(ht_gp))
+		## Check to see if goal position is specified for head tilt
+		## get HTGP value
+		_tmp = re.search( self.htgp_regex, gp_cmd )
+		if (((_tmp != None) or (gp_cmd == "reset")) and
+			(not headTiltBaseBehavior.isHTEnabled( self ))):
+			## if head tilt is not enabled before publishing a message to /maki_command
+			headTiltBaseBehavior.enableHT( self )
+			rospy.logwarn("monitorMoveToGP(): About to publish on /maki_command (" + str(gp_cmd) + ") but isHTEnabled==False... FIRST call enableHT()")
+		return baseBehavior.monitorMoveToGP( self, gp_cmd, hp_gp=hp_gp, ht_gp=ht_gp, ll_gp=ll_gp, lr_gp=lr_gp, ep_gp=ep_gp, et_gp=et_gp, delta_pp=delta_pp, cmd_prop=cmd_prop )
 	
+
 ########################
 ## All behavior macros involving eyelids (LL) will use this as base class
 ##

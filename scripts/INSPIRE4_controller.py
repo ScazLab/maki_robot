@@ -45,7 +45,7 @@ class INSPIRE4Controller( object ):
 
 	def __init__(self, verbose_debug, ros_pub):
 
-		#self.ALIVE = True
+		self.ALIVE = True
 		#self.mTT_INTERRUPT = True
 		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
@@ -839,11 +839,47 @@ class INSPIRE4Controller( object ):
 
 
 
+## KATE
+	def controllerExit( self ):
+		rospy.logdebug("controllerExit(): BEGIN")
+		if self.ALIVE:
+			_htBB = headTiltBaseBehavior( True, self.ros_pub )
+			try:
+				## THIS IS CUSTOM RESET
+				##      reset goal speeds and goal positions
+				##      and monitor moving into goal positions
+				_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
+			except rospy.exceptions.ROSException as _e:
+				rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e))
+				_htBB.pubTo_maki_command( "reset" )
+				rospy.sleep(1.0)
+			_htBB.stop()
+
+		self.ALIVE = False
+		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
+		rospy.logdebug( "controllerExit: END OF INSPIRE4 EXPERIMENT..." )
+		rospy.logdebug("controllerExit(): END")
+		exit    ## meant for interactive interpreter shell; unlikely this actually exits
+
 
 ## ------------------------------
+def signal_handler(signal, frame):
+	global controller
+	rospy.loginfo( "signal_handler: CTRL+C" )
+	controller.controllerExit()
+	rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
+	sys.exit()      ## use this instead of exit (which is meant for interactive shells)
+
+
 if __name__ == '__main__':
         print "__main__: BEGIN"
+	global controller 
 	controller = INSPIRE4Controller( True, None )
+
+	# allow closing the program using CTRL+C
+	signal.signal(signal.SIGINT, signal_handler)
+	# Register shutdown hook
+	rospy.on_shutdown(controller.controllerExit)
 
 	rospy.Subscriber( "/inspire_four_pilot_command", String, controller.parse_pilot_command )
         rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
