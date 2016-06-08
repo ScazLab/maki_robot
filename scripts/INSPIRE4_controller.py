@@ -81,6 +81,9 @@ class INSPIRE4Controller( object ):
 		## publisher for the experimenter 
 		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
 
+		## always begin in neutral position
+		## NOTE: head tilt motor will be disabled after reset
+		INSPIRE4Controller.controllerReset( self )
 		return
 
 
@@ -843,23 +846,30 @@ class INSPIRE4Controller( object ):
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
 		if self.ALIVE:
-			_htBB = headTiltBaseBehavior( True, self.ros_pub )
-			try:
-				## THIS IS CUSTOM RESET
-				##      reset goal speeds and goal positions
-				##      and monitor moving into goal positions
-				_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
-			except rospy.exceptions.ROSException as _e:
-				rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e))
-				_htBB.pubTo_maki_command( "reset" )
-				rospy.sleep(1.0)
-			_htBB.stop()
+			## NOTE: head tilt motor will be disabled after reset
+			INSPIRE4Controller.controllerReset( self )
 
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
 		rospy.logdebug( "controllerExit: END OF INSPIRE4 EXPERIMENT..." )
 		rospy.logdebug("controllerExit(): END")
 		exit    ## meant for interactive interpreter shell; unlikely this actually exits
+
+
+	## NOTE: head tilt motor will be disabled after reset
+	def controllerReset( self ):
+		_htBB = headTiltBaseBehavior( True, self.ros_pub )
+		try:
+			## THIS IS CUSTOM RESET
+			##      reset goal speeds and goal positions
+			##      and monitor moving into goal positions
+			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
+		except rospy.exceptions.ROSException as _e:
+			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e))
+			_htBB.pubTo_maki_command( "reset" )
+			rospy.sleep(1.0)
+		_htBB.stop()
+		return
 
 
 ## ------------------------------
