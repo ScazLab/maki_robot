@@ -21,6 +21,15 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 # --------------------------------------------------------------------	
 ## ---- USER DEFINED GLOBALS ----
 
+global SIM
+global VERBOSE_DEBUG
+global FILENAME
+global ALIVE
+global TTY_PORT, BAUD_RATE, maki_serial
+global maki_port
+
+
+
 SIM = False	## default is False
 VERBOSE_DEBUG = True	#False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
 LATCH = False	## if LATCH==True, any new subscribers will see the most recent message published
@@ -52,7 +61,7 @@ def usage(cmd_line_args):
 
 ## ------------------------------
 def recvFromArduino():
-	global SIM
+	
 	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
@@ -95,7 +104,7 @@ def recvFromArduino():
 	return _recv_msg
 
 def sendToMAKI (message): 
-	global SIM
+	
 	global maki_serial
 	global feedback_strings
 	global maki_cmd_template
@@ -230,7 +239,7 @@ def feedback(feedbackString):
 
 def requestFeedback(feedbackString):
 	global feedback_req_template
-	global SIM, SIM_feedback_type
+	global SIM_feedback_type
 	global maki_serial
 
 	rospy.logdebug( "about to request feedback; feedbackString=" + str(feedbackString) )
@@ -263,7 +272,7 @@ def publishFeedback(feedbackType=""):
 
 	global feedback_resp_template
 	global feedback_pub_dict
-	global SIM, SIM_feedback_type
+	global SIM_feedback_type
 
 	_recv_msg = ''		## Init to empty string
 	if not SIM:
@@ -316,7 +325,7 @@ def generateSIMFeedback(feedback_type):
 
 ## ------------------------------
 def defReset():
-	global SIM
+	
 	global maki_serial
 
 	if SIM:
@@ -471,14 +480,6 @@ def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
 
 ## ------------------------------
 if __name__ == '__main__':
-
-	global SIM
-	global VERBOSE_DEBUG
-	global FILENAME
-	global ALIVE
-	global TTY_PORT, BAUD_RATE, maki_serial
-	global maki_port
-
 
 	## ------------------------------
 	## BEGIN INITIALIZATION
