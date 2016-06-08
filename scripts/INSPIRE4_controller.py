@@ -356,7 +356,6 @@ class INSPIRE4Controller( object ):
 			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
 ## KATE
 			INSPIRE4Controller.transitionToEngagement( self, _data )
-			self.exp_pub.publish('[YALE][state] ' + self.state_dict[self.state])
 			self.exp_pub.publish('[button pressed][detail] ' + _data)
 			#rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
 			self.interaction_count += 1
@@ -528,6 +527,7 @@ class INSPIRE4Controller( object ):
 	## "Friend" actor will adapt to Maki-ro's skit
 	def runFamiliarizationSkit( self ):
 		rospy.logdebug("runFamiliarizationSkit(): BEGIN")
+		self.exp_pub.publish('familiarization skit: BEGIN')
 
 		_verbose = True
 		_thought = ""	## start off not thinking of anything, beginner's mind
@@ -692,6 +692,7 @@ class INSPIRE4Controller( object ):
 		##	larger context of the experiment
 
 		rospy.logdebug("runFamiliarizationSkit(): END")
+		self.exp_pub.publish('familiarization skit: BEGIN')
 		return
 
 
@@ -740,7 +741,8 @@ class INSPIRE4Controller( object ):
 		_unknown_flag = False
 		_data = str(msg.data)
 		rospy.logdebug("_data = " + _data)
-		self.exp_pub.publish('[button pressed] ' + _data)
+		if _data != 'turnToInfant':
+			self.exp_pub.publish('[button pressed] ' + _data)
 	
 		#if _data == "init pilot GUI": #cmhuang: dont need this anymore...
 		#	rospy.loginfo( "Received initial message from clicking a button in the pilot's GUI" )			
