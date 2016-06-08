@@ -293,12 +293,10 @@ class INSPIRE4Controller( object ):
 	## durations in seconds
 	def setAutoTransitionWatchStimuli( self, durationTurnToScreen=1.0, durationWatchStimuli=8.0 ):
 	#def setAutoTransitionWatchStimuli( self, durationTurnToScreen=INSPIRE4Controller.durationHeadTurn, durationWatchStimuli=INSPIRE4Controller.durationWatchStimuli):
-		rospy.loginfo("setAutoTransitionFromStimuli(): BEGIN")
+		rospy.logdebug("setAutoTransitionFromStimuli(): BEGIN")
 		self.start_watch_timer = rospy.Timer(rospy.Duration(durationTurnToScreen), self.startWatchStimuli_callback, oneshot=True)
-		rospy.loginfo("CREATED self.start_watch_timer")
 		self.stop_watch_timer = rospy.Timer(rospy.Duration(durationTurnToScreen + durationWatchStimuli), self.stopWatchStimuli_callback, oneshot=True)
-		rospy.loginfo("CREATED self.stop_watch_timer")
-		rospy.loginfo("setAutoTransitionFromStimuli(): END")
+		rospy.logdebug("setAutoTransitionFromStimuli(): END")
 		return
 
 		self.durationHeadTurn = 1.0
@@ -306,7 +304,7 @@ class INSPIRE4Controller( object ):
 
 	def startWatchStimuli_callback( self, event ):
 		rospy.logdebug("startWatchStimuli(): BEGIN")
-		rospy.loginfo("startWatchStimuli_callback() called at " + str( event.current_real))
+		rospy.logdebug("startWatchStimuli_callback() called at " + str( event.current_real))
 		#_start_time = rospy.get_time()
 		##INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
 		#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
@@ -322,7 +320,7 @@ class INSPIRE4Controller( object ):
 
 	def stopWatchStimuli_callback( self, event ):
 		rospy.logdebug("stopWatchStimuli(): BEGIN")
-		rospy.loginfo("stopWatchStimuli_callback() called at " + str( event.current_real))
+		rospy.logdebug("stopWatchStimuli_callback() called at " + str( event.current_real))
 		#_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
 		#_ros_pub.publish( "turnToInfant" )
 		#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "turnToInfant" )
@@ -339,8 +337,8 @@ class INSPIRE4Controller( object ):
 			_elapsed_duration = rospy.get_time() - _start_time
 			while (_elapsed_duration < self.durationWatchStimuli):
 				_elapsed_duration = rospy.get_time() - _start_time
-				rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
-				self.exp_pub.publish("watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+				rospy.logdebug("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
+				self.exp_pub.publish("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
 				rospy.sleep(1)	## sleep for 1 second
 
 		if auto_return:
@@ -358,7 +356,7 @@ class INSPIRE4Controller( object ):
 				pass
 				## TODO: automatically start playing startle game????
 			else:
-				rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
+				rospy.loginfo ("======== Maximum Number of Iterations Reached: " + str(self.interaction_count))
 				## TODO: automatically end????
 
 		rospy.logdebug("runWatchStimuli(): END")
