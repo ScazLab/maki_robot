@@ -47,10 +47,10 @@ class INSPIRE4Controller( object ):
 	def __init__(self, verbose_debug, ros_pub):
 
 		self.ALIVE = True
-		#self.mTT_INTERRUPT = True
-		self.VERBOSE_DEBUG = verbose_debug	## default is False
-		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
-		#self.DC_helper = dynamixelConversions()
+		# self.mTT_INTERRUPT = True
+		# self.VERBOSE_DEBUG = verbose_debug	## default is False
+		# self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
+		# self.DC_helper = dynamixelConversions()
 
 		INSPIRE4Controller.resetInteractionCount( self )
 		#self.__is_setup_done = False
@@ -98,6 +98,10 @@ class INSPIRE4Controller( object ):
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		return
 
+	#def __del__(self):
+	#	rospy.loginfo( "signal_handler: CTRL+C" )
+	#	controller.controllerExit()
+	#	rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
 
 	def resetInteractionCount( self ):
 		self.interaction_count = 0
@@ -131,15 +135,15 @@ class INSPIRE4Controller( object ):
 				#print nodename
 				return
 
-        	# see http://wiki.ros.org/rospy/Overview/Logging
-        	if self.VERBOSE_DEBUG:
-        	        self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
-			rospy.logdebug("log_level=rospy.DEBUG")
-        	else:
-        	        self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
-		rospy.logdebug("anonymous=" + str(_anon_rosnode))
-
-		rospy.loginfo( str(_fname) + ": END")
+			# see http://wiki.ros.org/rospy/Overview/Logging
+			# if self.VERBOSE_DEBUG:
+			# 		self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+			# rospy.logdebug("log_level=rospy.DEBUG")
+			# else:
+			self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
+		
+			rospy.logdebug("anonymous=" + str(_anon_rosnode))
+			rospy.loginfo( str(_fname) + ": END")
 		return
 
 
@@ -178,7 +182,7 @@ class INSPIRE4Controller( object ):
 	#####################
 	def initROSSub( self ):
 		rospy.Subscriber( "inspire_four_pilot_command", String, INSPIRE4Controller.parse_pilot_command )
-	        rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
+		rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
 		return
 
 
@@ -378,10 +382,10 @@ class INSPIRE4Controller( object ):
 	## To start recording, pass dl_status as "stopped"
 	## To stop recording, pass dl_status as "started"
 	def toggleDataLoggerRecording( self, dl_status ):
-		rospy.logdebug("toggleDataLoggerRecording(): BEGIN")
+		rospy.logdebug("BEGIN")
 
 		if ( (not dl_status.isalpha()) or (dl_status != "started") and (dl_status != "stopped") ):
-			rospy.logwarn( "toggleDataLoggerRecording(): Invalid data_logger_status (" + str( dl_status ) + "); rosnode /data_logger may not be running")
+			rospy.logwarn( "Invalid data_logger_status (" + str( dl_status ) + "); rosnode /data_logger may not be running")
 			return
 
 		_service_exception_flag = False
@@ -432,7 +436,7 @@ class INSPIRE4Controller( object ):
 			else:
 				rospy.logwarn( "Unable to toggle rosbag recording... INVALID STATUS; self.data_logger_status = " + str(self.data_logger_status) )
 
-		rospy.logdebug("toggleDataLoggerRecording(): END")
+		rospy.logdebug("END")
 		return
 
 
@@ -440,11 +444,11 @@ class INSPIRE4Controller( object ):
 	##	published to rostopic /data_logger/status 
 	##	by calling its start/stop services
 	def updateDataLoggerStatus_callback( self, msg ):
-		rospy.logdebug( "updateDataLoggerStatus_callback(): BEGIN" )
+		rospy.logdebug( "BEGIN" )
 		_data = str( msg.data )
 		if ((not _data.isalpha) or ((_data != "started") and (_data != "stopped"))):
-			rospy.logwarn( "updateDataLoggerStatus_callback(): INVALID INPUT: expected string 'started' or 'stopped'; received " + str( _data ) )
-			rospy.logdebug( "updateDataLoggerStatus_callback(): self.data_logger_status remains " + str(self.data_logger_status) )
+			rospy.logwarn( "INVALID INPUT: expected string 'started' or 'stopped'; received " + str( _data ) )
+			rospy.logdebug( "self.data_logger_status remains " + str(self.data_logger_status) )
 			return
 
 		if (_data != self.data_logger_status):
@@ -456,13 +460,13 @@ class INSPIRE4Controller( object ):
 			else:
 				rospy.loginfo( "Toggle rosbag recording to OFF" )
 
-		rospy.logdebug( "updateDataLoggerStatus_callback(): END" )
+		rospy.logdebug( "END" )
 		return
 
 
 	## durations in seconds
 	def setAutoDataLogging( self, durationToAutoOff=None, durationToAutoOn=None ):
-		rospy.logdebug( "setAutoDataLogging(): BEGIN" )
+		rospy.logdebug( "BEGIN" )
 
 		if ((durationToAutoOn != None) and (isinstance(durationToAutoOn, float) or isinstance(durationToAutoOn, int))):
 			self.start_logger_timer = rospy.Timer( rospy.Duration(durationToAutoOn), self.startAutoDataLogger_callback, oneshot=True)
@@ -472,25 +476,25 @@ class INSPIRE4Controller( object ):
 			self.stop_logger_timer = rospy.Timer( rospy.Duration(durationToAutoOff), self.stopAutoDataLogger_callback, oneshot=True)
 			rospy.loginfo("CREATED self.stop_logger_timer; will fire in " + str(durationToAutoOff) + " seconds")
 
-		rospy.logdebug( "setAutoDataLogging(): END" )
+		rospy.logdebug( "END" )
 		return
 
 
 	def startAutoDataLogger_callback( self, event ):
-		rospy.logdebug("startAutoDataLogger_callback(): BEGIN")
+		rospy.logdebug("BEGIN")
 		if self.start_logger_timer != None:
-			rospy.loginfo("startAutoDataLogger_callback() called at " + str( event.current_real))
+			rospy.logdebug("startAutoDataLogger_callback() called at " + str( event.current_real))
 			## Synthesize a button press by publishing message
 			#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "log record start" )
 			INSPIRE4Controller.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
 		else:
 			rospy.logdebug("INVALID ACTION: self.start_logger_timer = " + str(self.start_logger_timer))
-		rospy.logdebug("startAutoDataLogger_callback(): END")
+		rospy.logdebug("END")
 		return
 
 
 	def stopAutoDataLogger_callback( self, event ):
-		rospy.logdebug("stopAutoDataLogger_callback(): BEGIN")
+		rospy.logdebug("BEGIN")
 		if self.stop_logger_timer != None:
 			rospy.loginfo("stopAutoDataLogger_callback() called at " + str( event.current_real))
 			## Synthesize a button press by publishing message
@@ -498,7 +502,7 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
 		else:
 			rospy.logdebug("INVALID ACTION: self.stop_logger_timer = " + str(self.stop_logger_timer))
-		rospy.logdebug("stopAutoDataLogger_callback(): END")
+		rospy.logdebug("END")
 		return
 
 
@@ -539,14 +543,10 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug( "...\tPRE-CHECK...\tIs Maki-ro already sleeping? self.asleepAwake.asleep_p() = " + str( self.asleepAwake.asleep_p() ) )
 		#if AA.asleep_p():
 		if self.asleepAwake.asleep_p():
-			_thought = "Maki-ro is already asleep... ZZZzzzz ZZZZzzzzzz..."
-			INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-			rospy.logwarn("runFamiliarizationSkit(): " + _thought + " SKIP")
+			self.publishMonologue('runFamiliarizationSkit', "Maki-ro is already asleep... ZZZzzzz ZZZZzzzzzz...")
 			pass
 		else:
-			_thought = "Maki-ro is not yet asleep... Going to sleep..."
-			INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-			rospy.logwarn("runFamiliarizationSkit(): " + _thought )
+			self.publishMonologue('runFamiliarizationSkit', "Maki-ro is not yet asleep... Going to sleep...")
 			## TODO: Add timers to see how long each step takes
 			#_start_time = rospy.get_time()
 
@@ -562,9 +562,8 @@ class INSPIRE4Controller( object ):
 		pass
 
 		## STEP 2: Maki-ro wakes up and faces Friend
-		_thought = "Maki-ro, wake up!!! Face Friend..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro, wake up!!! Face Friend...")
+	
 		#AA.runAwakeExperimenter( disable_ht=False )
 		#rospy.logdebug("...\tMaki-ro should now be awake... AA.awake_p()=" + str( AA.awake_p() ))
 		self.asleepAwake.runAwakeExperimenter( disable_ht=False )
@@ -574,9 +573,8 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.75)	## 750 ms
 
 		## STEP 4: Maki-ro acknowledges greeting
-		_thought = "Maki-ro, mind your manners and say hello..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro, mind your manners and say hello...")
+		
 		#lookIntro.macroGreeting()
 		self.lookIntro.macroGreeting()
 
@@ -584,9 +582,8 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.75)	## 750 ms
 
 		## STEP 6: Maki-ro reacts with a startle expression and immediately relaxes
-		_thought = "Maki-ro is startled!!! Peek-a-boo does that..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro is startled!!! Peek-a-boo does that...")
+		
 		#lookIntro.startStartle( relax=True )
 		self.lookIntro.startStartle( relax=True )
 		### KATE HACKING: BEGIN...
@@ -605,27 +602,21 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.setBlinkAndScan( self, blink=True )
 
 		## STEP 8: Maki-ro nods
-		_thought = "Oooo a blinky... Maki-ro tries to nod enthusiastically..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Oooo a blinky... Maki-ro tries to nod enthusiastically...")
 		## This hack works better than specifying repetitions as optional input parameter
 		#lookIntro.macroGreeting()
 		self.lookIntro.macroGreeting()
 		rospy.sleep(0.5)
 		#lookIntro.macroGreeting()
 		self.lookIntro.macroGreeting()
-		_thought = "Maki-ro might be a little dizzy now..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logdebug("...\t" + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro might be a little dizzy now...")
 
 		## STEP 9: Friend moves the flashing ball to the UPPER RIGHT calibration point
 		##	and jiggles it to attract Maki-ro's attention
 		rospy.sleep(0.5)
 
 		## STEP 10: Maki-ro looks at the upper right calibration point
-		_thought = "Maki-ro likes the fun flashy ball and here comes faux smooth pursuit..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro likes the fun flashy ball and here comes faux smooth pursuit...")
 		#lookIntro.macroLookAtBallLocationRight( upper=True )
 		self.lookIntro.macroLookAtBallLocationRight( upper=True )
 
@@ -634,9 +625,7 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.5)
 
 		## STEP 12: Maki-ro looks at the lower right calibration point
-		_thought = "Maki-ro thinks the flashy ball is pretty... There Maki-ro goes chasing the ball..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro thinks the flashy ball is pretty... There Maki-ro goes chasing the ball...")
 		#lookIntro.macroLookAtBallLocationRight( lower=True )
 		self.lookIntro.macroLookAtBallLocationRight( lower=True )
 
@@ -645,9 +634,7 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.5)
 
 		## STEP 14: Maki-ro looks at the infant
-		_thought = "Maki-ro... Follow, follow, follow, follow the flashy ball..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow, follow, follow, follow the flashy ball...")
 		#lookIntro.macroLookAtInfant()
 		self.lookIntro.macroLookAtInfant()
 
@@ -655,35 +642,25 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.5)
 
 		## STEP 16: Maki-ro follows the ball and faces Friend
-		_thought = "Maki-ro... Follow and follow, follow the flashy ball... Oh hiya, Friend!!!..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow and follow, follow the flashy ball... Oh hiya, Friend!!!...")
 		#lookIntro.macroLookAtExperimenter()
 		self.lookIntro.macroLookAtExperimenter()
 
 		## STEP 17: Maki-ro watches Friend leave
-		_thought = "Hey, wait!!! Where did Friend go?? Maki-ro was playing with Friend..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Hey, wait!!! Where did Friend go?? Maki-ro was playing with Friend...")
 		rospy.sleep(0.5)
 
 		## STEP 18: Maki-ro turns back to Infant
-		_thought = "Maki-ro misses Friend... Sad... Lonely... Who will play with Maki-ro now??..."
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro misses Friend... Sad... Lonely... Who will play with Maki-ro now??...")
 		#lookIntro.macroLookAtInfant()
 		self.lookIntro.macroLookAtInfant()
 
 		## STEP 19: Maki-ro makes a new pal
-		_thought = "Maki-ro spies with its eyes... a human baby!?!?"
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro spies with its eyes... a human baby!?!?")
 		rospy.sleep(0.5)
 
 		## STEP 20: END OF FAMILIARIZATION
-		_thought = "<<<< END SCENE >>>>"
-		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
-		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
+		self.publishMonologue('runFamiliarizationSkit', "<<<< END SCENE >>>>")
 		#lookIntro.stop( disable_ht=False )
 		self.lookIntro.stop( disable_ht=False )
 		## disable_ht might have to change to False once in the
@@ -693,6 +670,9 @@ class INSPIRE4Controller( object ):
 		self.exp_pub.publish('familiarization skit: END')
 		return
 
+	def publishMonologue(self, func, thought):
+		INSPIRE4Controller.pubTo_maki_internal_monologue( self, thought )
+		rospy.logdebug(func + '(): ' + thought)
 
 	## ------------------------------
 ## KATE
@@ -983,7 +963,10 @@ class INSPIRE4Controller( object ):
 			rospy.logwarn( "UNKNOWN pilot command: " + str(_data) + "; REMAINS in self.state " + str(self.state) )
 
 		if self.state != self.previous_state:
-			rospy.loginfo("UPDATE self.state from previous " + str(self.previous_state) + " to " + str(self.state) + " current")
+			if self.previous_state == None:
+				rospy.loginfo("Update self.state from [None] to [" + self.state_dict[self.state] + "]")
+			else:
+				rospy.loginfo("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
 
 		rospy.logdebug("parse_pilot_command(): END")
 		return
@@ -993,7 +976,7 @@ class INSPIRE4Controller( object ):
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
 		if self.ALIVE:
-			self.ALIVE = False
+			#self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
 			INSPIRE4Controller.controllerReset( self )
 
@@ -1002,7 +985,7 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug( "controllerExit: END OF INSPIRE4 EXPERIMENT..." )
 		rospy.logdebug("controllerExit(): END")
 		self.exp_pub.publish('----- END OF INSPIRE4 EXPERIMENT -----')
-		exit    ## meant for interactive interpreter shell; unlikely this actually exits
+		#exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
 
 	## NOTE: head tilt motor will be disabled after reset
@@ -1042,7 +1025,7 @@ if __name__ == '__main__':
 	controller = INSPIRE4Controller( True, None )
 
 	# allow closing the program using CTRL+C
-	signal.signal(signal.SIGINT, signal_handler)
+	#signal.signal(signal.SIGINT, signal_handler)
 	# Register shutdown hook
 	rospy.on_shutdown(controller.controllerExit)
 

@@ -31,7 +31,7 @@ class baseBehavior(object):
 		self.count_movements = 0
 		self.ALIVE = True
 		self.mTT_INTERRUPT = True
-		self.VERBOSE_DEBUG = verbose_debug	## default is False
+		# self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		self.DC_helper = dynamixelConversions()
 
@@ -128,11 +128,13 @@ class baseBehavior(object):
 			## append the missing TERM_CHAR_SEND
 			commandOut += str(TERM_CHAR_SEND)
 			_pub_flag = True
-			if self.VERBOSE_DEBUG:       rospy.logdebug( str(commandOut) + " added TERM_CHAR_SEND" )
+			# if self.VERBOSE_DEBUG:       rospy.logdebug( str(commandOut) + " added TERM_CHAR_SEND" )
+			rospy.logdebug( str(commandOut) + " added TERM_CHAR_SEND" )
 		else:
 			rospy.logerr( "Incorrect message format" + str(commandOut) )
 
-		if self.VERBOSE_DEBUG: rospy.logdebug( str(commandOut) )
+		# if self.VERBOSE_DEBUG: rospy.logdebug( str(commandOut) )
+		rospy.logdebug( str(commandOut) )
 
 		if _pub_flag and not rospy.is_shutdown():
 			self.ros_pub.publish( commandOut )
@@ -169,14 +171,14 @@ class baseBehavior(object):
 				#print nodename
 				return
 
-        	# see http://wiki.ros.org/rospy/Overview/Logging
-        	if self.VERBOSE_DEBUG:
-        	        self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
-			rospy.logdebug("log_level=rospy.DEBUG")
-        	else:
-        	        self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
+			# see http://wiki.ros.org/rospy/Overview/Logging
+			# if self.VERBOSE_DEBUG:
+			# 	self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+			# 	rospy.logdebug("log_level=rospy.DEBUG")
+			# else:
+			self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
+			
 		rospy.logdebug("anonymous=" + str(_anon_rosnode))
-
 		rospy.loginfo( str(_fname) + ": END")
 		return
 
@@ -191,7 +193,7 @@ class baseBehavior(object):
 		# Setup publisher
 		self.ros_pub = rospy.Publisher("maki_command", String, queue_size = 10)
 
-		rospy.loginfo( str(_fname) + ": END")
+		rospy.logdebug( str(_fname) + ": END")
 		return
 
 	#####################
@@ -259,7 +261,7 @@ class baseBehavior(object):
 		if (len(self.maki_feedback_values) == 0) or not ( str(_prefix) in self.maki_feedback_values ):
 			## if no _prefix entry exists in the dictionary, add new
 			self.maki_feedback_values[ str(_prefix) ] = _tmp_dict
-			rospy.loginfo( "New entry added to self.maki_feedback_values" + str(recv_msg) )
+			rospy.logdebug( "New entry added to self.maki_feedback_values" + str(recv_msg) )
 
 		elif not (_tmp_dict == self.maki_feedback_values[ str(_prefix) ]):
 			## if _prefix entry exists, update
@@ -376,7 +378,7 @@ class baseBehavior(object):
 				break
 			_old_makiPP = self.makiPP
 		_duration = abs(rospy.get_time() - _start_time)
-		rospy.loginfo("**** DONE! movement took " + str(_duration) + " seconds")
+		rospy.logdebug("**** DONE! movement took " + str(_duration) + " seconds")
 		return
 
 
@@ -700,7 +702,7 @@ class headTiltBaseBehavior(baseBehavior):
 		## and status reflected in the servo motor status
 		headTiltBaseBehavior.__ht_enabled = True
 
-		rospy.logerr( "enableHT duration: " + str( rospy.get_time() - _enableHT_start_time ) + " seconds" )
+		rospy.logdebug( "enableHT duration: " + str( rospy.get_time() - _enableHT_start_time ) + " seconds" )
 		return
 
 
@@ -726,7 +728,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		headTiltBaseBehavior.__ht_enabled = False
 
-		rospy.logerr(" disableHT duration: " + str( rospy.get_time() - _disableHT_start_time ) + " seconds" )
+		rospy.logdebug(" disableHT duration: " + str( rospy.get_time() - _disableHT_start_time ) + " seconds" )
 		return
 
 
@@ -764,11 +766,11 @@ class headTiltBaseBehavior(baseBehavior):
 				if (_ht_tl_val == ht_tl_disable):
 					if (headTiltBaseBehavior.__ht_enabled == True):
 						headTiltBaseBehavior.__ht_enabled = False
-						rospy.loginfo("TL feedback received; disable headTiltBaseBehavior.__ht_enabled flag: " + str(headTiltBaseBehavior.__ht_enabled))
+						rospy.logdebug("TL feedback received; disable headTiltBaseBehavior.__ht_enabled flag: " + str(headTiltBaseBehavior.__ht_enabled))
 				elif (_ht_tl_val == ht_tl_enable):
 					if (headTiltBaseBehavior.__ht_enabled == False):
 						headTiltBaseBehavior.__ht_enabled = True
-						rospy.loginfo("TL feedback received; enable headTiltBaseBehavior.__ht_enabled flag: " + str(headTiltBaseBehavior.__ht_enabled))
+						rospy.logdebug("TL feedback received; enable headTiltBaseBehavior.__ht_enabled flag: " + str(headTiltBaseBehavior.__ht_enabled))
 				else:
 					rospy.logerr( "Invalid head tilt torque limit: " + str(_ht_tl_val) )
 
@@ -786,7 +788,7 @@ class headTiltBaseBehavior(baseBehavior):
 			(not headTiltBaseBehavior.isHTEnabled( self ))):
 			## if head tilt is not enabled before publishing a message to /maki_command
 			headTiltBaseBehavior.enableHT( self )
-			rospy.logwarn("pubTo_maki_command(): About to publish on /maki_command (" + str(commandOut) + ") but isHTEnabled==False... FIRST call enableHT()")
+			rospy.logdebug("pubTo_maki_command(): About to publish on /maki_command (" + str(commandOut) + ") but isHTEnabled==False... FIRST call enableHT()")
 
 		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
 
@@ -801,7 +803,7 @@ class headTiltBaseBehavior(baseBehavior):
 			(not headTiltBaseBehavior.isHTEnabled( self ))):
 			## if head tilt is not enabled before publishing a message to /maki_command
 			headTiltBaseBehavior.enableHT( self )
-			rospy.logwarn("monitorMoveToGP(): About to publish on /maki_command (" + str(gp_cmd) + ") but isHTEnabled==False... FIRST call enableHT()")
+			rospy.logdebug("monitorMoveToGP(): About to publish on /maki_command (" + str(gp_cmd) + ") but isHTEnabled==False... FIRST call enableHT()")
 		return baseBehavior.monitorMoveToGP( self, gp_cmd, hp_gp=hp_gp, ht_gp=ht_gp, ll_gp=ll_gp, lr_gp=lr_gp, ep_gp=ep_gp, et_gp=et_gp, delta_pp=delta_pp, cmd_prop=cmd_prop )
 	
 
