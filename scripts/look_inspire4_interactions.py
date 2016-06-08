@@ -320,7 +320,7 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 		#if True:	return
 	
 		if (self.facing == lookINSPIRE4Interaction.FACING_INFANT):
-			rospy.logwarn("turnToScreen(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Interaction.FACING_INFANT)
+			rospy.logwarn("turnToInfant(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Interaction.FACING_INFANT)
 
 		_pub_hp = True
 		_pub_ht = True

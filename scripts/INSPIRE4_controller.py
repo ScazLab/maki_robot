@@ -89,7 +89,7 @@ class INSPIRE4Controller( object ):
 		self.asleepAwake = asleepAwake( verbose_debug, self.ros_pub )
 		self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
 		#self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
-		#self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
+		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		return
@@ -242,10 +242,10 @@ class INSPIRE4Controller( object ):
 	def transitionToEngagement( self, msg ):
 		rospy.logdebug("transitionToEngagement(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
-		INSPIRE4Controller.pubTo_maki_macro( self, msg )
-		## TODO: add timer
-		#self.SWW_WI.sleepWhileWaiting(1)	## takes 1 second to turn head
-		rospy.sleep(1.0)
+		#INSPIRE4Controller.pubTo_maki_macro( self, msg )
+		### TODO: add timer
+		##self.SWW_WI.sleepWhileWaiting(1)	## takes 1 second to turn head
+		#rospy.sleep(1.0)
 
 		if (self.state == None) or (not isinstance(self.state, int)):
 			rospy.logerr("transitionToEngagement(): ERROR: Unknown self.state: " + str(self.state))
@@ -256,7 +256,9 @@ class INSPIRE4Controller( object ):
 			#INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
 			pass
 		elif self.state == INSPIRE4Controller.STIMULI:
-			INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
+			self.lookStimuli.turnToInfant()	## blocking with monitorMoveToGP
+			#INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
+			self.lookStimuli.stop( disable_ht=False )
 		else:
 			rospy.logwarn("transitionToEngagement(): WARNING: Unexpect transition from self.state: " + str(self.state))
 			rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO or STIMULI")
@@ -273,7 +275,8 @@ class INSPIRE4Controller( object ):
 		#	INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
 		#	self.__is_game_running = False
 		INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
-		INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
+		#INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
+		self.lookStimuli.start()
 		self.state = INSPIRE4Controller.STIMULI
 		rospy.logdebug("transitionToStimuli(): END")
 		return
@@ -312,7 +315,8 @@ class INSPIRE4Controller( object ):
 		rospy.loginfo("stopWatchStimuli_callback() called at " + str( event.current_real))
 		#_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
 		#_ros_pub.publish( "turnToInfant" )
-		INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "turnToInfant" )
+		#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "turnToInfant" )
+		self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
 		rospy.logdebug("stopWatchStimuli(): END")
 		return
 
@@ -664,7 +668,7 @@ class INSPIRE4Controller( object ):
 			thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
 			self.state = INSPIRE4Controller.INTRO
 		except Exception as _e_rFS:
-				rospy.logerror("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
+				rospy.logerr("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
 		return
 
 	def parse_pilot_command( self, msg ):
@@ -800,15 +804,28 @@ class INSPIRE4Controller( object ):
 				_unknown_flag = True
 				## TODO: auto fix prior state
 
+			_right_screen = None
+			if ("left" in _data):
+				_right_screen = False
+			elif ("right" in _data):
+				_right_screen = True
+			else:
+				_unknown_flag = True
+
+
 			if not _unknown_flag:
 				#self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				INSPIRE4Controller.transitionToStimuli( self )
 ## KATE
 
-				rospy.loginfo("'turnToScreen' in _data; forward the message contents to /maki_macro: " + _data)
-				## forward the message contents
-				INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				#rospy.loginfo("'turnToScreen' in _data; forward the message contents to /maki_macro: " + _data)
+				### forward the message contents
+				#INSPIRE4Controller.pubTo_maki_macro( self, _data )
+
+				## NOTE: This has blocking call (monitorMoveToGP)
+				self.lookStimuli.turnToScreen( right_screen=_right_screen )
+
 				self.state = INSPIRE4Controller.STIMULI
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 				self.exp_pub.publish('[state][detail] ' + _data)
@@ -891,11 +908,11 @@ class INSPIRE4Controller( object ):
 			##      and monitor moving into goal positions
 			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
 		except rospy.exceptions.ROSException as _e:
-			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position...STALLED??..." + str(_e))
+			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position...STALLED??..." + str(_e))
 			_htBB.pubTo_maki_command( "reset" )
 			rospy.sleep(1.0)
 		except TypeError as _e1:
-			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e1))
+			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e1))
 			_htBB.pubTo_maki_command( "reset" )
 			rospy.sleep(1.0)
 		_htBB.stop()
@@ -1011,7 +1028,7 @@ if __name__ == '__main__':
 			try:
 				thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
 			except Exception as _e_rFS:
-				rospy.logerror("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
+				rospy.logerr("Unable to start new thread for INSPIRE4Controller.runFamiliarizationSkit()")
 
 		elif _data.startswith( "awake" ):
 			rospy.loginfo("prefix = awake; forward the message contents to /maki_macro: " + _data)
