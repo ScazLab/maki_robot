@@ -37,10 +37,11 @@ class INSPIRE4Controller( object ):
 	ENGAGEMENT = 4
 	STIMULI = 5
 	END = 6
+	INVALID_TRIAL = 7
 
 	NUMBER_OF_INTERACTIONS = 6
 
-	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end'}
+	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
 
 
 	def __init__(self, verbose_debug, ros_pub):
@@ -54,6 +55,7 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.resetInteractionCount( self )
 		#self.__is_setup_done = False
 		#self.__is_game_running = False
+		self.__is_running_stimuli=False
 
 		self.data_logger_status = "unknown"
 		self.start_logger_timer = None
@@ -241,7 +243,7 @@ class INSPIRE4Controller( object ):
 		return
 
 
-	def transitionToEngagement( self, msg ):
+	def transitionToEngagement( self, msg=None ):
 		rospy.logdebug("transitionToEngagement(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
 		#INSPIRE4Controller.pubTo_maki_macro( self, msg )
@@ -261,6 +263,8 @@ class INSPIRE4Controller( object ):
 			rospy.logdebug("!!!!!!!!!!!!!!!! BOB'S YOUR UNCLE")
 			#INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
 			self.lookStimuli.stop( disable_ht=False )
+		elif self.state == INSPIRE4Controller.INVALID_TRIAL:
+			pass	## KATE
 		else:
 			rospy.logwarn("transitionToEngagement(): WARNING: Unexpect transition from self.state: " + str(self.state))
 			rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO or STIMULI")
@@ -332,18 +336,21 @@ class INSPIRE4Controller( object ):
 
 	def runWatchStimuli( self, watch=True, auto_return=True ):
 		rospy.logdebug("runWatchStimuli(): BEGIN")
-		if watch:
+		if self.blocking_gui:	self.__is_running_stimuli=True
+
+		if watch and not (self.state == INSPIRE4Controller.INVALID_TRIAL):
 			_start_time = rospy.get_time()
 			#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
 			INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
 			_elapsed_duration = rospy.get_time() - _start_time
-			while (_elapsed_duration < self.durationWatchStimuli):
+			while ((_elapsed_duration < self.durationWatchStimuli) and
+				not (self.state == INSPIRE4Controller.INVALID_TRIAL)):
 				_elapsed_duration = rospy.get_time() - _start_time
 				rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
 				self.exp_pub.publish("watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
 				rospy.sleep(1)	## sleep for 1 second
 
-		if auto_return:
+		if auto_return and not (self.state == INSPIRE4Controller.INVALID_TRIAL):
 			_data = "turnToInfant"	## QUICK HACK
 			rospy.logwarn("====> turnToInfant")
 			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
@@ -351,7 +358,7 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.transitionToEngagement( self, _data )
 			self.exp_pub.publish('[YALE][state] ' + self.state_dict[self.state])
 			self.exp_pub.publish('[button pressed][detail] ' + _data)
-			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
+			#rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
 			self.interaction_count += 1
 			self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
 			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
@@ -362,6 +369,7 @@ class INSPIRE4Controller( object ):
 				rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
 				## TODO: automatically end????
 
+		self.__is_running_stimuli=False
 		rospy.logdebug("runWatchStimuli(): END")
 		return
 
@@ -831,13 +839,19 @@ class INSPIRE4Controller( object ):
 
 
 		elif (_data == "startleGame start" ):
-			## We should only be able to get to this controller state from INTRO
+			## We should only be able to get to this controller state from 
+			##	INTRO, STIMULI, or INVALID_TRIAL
 			if ((self.previous_state != INSPIRE4Controller.INTRO) and 
-				(self.previous_state != INSPIRE4Controller.STIMULI)):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO or STIMULI...\tcurrent STATE = " + str(self.state))
+				(self.previous_state != INSPIRE4Controller.STIMULI) and
+				(self.previous_state != INSPIRE4Controller.INVALID_TRIAL)):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO, STIMULI, or INVALID_TRIAL...\tcurrent STATE = " + str(self.state))
 				_unknown_flag = True
 				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 				## TODO: auto fix prior state
+			
+			if self.__is_running_stimuli:
+				rospy.logerr("Do NOT attempt to interrupt the turnToScreen stimuli!!!")
+				_unknown_flag = True
 
 			if not _unknown_flag:
 				#self.__is_game_running = True
@@ -882,12 +896,51 @@ class INSPIRE4Controller( object ):
 
 				if _data.endswith( "auto_return=True" ):
 					if self.blocking_gui:
-						INSPIRE4Controller.runWatchStimuli( self, watch=True, auto_return=True )
+						#INSPIRE4Controller.runWatchStimuli( self, watch=True, auto_return=True )
+## KATE
+						try:
+							#thread.start_new_thread( INSPIRE4Controller.runWatchStimuli, ( self, watch=True, auto_return=True, ))
+							thread.start_new_thread( INSPIRE4Controller.runWatchStimuli, ( self, True, True, ))
+						except Exception as _e_TTS:
+							rospy.logerr("Unable to start thread for INSPIRE4Controller.runWatchStimuli()")
+							## at least set the timers
+							INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
 					else:
 						## add timed trigger 'watch stimuli' behavior 
 						## and followed by turning back to face the infant
 						INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
 						## TODO: Set a timer to enable blink and scan
+
+		elif _data == "reset interaction":
+			## We should only be able to get to this controller state from STIMULI or ENGAGEMENT
+			if ((self.previous_state != INSPIRE4Controller.ENGAGEMENT) and
+				(self.previous_state != INSPIRE4Controller.STIMULI)):
+				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INVALID_TRIAL from ENGAGEMENT or STIMULI...\tcurrent STATE = " + str(self.state))
+				_unknown_flag = True
+				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+
+			## STEP 1: update state
+			self.state = INSPIRE4Controller.INVALID_TRIAL
+
+			## STEP 2: return to neutral position
+			if self.previous_state == INSPIRE4Controller.ENGAGEMENT:
+				## if pressed during startleGame, then stop
+				self.startleGame.stopStartleGame( disable_ht=False )
+
+			elif self.previous_state == INSPIRE4Controller.STIMULI:
+				## TODO: harder if blocking
+				pass	## KATE
+
+			else:
+				pass	## cannot get here
+
+			## always begin in neutral position
+			## NOTE: head tilt motor will be disabled after reset
+			INSPIRE4Controller.controllerReset( self )
+
+			### STEP 3: decrement number of interactions
+			#self.interaction_count = self.interaction_count -1
+## KATE
 
 		### TODO: FIX!!! REMOVE THIS CRUTCH
 		#elif _data == "turnToInfant":
@@ -968,6 +1021,7 @@ class INSPIRE4Controller( object ):
 			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e1))
 			_htBB.pubTo_maki_command( "reset" )
 			rospy.sleep(1.0)
+		## TODO: ADD TIMEOUT HERE
 		_htBB.stop()
 		return
 
