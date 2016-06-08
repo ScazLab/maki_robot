@@ -337,6 +337,7 @@ class INSPIRE4Controller( object ):
 			while (_elapsed_duration < self.durationWatchStimuli):
 				_elapsed_duration = rospy.get_time() - _start_time
 				rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+				self.exp_pub.publish("watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
 				rospy.sleep(1)	## sleep for 1 second
 
 		if auto_return:
@@ -755,6 +756,7 @@ class INSPIRE4Controller( object ):
 				(self.previous_state != INSPIRE4Controller.SYNC)):
 				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + str(self.state))
 				_unknown_flag = True
+				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 				## TODO: auto fix prior state
 
 			elif (self.previous_state == INSPIRE4Controller.READY):
@@ -812,6 +814,7 @@ class INSPIRE4Controller( object ):
 			if (self.previous_state != INSPIRE4Controller.SYNC):
 				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + str(self.state))
 				_unknown_flag = True
+				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 				## TODO: auto fix prior state
 
 			if not _unknown_flag:	
@@ -831,6 +834,7 @@ class INSPIRE4Controller( object ):
 				(self.previous_state != INSPIRE4Controller.STIMULI)):
 				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO or STIMULI...\tcurrent STATE = " + str(self.state))
 				_unknown_flag = True
+				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 				## TODO: auto fix prior state
 
 			if not _unknown_flag:
@@ -849,6 +853,7 @@ class INSPIRE4Controller( object ):
 			if (self.previous_state != INSPIRE4Controller.ENGAGEMENT):
 				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + str(self.state))
 				_unknown_flag = True
+				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 				## TODO: auto fix prior state
 
 			_right_screen = None
@@ -946,6 +951,7 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
 		rospy.logdebug( "controllerExit: END OF INSPIRE4 EXPERIMENT..." )
 		rospy.logdebug("controllerExit(): END")
+		self.exp_pub.publish('----- END OF INSPIRE4 EXPERIMENT -----')
 		exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
 
@@ -979,7 +985,9 @@ def signal_handler(signal, frame):
 
 
 if __name__ == '__main__':
-        print "__main__: BEGIN"
+    print "__main__: BEGIN"
+    self.exp_pub.publish('----- BEGIN INSPIRE4 EXPERIMENT -----')
+
 	global controller 
 	controller = INSPIRE4Controller( True, None )
 
