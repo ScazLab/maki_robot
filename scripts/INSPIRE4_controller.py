@@ -90,7 +90,7 @@ class INSPIRE4Controller( object ):
 		## instead of passing messages, instantiate the behaviors
 		self.asleepAwake = asleepAwake( verbose_debug, self.ros_pub )
 		self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
-		#self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
+		self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
 		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
@@ -273,10 +273,12 @@ class INSPIRE4Controller( object ):
 	def transitionToStimuli( self ):
 		rospy.logdebug("transitionToStimuli(): BEGIN")
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
-		#if self.__is_game_running:
-		#	INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
-		#	self.__is_game_running = False
-		INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+		##if self.__is_game_running:
+		##	INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+		##	self.__is_game_running = False
+		#INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
+		self.startleGame.stop( disable_ht=False )
+## KATE
 		#INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.lookStimuli.start()
 		self.state = INSPIRE4Controller.STIMULI
@@ -835,8 +837,9 @@ class INSPIRE4Controller( object ):
 				#self.__is_game_running = True
 				self.exp_pub.publish('[state] startle game start')
 				rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
-				## forward the message contents
-				INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				### forward the message contents
+				#INSPIRE4Controller.pubTo_maki_macro( self, _data )
+				self.startleGame.startStartleGame()	## runs game in new thread
 				self.state = INSPIRE4Controller.ENGAGEMENT
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 				self.exp_pub.publish('[state][detail] ' + _data)
@@ -935,6 +938,7 @@ class INSPIRE4Controller( object ):
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
 		if self.ALIVE:
+			self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
 			INSPIRE4Controller.controllerReset( self )
 

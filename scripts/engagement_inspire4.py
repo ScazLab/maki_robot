@@ -736,6 +736,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		eyelidHeadTiltBaseBehavior.stop(self)
 		return
 
+
 	## DO NOT USE -- UNDER DEVELOPMENT -- NOT FULLY TESTED	
 	def startStartleGame( self ):
 		## call base class' start function
@@ -752,7 +753,12 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		#rospy.logdebug("startStartle(): next_startle_time=" + str(self.next_startle_time))
 		### NOTE: initial startle is taken care of in runGame()
 
-		engagementStartleGame.runGame( self )
+		## NOTE: This call is blocking
+		try:
+			## start the infant engagement game
+			thread.start_new_thread(engagementStartleGame.runGame, ( self, ) )
+		except:
+			rospy.logerr("Unable to start new thread for engagementStartleGame.runGame()")
 		return
 
 	## DO NOT USE -- UNDER DEVELOPMENT -- NOT FULLY TESTED	
@@ -819,12 +825,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			engagementStartleGame.unhideIntoStartle( self )
 
 		elif (msg.data == "startleGame start"):
-			## NOTE: This call is blocking
-			try:
-				## start the infant engagement game
-				thread.start_new_thread( engagementStartleGame.startStartleGame, (self, ))
-			except:
-				rospy.logerr("Unable to start new thread for engagementStartleGame.startStartleGame()")
+			## runs game in a new thread
+			engagementStartleGame.startStartleGame( self )
 
 		elif (msg.data.startswith( "startleGame stop") ):
 			## stop the infant engagement game
