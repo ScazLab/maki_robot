@@ -96,6 +96,10 @@ class INSPIRE4Controller( object ):
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		return
 
+	#def __del__(self):
+	#	rospy.loginfo( "signal_handler: CTRL+C" )
+	#	controller.controllerExit()
+	#	rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
 
 	def resetInteractionCount( self ):
 		self.interaction_count = 0
@@ -916,7 +920,7 @@ class INSPIRE4Controller( object ):
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
 		if self.ALIVE:
-			self.ALIVE = False
+			#self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
 			INSPIRE4Controller.controllerReset( self )
 
@@ -925,7 +929,7 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug( "controllerExit: END OF INSPIRE4 EXPERIMENT..." )
 		rospy.logdebug("controllerExit(): END")
 		self.exp_pub.publish('----- END OF INSPIRE4 EXPERIMENT -----')
-		exit    ## meant for interactive interpreter shell; unlikely this actually exits
+		#exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
 
 	## NOTE: head tilt motor will be disabled after reset
@@ -964,7 +968,7 @@ if __name__ == '__main__':
 	controller = INSPIRE4Controller( True, None )
 
 	# allow closing the program using CTRL+C
-	signal.signal(signal.SIGINT, signal_handler)
+	#signal.signal(signal.SIGINT, signal_handler)
 	# Register shutdown hook
 	rospy.on_shutdown(controller.controllerExit)
 
