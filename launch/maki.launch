@@ -1,5 +1,5 @@
 <launch>
-	<arg name="behaviors" default="true" />
+	<arg name="behaviors" default="false" />
 	<arg name="exp_controller" default="true" />
 	<arg name="arbotix" default="true" />
 
@@ -20,9 +20,9 @@
 		<node name="look_inspire4_intro" pkg="maki_robot" type="look_inspire4_intro.py" output="screen" />
 		<node name="look_inspire4_interactions" pkg="maki_robot" type="look_inspire4_interactions.py" output="screen" />
 		<node name="engagement_inspire4" pkg="maki_robot" type="engagement_inspire4.py" output="screen" />
-
-		<node name="ros2vhmsg" pkg="maki_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
 	</group>
+
+	<node name="ros2vhmsg" pkg="maki_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
 
  	<!-- for testing -->
 	<!-- <node name="sim_inputs" pkg="maki_robot" type="sim_inputs.py" output="screen" /> -->
