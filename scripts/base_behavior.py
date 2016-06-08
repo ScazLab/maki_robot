@@ -461,6 +461,8 @@ class headTiltBaseBehavior(baseBehavior):
 		if (headTiltBaseBehavior.__maki_feedback_format == None):
 			headTiltBaseBehavior.__maki_feedback_format = baseBehavior.initSubMAKIFormat( self )
 
+		self.htgp_regex = "HT" + str(SC_SET_GP) + "([0-9]+)"
+
 		## subscribe to rostopic maki_feedback_torque_limit and maki_feedback_goal_pos
 		_maki_feedback_sub = {}		## init as empty dictionary
 		_maki_feedback_sub[ str(SC_GET_TL) ] = ("maki_feedback_torque_limit", String, self.parseMAKIFeedbackMsg)
@@ -647,7 +649,10 @@ class headTiltBaseBehavior(baseBehavior):
 
 		## wait here until feedback is published to rostopics
 		_loop_count = 0
-		while (self.makiPP == None) and (not rospy.is_shutdown()):
+		while (((self.makiPP == None) or 
+			(not (SC_GET_PP in self.maki_feedback_values)) or
+			(not (SC_GET_TL in self.maki_feedback_values))) and
+			(not rospy.is_shutdown())):
 			if (_loop_count == 0):
 				## request current servo motor values
 				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
@@ -665,9 +670,15 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_enabled = True
 			return
 
+		## HT TL is 0%
+		## Set the goal position as the present position
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			headTiltBaseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+			## bypass headTiltBaseBehavior.pubTo_maki_command() since in this
+			##	one case, we want to set the goal position first
+			## 	also, we are manually below setting TL (torque load)
+			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+## 100ms
 		
 		## wait here until feedback is published to rostopics
 		_loop_count = 0
@@ -675,10 +686,12 @@ class headTiltBaseBehavior(baseBehavior):
 		while (not rospy.is_shutdown()) and (not headTiltBaseBehavior.__ht_enabled):	## value set in parseMAKIFeedbackMsg
 			if (_loop_count == 0):
 				headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
+## 100ms
 
 			## every pass through,
 			## request current servo motor values
 			headTiltBaseBehavior.requestFeedback( self, str(SC_GET_TL) )
+## 100ms
 
 			_loop_count = (1 + _loop_count) % 10
 			rospy.logdebug( "enable, 2nd while: " + str(_loop_count) )
@@ -722,7 +735,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			headTiltBaseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
 		
 		## send enable command
 		headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
@@ -764,6 +777,20 @@ class headTiltBaseBehavior(baseBehavior):
 		return
 
 
+	## override base class
+	def pubTo_maki_command( self, commandOut, cmd_prop=True, time_ms=100, time_inc=0.01 ):
+		## Check to see if goal position is specified for head tilt
+		## get HTGP value
+		_tmp = re.search( self.htgp_regex, commandOut )
+		if (((_tmp != None) or (commandOut == "reset")) and
+			(not headTiltBaseBehavior.isHTEnabled( self ))):
+			## if head tilt is not enabled before publishing a message to /maki_command
+			headTiltBaseBehavior.enableHT( self )
+			rospy.logwarn("pubTo_maki_command(): About to publish on /maki_command (" + str(commandOut) + ") but isHTEnabled==False... FIRST call enableHT()")
+
+		return baseBehavior.pubTo_maki_command( self, commandOut, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+
+	
 ########################
 ## All behavior macros involving eyelids (LL) will use this as base class
 ##
