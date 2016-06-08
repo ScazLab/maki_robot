@@ -46,10 +46,10 @@ class INSPIRE4Controller( object ):
 	def __init__(self, verbose_debug, ros_pub):
 
 		self.ALIVE = True
-		#self.mTT_INTERRUPT = True
-		self.VERBOSE_DEBUG = verbose_debug	## default is False
-		#self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
-		#self.DC_helper = dynamixelConversions()
+		# self.mTT_INTERRUPT = True
+		# self.VERBOSE_DEBUG = verbose_debug	## default is False
+		# self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
+		# self.DC_helper = dynamixelConversions()
 
 		INSPIRE4Controller.resetInteractionCount( self )
 		#self.__is_setup_done = False
@@ -133,15 +133,15 @@ class INSPIRE4Controller( object ):
 				#print nodename
 				return
 
-        	# see http://wiki.ros.org/rospy/Overview/Logging
-        	if self.VERBOSE_DEBUG:
-        	        self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
-			rospy.logdebug("log_level=rospy.DEBUG")
-        	else:
-        	        self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
-		rospy.logdebug("anonymous=" + str(_anon_rosnode))
-
-		rospy.loginfo( str(_fname) + ": END")
+			# see http://wiki.ros.org/rospy/Overview/Logging
+			# if self.VERBOSE_DEBUG:
+			# 		self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+			# rospy.logdebug("log_level=rospy.DEBUG")
+			# else:
+			self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
+		
+			rospy.logdebug("anonymous=" + str(_anon_rosnode))
+			rospy.loginfo( str(_fname) + ": END")
 		return
 
 
@@ -180,7 +180,7 @@ class INSPIRE4Controller( object ):
 	#####################
 	def initROSSub( self ):
 		rospy.Subscriber( "inspire_four_pilot_command", String, INSPIRE4Controller.parse_pilot_command )
-	        rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
+		rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
 		return
 
 

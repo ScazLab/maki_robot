@@ -22,7 +22,7 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ## ---- USER DEFINED GLOBALS ----
 
 global SIM
-global VERBOSE_DEBUG
+# global VERBOSE_DEBUG
 global ALIVE
 global TTY_PORT
 global BAUD_RATE
@@ -30,7 +30,7 @@ global maki_serial
 global maki_port
 
 SIM = False				## default is False
-VERBOSE_DEBUG = True	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
+# VERBOSE_DEBUG = True	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
 LATCH = False			## if LATCH==True, any new subscribers will see the most recent message published
 TTY_PORT = "USB0"		## default port for the MAKI Arbotix-M board
 
@@ -222,7 +222,7 @@ def initRegexFormat():
 	_maki_cmd_format_p2 += _torque_cmd + ')+'
 	_maki_cmd = '(' + _maki_cmd_format_p1 + ')|(' + _maki_cmd_format_p2 + ')'
 	maki_cmd_template = re.compile( _maki_cmd )
-	print _maki_cmd
+	rospy.logdebug( _maki_cmd )
 
 	return
 
@@ -444,8 +444,6 @@ def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
 
 ## ------------------------------
 if __name__ == '__main__':
-	global ALIVE
-	global TTY_PORT
 	global maki_serial
 	global maki_port
 
@@ -453,6 +451,7 @@ if __name__ == '__main__':
 	## BEGIN INITIALIZATION
 	## ------------------------------
 	## STEP 0: INIT GLOBAL VARIABLES
+	global ALIVE
 	ALIVE = True
 
 	## STEP 1: SIGNAL HANDLER
@@ -462,10 +461,10 @@ if __name__ == '__main__':
 	## STEP 2: ROS SETUP
 	# Initialize ROS node
 	# see http://wiki.ros.org/rospy/Overview/Logging
-	if VERBOSE_DEBUG:
-		rospy.init_node('maki_arbotix_interface', log_level=rospy.DEBUG)
-	else:
-		rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
+	# if VERBOSE_DEBUG:
+	# 	rospy.init_node('maki_arbotix_interface', log_level=rospy.DEBUG)
+	# else:
+	rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
 	# Register shutdown hook
 	rospy.on_shutdown(makiExit)
 	# Setup regular expression templates for parsing feedback messages and ROS messages from maki_command rostopic
@@ -482,10 +481,11 @@ if __name__ == '__main__':
 	## NOTE: rospy.myargv() strips __name:=FOO __log:=BAR command line args run from roslaunch file
 	_argc = len(rospy.myargv())
 	if ( _argc > 1 ):
+		global TTY_PORT
 		TTY_PORT = str(rospy.myargv()[1])
 	if ( _argc > 2 ):
 		usage(rospy.myargv()[1:])	## call sys.exit()
-	#_maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
+
 	maki_port = "/dev/tty" + str(TTY_PORT) # default port for the MAKI Arbotix Board
 	#try:
 	#	maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
