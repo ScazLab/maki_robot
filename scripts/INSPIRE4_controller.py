@@ -277,7 +277,9 @@ class INSPIRE4Controller( object ):
 		##	INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
 		##	self.__is_game_running = False
 		#INSPIRE4Controller.pubTo_maki_macro( self, "startleGame stop disable_ht=False" )
-		self.startleGame.stop( disable_ht=False )
+		self.startleGame.stopStartleGame( disable_ht=False )
+		self.startleGame.eyelidOpen()	## make sure that eyelid is open
+
 ## KATE
 		#INSPIRE4Controller.pubTo_maki_macro( self, "interaction start" )
 		self.lookStimuli.start()
