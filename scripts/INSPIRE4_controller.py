@@ -684,7 +684,7 @@ class INSPIRE4Controller( object ):
 		##	larger context of the experiment
 
 		rospy.logdebug("runFamiliarizationSkit(): END")
-		self.exp_pub.publish('familiarization skit: BEGIN')
+		self.exp_pub.publish('familiarization skit: END')
 		return
 
 
