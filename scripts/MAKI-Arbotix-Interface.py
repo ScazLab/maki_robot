@@ -23,49 +23,46 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 global SIM
 global VERBOSE_DEBUG
-global FILENAME
 global ALIVE
-global TTY_PORT, BAUD_RATE, maki_serial
+global TTY_PORT
+global BAUD_RATE
+global maki_serial
 global maki_port
 
-
-
-SIM = False	## default is False
-VERBOSE_DEBUG = True	#False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
-LATCH = False	## if LATCH==True, any new subscribers will see the most recent message published
-TTY_PORT = "USB0"	## default port for the MAKI Arbotix-M board
+SIM = False				## default is False
+VERBOSE_DEBUG = True	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
+LATCH = False			## if LATCH==True, any new subscribers will see the most recent message published
+TTY_PORT = "USB0"		## default port for the MAKI Arbotix-M board
 
 ## ---- CONSTANTS ----
-FILENAME = "MAKI-Arbotix-Interface.py"	## used for logging
-
-BAUD_RATE = 19200	#9600
+BAUD_RATE = 19200		## 9600
 EC_TIMER_DURATION = 30	## 30s, or 30000ms
 
-## ---- DYNAMIC GLOBALS ---- modified programatically ----
+## ---- DYNAMIC GLOBALS ---- modified programmatically ----
 ALIVE = False
-maki_serial = None 	## init as Python's null object
-feedback_req_template = ""	## init as empty string; dynamically populated as compiled regular expression
-feedback_resp_template = ""	## init as empty string; dynamically populated as compiled regular expression
-feedback_pub_dict = { }	## init as empty dictionary; dynamically populated
+maki_serial = None 				## init as Python's null object
+feedback_req_template = ""		## init as empty string; dynamically populated as compiled regular expression
+feedback_resp_template = ""		## init as empty string; dynamically populated as compiled regular expression
+feedback_pub_dict = { }			## init as empty dictionary; dynamically populated
 feedback_topic_name_dict = { }	## init as empty dictionary; dynamically populated
-resetPositions = ""	## init as empty string; dynamically populated
-resetSpeeds = ""	## init as empty string; dynamically populated
+resetPositions = ""				## init as empty string; dynamically populated
+resetSpeeds = ""				## init as empty string; dynamically populated
 SIM_feedback_type = None
 
 # --------------------------------------------------------------------
 def usage(cmd_line_args):
-	rospy.loginfo( "Usage:	rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>" )
+	rospy.loginfo( "Usage: rosrun maki_robot MAKI-Arbotix-Interface.py <PORT, default=USB0>" )
 	if cmd_line_args != None and cmd_line_args != "":
 		rospy.loginfo( "Given command line args: " + str(cmd_line_args) )
 		sys.exit()
 
 ## ------------------------------
 def recvFromArduino():
-	
+	global SIM
 	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
-	rospy.logdebug( "recvFromArduino: BEGIN" )
+	rospy.logdebug( "BEGIN" )
 
 	if SIM:
 		## shouldn't get here since publishFeedback will generate a SIM feedback message
@@ -83,15 +80,14 @@ def recvFromArduino():
 				if _m_char==TERM_CHAR_RECV:
 					_RECEIVING = False
 		except ValueError as e1:
-			rospy.logerr( "recvFromArduino: VALUE ERROR: Serial connection closed while reading: " + str(e1) )
+			rospy.logerr( "VALUE ERROR: Serial connection closed while reading: " + str(e1) )
 			_exit_flag = True
 		except IOError as e2:
-			rospy.logerr( "recvFromArduino: IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2) )
+			rospy.logerr( "IOError: Serial connection unplugged while waiting for transmission from the robot: " + str(e2) )
 			_exit_flag = True
 
 		if _exit_flag:
-			rospy.logerr( "ERROR: Reading from serial port disturbed..." )
-			print "ERROR: Reading from serial port disturbed..."
+			rospy.logerr( "Reading from serial port disturbed..." )
 			print "####################################################\n"
 			print "(Is the robot's Arbotix-M board plugged in?)"
 			print "\n####################################################"
@@ -100,11 +96,11 @@ def recvFromArduino():
 	if _recv_msg != '' and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 
-	rospy.logdebug( "recvFromArduino: END" )
+	rospy.logdebug( "END" )
 	return _recv_msg
 
 def sendToMAKI (message): 
-	
+	global SIM
 	global maki_serial
 	global feedback_strings
 	global maki_cmd_template
@@ -239,10 +235,10 @@ def feedback(feedbackString):
 
 def requestFeedback(feedbackString):
 	global feedback_req_template
-	global SIM_feedback_type
+	global SIM, SIM_feedback_type
 	global maki_serial
 
-	rospy.logdebug( "about to request feedback; feedbackString=" + str(feedbackString) )
+	rospy.logdebug( "About to request feedback; feedbackString=" + str(feedbackString) )
 	_bytes_written = 0
 	_tmp = feedback_req_template.search(feedbackString)
 	## Yes, feedbackString has the expected format
@@ -267,12 +263,10 @@ def requestFeedback(feedbackString):
 		return ''
 	return
 
-def publishFeedback(feedbackType=""):
-	## TODO: currently feedbackType is ignored
-
+def publishFeedback():
 	global feedback_resp_template
 	global feedback_pub_dict
-	global SIM_feedback_type
+	global SIM, SIM_feedback_type
 
 	_recv_msg = ''		## Init to empty string
 	if not SIM:
@@ -291,14 +285,13 @@ def publishFeedback(feedbackType=""):
 		rospy.logdebug( "Validated: prefix='" + str(_prefix) + "' and feedback_values='" + str(_feedback_values) + "'" )
 		if feedback_pub_dict.has_key(_prefix):
 			feedback_pub_dict[_prefix].publish(_recv_msg)
-			rospy.loginfo( "published std_msgs/String '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
+			rospy.logdebug( "Published '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
 		
 			## reset after publishing to appropriate rostopic
 			if SIM:	SIM_feedback_type = None
 	else:
-		rospy.logerr( "publishFeedback: INVALID MESSAGE RECEIVED; '" + str(_recv_msg) + "'" )
+		rospy.logerr( "INVALID MESSAGE RECEIVED: '" + str(_recv_msg) + "'" )
 
-	rospy.logdebug( "feedback: " + str(_recv_msg) )
 	return
 
 def generateSIMFeedback(feedback_type):
@@ -325,7 +318,7 @@ def generateSIMFeedback(feedback_type):
 
 ## ------------------------------
 def defReset():
-	
+	global SIM
 	global maki_serial
 
 	if SIM:
@@ -378,40 +371,11 @@ def token(header):
 		subCommand += c
 		c = maki_serial.read()
 	return subCommand		
-		
-			
-## ------------------------------
-## NOTE: ktsui: turns out that this is superfluous with rospy
-## decided to use just straight rospy.log* since /rosout provides file, function, and line in addition to the message itself
-def my_ros_log(function_name, log_msg, log_level=rospy.INFO):
-	global FILENAME
-	_new_log_msg = "[" + str(FILENAME) + "]"
-	_new_log_msg += " [" + str(function_name) + "] "
-	_new_log_msg += str(log_msg)
-
-	if VERBOSE_DEBUG:
-		print _new_log_msg
-
-	## for ROS verbosity levels, see http://wiki.ros.org/Verbosity%20Levels
-	if log_level==rospy.DEBUG:
-		rospy.logdebug(_new_log_msg)
-	elif log_level==rospy.INFO:
-		rospy.loginfo(_new_log_msg)
-	elif log_level==rospy.WARN:
-		rospy.logwarn(_new_log_msg)
-	elif log_level==rospy.ERROR:
-		rospy.logerr(_new_log_msg)
-	elif log_level==rospy.FATAL:
-		rospy.logfatal(_new_log_msg)
-	else:
-		print "Unknown log_level for log_msg: '" + _new_log_msg + "'"
-	return
 
 ## ------------------------------
 def signal_handler(signal, frame):
-	rospy.loginfo( "signal_handler: CTRL+C" )
 	makiExit()
-	rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
+	rospy.loginfo( "CTRL+C says goodnight" )
 	sys.exit()	## use this instead of exit (which is meant for interactive shells)
 
 def makiExit():
@@ -431,40 +395,40 @@ def makiExit():
 			pass
 		ALIVE = False
 		rospy.sleep(1)	# give a chance for everything else to shutdown nicely
-		rospy.logdebug( "makiExit: And MAKI lived happily ever after..." )
+		rospy.logdebug( "And MAKI lived happily ever after..." )
 	exit	## meant for interactive interpreter shell; unlikely this actually exits
 
 def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
 	global maki_serial, maki_port
 
 	if maki_serial == None:
-		rospy.loginfo("Opening new serial connection to " + str(maki_port))
+		rospy.logdebug("Opening new serial connection to " + str(maki_port))
 		try:
 			maki_serial = serial.Serial()
 			maki_serial.baudrate = baud
 			maki_serial.timeout = timeout
 			maki_serial.port = maki_port
 			maki_serial.open()
-			rospy.loginfo( str(maki_serial) )
+			rospy.logdebug( str(maki_serial) )
 		except serial.serialutil.SerialException as _e0:
-			rospy.logerr( "ERROR: " + str(_e0) )
+			rospy.logerr( str(_e0) )
 			return False
 	else:
 		rospy.loginfo("Attempting to reopen existing serial connection...")
 		try:
 			maki_serial.open()
-			rospy.loginfo( str(maki_serial) )
+			rospy.logdebug( str(maki_serial) )
 			rospy.loginfo("SUCCESS: Reopened serial connection to " + str(maki_port))	
 		except serial.serialutil.SerialException as _e1:
-			rospy.loginfo("FAILED: Unable to reopen serial connection to " + str(maki_port))	
-			rospy.logerr( "ERROR: " + str(_e1) )
+			rospy.logerr("FAILED: Unable to reopen serial connection to " + str(maki_port))	
+			rospy.logerr( str(_e1) )
 			return False
 
 	#try:
 	#	maki_serial = serial.Serial( maki_port, int(baud), timeout=timeout) # no timeout  timeout=None
 	#	rospy.loginfo( str(maki_serial) )
 	#except serial.serialutil.SerialException as e0:
-	#	rospy.logerr( "ERROR: " + str(e0) )
+	#	rospy.logerr( str(e0) )
 	#	return False
 	
 	if maki_serial != None and maki_serial.isOpen():
@@ -480,6 +444,10 @@ def openMAKISerialPort( baud=BAUD_RATE, timeout=None):
 
 ## ------------------------------
 if __name__ == '__main__':
+	global ALIVE
+	global TTY_PORT
+	global maki_serial
+	global maki_port
 
 	## ------------------------------
 	## BEGIN INITIALIZATION
@@ -523,7 +491,7 @@ if __name__ == '__main__':
 	#	maki_serial = serial.Serial(_maki_port, int(BAUD_RATE), timeout=None) # no timeout  timeout=None
 	#	rospy.loginfo( str(maki_serial) )
 	#except serial.serialutil.SerialException as e0:
-	#	rospy.logerr( "ERROR: " + str(e0) )
+	#	rospy.logerr( str(e0) )
 	openMAKISerialPort()
 
 	## STEP 3B: ENSURE SERIAL COMMUNICATION WITH THE ROBOT
@@ -533,7 +501,7 @@ if __name__ == '__main__':
 		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(maki_port) ) 
 	else:
 		if not SIM:
-			rospy.logerr( "ERROR: Unable to connect to MAKI on " + str(maki_port) + ". Exiting..." )
+			rospy.logerr( "Unable to connect to MAKI on " + str(maki_port) + ". Exiting..." )
 			sys.exit()	## use this instead of exit (which is meant for interactive shells)
 		else:
 			rospy.logwarn( "SIM = " + str(SIM) + "; continuing..." )
@@ -551,8 +519,7 @@ if __name__ == '__main__':
 
 		#print "Elapsed time: " + str( int(rospy.get_time() - _auto_feedback_ER_timer_start) )	## debugging
 		if ( int(rospy.get_time() - _auto_feedback_ER_timer_start) > int(EC_TIMER_DURATION) ):
-			rospy.logwarn( "WARNING: Nothing received from serial port..." )
-			print "WARNING: Nothing received from serial port..."
+			rospy.logwarn( "Nothing received from serial port..." )
 			print "####################################################\n"
 			print "(Does the robot have power? Is the power switch on?)"
 			print "\n####################################################"
@@ -561,8 +528,7 @@ if __name__ == '__main__':
 			
 		if _exit_flag:
 			if ( int(rospy.get_time() - _auto_feedback_ER_timer_start) > 10 ):
-				rospy.logerr( "ERROR: Nothing received from serial port. Exiting..." )
-				print "ERROR: Nothing received from serial port. Exiting..."
+				rospy.logerr( "Nothing received from serial port. Exiting..." )
 				print "####################################################\n"
 				print "(Does the robot have power? Is the power switch on?)"
 				print "\n####################################################"
@@ -585,18 +551,17 @@ if __name__ == '__main__':
 			_exit_flag = True
 
 		
-
 	# clear the input buffer; we don't actually care about the contents
 	if not SIM: maki_serial.flushInput();
 
 	## STEP 4: INIT ROBOT STATE
 	# Reset MAKI to default position and speed
 	defReset()
+	rospy.loginfo( "SUCCESS: Robot successfully connected.")
 	## ------------------------------
 	## END OF INITIALIZATION
 	## ------------------------------
 	
-
 	## main loop will process messages received from the Arbotix-M board
 	# And now... go!
 	#rospy.spin()	## sleeps until rospy.is_shutdown() == True; prevent main thread from exiting
@@ -605,5 +570,5 @@ if __name__ == '__main__':
 		#rospy.sleep(0.5)	# 500ms		## too much latency between feedback requests and feedback responses
 		rospy.sleep(0.05)	# 50ms		## without rospy.get_time(), can't tell loop speed difference between 100ms and 50ms
 
-	print str(FILENAME) + " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
+	print " __main__: Bye bye"	## rosnode shutdown, can't use rospy.log* when rosnode is down
 
