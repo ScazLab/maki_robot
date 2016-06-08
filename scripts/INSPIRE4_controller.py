@@ -335,6 +335,7 @@ class INSPIRE4Controller( object ):
 			while (_elapsed_duration < self.durationWatchStimuli):
 				_elapsed_duration = rospy.get_time() - _start_time
 				rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+				self.exp_pub.publish("watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
 				rospy.sleep(1)	## sleep for 1 second
 
 		if auto_return:
