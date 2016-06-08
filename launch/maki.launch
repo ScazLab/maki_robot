@@ -1,22 +1,28 @@
 <launch>
+	<arg name="behaviors" default="true" />
+	<arg name="exp_controller" default="true" />
+	<arg name="arbotix" default="true" />
+
 	<!-- not sure if we need this -->
     <!-- <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
     	<arg name="port" value="9090"/>
   	</include> -->
 
   	<!-- robot interface -->
-	<node name="maki_arbotix_interface" pkg="maki_robot" type="MAKI-Arbotix-Interface.py" output="screen" />
+	<node name="maki_arbotix_interface" pkg="maki_robot" type="MAKI-Arbotix-Interface.py" output="screen" if="$(arg arbotix)" />
 
 	<!-- controller -->
-	<node name="inspire4_controller" pkg="maki_robot" type="INSPIRE4_controller.py" output="screen" />
+	<node name="inspire4_controller" pkg="maki_robot" type="INSPIRE4_controller.py" output="screen" if="$(arg exp_controller)" />
 
 	<!-- behaviors -->
-	<node name="asleep_awake" pkg="maki_robot" type="asleep_awake.py" output="screen" />
-	<node name="look_inspire4_intro" pkg="maki_robot" type="look_inspire4_intro.py" output="screen" />
-	<node name="look_inspire4_interactions" pkg="maki_robot" type="look_inspire4_interactions.py" output="screen" />
-	<node name="engagement_inspire4" pkg="maki_robot" type="engagement_inspire4.py" output="screen" />
+	<group if="$(arg behaviors)" >
+		<node name="asleep_awake" pkg="maki_robot" type="asleep_awake.py" output="screen" />
+		<node name="look_inspire4_intro" pkg="maki_robot" type="look_inspire4_intro.py" output="screen" />
+		<node name="look_inspire4_interactions" pkg="maki_robot" type="look_inspire4_interactions.py" output="screen" />
+		<node name="engagement_inspire4" pkg="maki_robot" type="engagement_inspire4.py" output="screen" />
 
-	<node name="ros2vhmsg" pkg="maki_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
+		<node name="ros2vhmsg" pkg="maki_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
+	</group>
 
  	<!-- for testing -->
 	<!-- <node name="sim_inputs" pkg="maki_robot" type="sim_inputs.py" output="screen" /> -->
