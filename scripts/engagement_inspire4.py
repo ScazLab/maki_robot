@@ -211,7 +211,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				## did self.repetitions rounds of infant engagement behavior max?
 				elif  (self.count_movements >= repetitions):
 					rospy.logwarn(">>>>>>>>> runGame: The End... " + str(repetitions) + " IS THE MAXIMUM GAME ROUNDS PLAYED IN A SINGLE GAME!!... We could play again later...")
-					self.exp_pub.publish('[Engagement game] End of game play')
+					self.exp_pub.publish('[Engagement game] End of game play!! the maximum game round (6) is reached.')
 					self.game_state = engagementStartleGame.STATE_STARTLE_RELAX #9
 					## this exit condition is self-terminating
 					engagementStartleGame.__is_game_running = False
@@ -219,8 +219,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					break	## jump out of the while loop
 
 				else:
-					rospy.logwarn("runGame(): STATE 1: Now playing ROUND #" + str(self.count_movements) + " of " + str(repetitions))
-					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(self.count_movements) + ' of ' + str(repetitions))
+					rospy.logdebug("runGame(): STATE 1: Now playing ROUND #" + str(self.count_movements+1) + " of " + str(repetitions))
+					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(self.count_movements+1) + ' of ' + str(repetitions))
 					_default_cmd_prop_duration = 100
 					_c_duration = _wait_attend * _default_cmd_prop_duration
 					for _c in range(_wait_attend):	## 0, 1, 2, 3, 4
