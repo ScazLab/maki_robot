@@ -87,7 +87,7 @@ class INSPIRE4Controller( object ):
 
 		## instead of passing messages, instantiate the behaviors
 		self.asleepAwake = asleepAwake( verbose_debug, self.ros_pub )
-		#self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
+		self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
 		#self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
 		#self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
@@ -253,7 +253,8 @@ class INSPIRE4Controller( object ):
 			return
 
 		elif self.state == INSPIRE4Controller.INTRO:
-			INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
+			#INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
+			pass
 		elif self.state == INSPIRE4Controller.STIMULI:
 			INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
 		else:
@@ -476,7 +477,7 @@ class INSPIRE4Controller( object ):
 		_thought = ""	## start off not thinking of anything, beginner's mind
 
 		#AA = asleepAwake( _verbose, self.ros_pub )
-		lookIntro = lookINSPIRE4Intro( _verbose, self.ros_pub )
+		#lookIntro = lookINSPIRE4Intro( _verbose, self.ros_pub )
 
 		## STEP -1: --- PRE-CHECK ---
 		## Assumes that Maki-ro begins in the asleep position
@@ -500,7 +501,8 @@ class INSPIRE4Controller( object ):
 			self.asleepAwake.runAsleep()
 
 		## STEP 0: Officially declare the familiarization begun
-		lookIntro.introStart()
+		#lookIntro.introStart()
+		self.lookIntro.introStart()
 
 		## STEP 1: Friend touches Maki-ro on the shoulder
 		pass
@@ -511,7 +513,7 @@ class INSPIRE4Controller( object ):
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
 		#AA.runAwakeExperimenter( disable_ht=False )
 		#rospy.logdebug("...\tMaki-ro should now be awake... AA.awake_p()=" + str( AA.awake_p() ))
-		self.awakeAsleep.runAwakeExperimenter( disable_ht=False )
+		self.asleepAwake.runAwakeExperimenter( disable_ht=False )
 		rospy.logdebug("...\tMaki-ro should now be awake... self.asleepAwake.awake_p()=" + str( self.asleepAwake.awake_p() ))
 
 		## STEP 3: Experimenter greets Maki-ro
@@ -521,7 +523,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro, mind your manners and say hello..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroGreeting()
+		#lookIntro.macroGreeting()
+		self.lookIntro.macroGreeting()
 
 		## STEP 5: Friend plays peek-a-boo. Covers own eyes with hands, then uncover
 		rospy.sleep(0.75)	## 750 ms
@@ -530,7 +533,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro is startled!!! Peek-a-boo does that..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.startStartle( relax=True )
+		#lookIntro.startStartle( relax=True )
+		self.lookIntro.startStartle( relax=True )
 		### KATE HACKING: BEGIN...
 		#rospy.logdebug("Maki-ro doesn't quiet fully relax, so adjust gaze to look at Friend again...")
 		#rospy.sleep(0.5)	## need a brief moment before executing next motion
@@ -551,9 +555,11 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
 		## This hack works better than specifying repetitions as optional input parameter
-		lookIntro.macroGreeting()
+		#lookIntro.macroGreeting()
+		self.lookIntro.macroGreeting()
 		rospy.sleep(0.5)
-		lookIntro.macroGreeting()
+		#lookIntro.macroGreeting()
+		self.lookIntro.macroGreeting()
 		_thought = "Maki-ro might be a little dizzy now..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logdebug("...\t" + _thought)
@@ -566,7 +572,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro likes the fun flashy ball and here comes faux smooth pursuit..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroLookAtBallLocationRight( upper=True )
+		#lookIntro.macroLookAtBallLocationRight( upper=True )
+		self.lookIntro.macroLookAtBallLocationRight( upper=True )
 
 		## STEP 11: Friend moves the flashing ball to the LOWER RIGHT calibration point
 		##	and jiggles it to attract Maki-ro's attention
@@ -576,7 +583,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro thinks the flashy ball is pretty... There Maki-ro goes chasing the ball..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroLookAtBallLocationRight( lower=True )
+		#lookIntro.macroLookAtBallLocationRight( lower=True )
+		self.lookIntro.macroLookAtBallLocationRight( lower=True )
 
 		## STEP 13: Friend moves the flashing ball between the infant and Maki-ro
 		##	and jiggles it to attract Maki-ro's attention
@@ -586,7 +594,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro... Follow, follow, follow, follow the flashy ball..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroLookAtInfant()
+		#lookIntro.macroLookAtInfant()
+		self.lookIntro.macroLookAtInfant()
 
 		## STEP 15: Friend retracts the flashy ball wand
 		rospy.sleep(0.5)
@@ -595,7 +604,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro... Follow and follow, follow the flashy ball... Oh hiya, Friend!!!..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroLookAtExperimenter()
+		#lookIntro.macroLookAtExperimenter()
+		self.lookIntro.macroLookAtExperimenter()
 
 		## STEP 17: Maki-ro watches Friend leave
 		_thought = "Hey, wait!!! Where did Friend go?? Maki-ro was playing with Friend..."
@@ -607,7 +617,8 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro misses Friend... Sad... Lonely... Who will play with Maki-ro now??..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.macroLookAtInfant()
+		#lookIntro.macroLookAtInfant()
+		self.lookIntro.macroLookAtInfant()
 
 		## STEP 19: Maki-ro makes a new pal
 		_thought = "Maki-ro spies with its eyes... a human baby!?!?"
@@ -619,7 +630,8 @@ class INSPIRE4Controller( object ):
 		_thought = "<<<< END SCENE >>>>"
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		lookIntro.stop( disable_ht=False )
+		#lookIntro.stop( disable_ht=False )
+		self.lookIntro.stop( disable_ht=False )
 		## disable_ht might have to change to False once in the
 		##	larger context of the experiment
 
@@ -879,7 +891,11 @@ class INSPIRE4Controller( object ):
 			##      and monitor moving into goal positions
 			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
 		except rospy.exceptions.ROSException as _e:
-			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e))
+			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position...STALLED??..." + str(_e))
+			_htBB.pubTo_maki_command( "reset" )
+			rospy.sleep(1.0)
+		except TypeError as _e1:
+			rospy.logerror("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e1))
 			_htBB.pubTo_maki_command( "reset" )
 			rospy.sleep(1.0)
 		_htBB.stop()
