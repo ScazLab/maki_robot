@@ -65,6 +65,8 @@ class INSPIRE4Controller( object ):
 		self.durationHeadTurn = 1.0
 		self.durationWatchStimuli = 8.0
 
+		self.blocking_gui = True
+
 		## primarily will publish to /maki_macro
 		if ros_pub == None:
 			self.initROS( self )
@@ -256,7 +258,7 @@ class INSPIRE4Controller( object ):
 			#INSPIRE4Controller.pubTo_maki_macro( self, "intro stop disable_ht=False" )
 			pass
 		elif self.state == INSPIRE4Controller.STIMULI:
-			self.lookStimuli.turnToInfant()	## blocking with monitorMoveToGP
+			rospy.logdebug("!!!!!!!!!!!!!!!! BOB'S YOUR UNCLE")
 			#INSPIRE4Controller.pubTo_maki_macro( self, "interaction stop disable_ht=False" )
 			self.lookStimuli.stop( disable_ht=False )
 		else:
@@ -294,18 +296,21 @@ class INSPIRE4Controller( object ):
 		rospy.loginfo("setAutoTransitionFromStimuli(): END")
 		return
 
+		self.durationHeadTurn = 1.0
+		self.durationWatchStimuli = 8.0
 
 	def startWatchStimuli_callback( self, event ):
 		rospy.logdebug("startWatchStimuli(): BEGIN")
-		_start_time = rospy.get_time()
 		rospy.loginfo("startWatchStimuli_callback() called at " + str( event.current_real))
-		#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
-		INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
-		_elapsed_duration = rospy.get_time() - _start_time
-		while (_elapsed_duration < 8.0):
-			_elapsed_duration = rospy.get_time() - _start_time
-			rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
-			rospy.sleep(1)	## sleep for 1 second
+		#_start_time = rospy.get_time()
+		##INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
+		#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
+		#_elapsed_duration = rospy.get_time() - _start_time
+		#while (_elapsed_duration < self.durationWatchStimuli):
+		#	_elapsed_duration = rospy.get_time() - _start_time
+		#	rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+		#	rospy.sleep(1)	## sleep for 1 second
+		INSPIRE4Controller.runWatchStimuli( self, watch=True, auto_return=False )
 		rospy.logdebug("startWatchStimuli(): END")
 		return
 
@@ -316,10 +321,43 @@ class INSPIRE4Controller( object ):
 		#_ros_pub = rospy.Publisher( "inspire_four_pilot_command", String, queue_size = 10)
 		#_ros_pub.publish( "turnToInfant" )
 		#INSPIRE4Controller.pubTo_inspire_four_pilot_command( self, "turnToInfant" )
-		self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+		INSPIRE4Controller.runWatchStimuli( self, watch=False, auto_return=True )
 		rospy.logdebug("stopWatchStimuli(): END")
 		return
 
+	def runWatchStimuli( self, watch=True, auto_return=True ):
+		rospy.logdebug("runWatchStimuli(): BEGIN")
+		if watch:
+			_start_time = rospy.get_time()
+			#INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=True )
+			INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
+			_elapsed_duration = rospy.get_time() - _start_time
+			while (_elapsed_duration < self.durationWatchStimuli):
+				_elapsed_duration = rospy.get_time() - _start_time
+				rospy.logdebug("startWatchStimuli_callback(): watching stimuli; ELAPSED DURATION: " + str(_elapsed_duration) + " seconds")
+				rospy.sleep(1)	## sleep for 1 second
+
+		if auto_return:
+			_data = "turnToInfant"	## QUICK HACK
+			rospy.logwarn("====> turnToInfant")
+			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+## KATE
+			INSPIRE4Controller.transitionToEngagement( self, _data )
+			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+			self.exp_pub.publish('[state][detail] ' + _data)
+			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
+			self.interaction_count += 1
+			self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
+			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
+			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
+				pass
+				## TODO: automatically start playing startle game????
+			else:
+				rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
+				## TODO: automatically end????
+
+		rospy.logdebug("runWatchStimuli(): END")
+		return
 
 	## ------------------------------
 	## based on MAKI-WOz-INSPIRE4.py
@@ -777,7 +815,7 @@ class INSPIRE4Controller( object ):
 			if not _unknown_flag:	
 ## KATE
 				self.exp_pub.publish('[state] run familiarization skit')
-				INSPIRE4Controller.transitionToIntro( self, blocking=True )
+				INSPIRE4Controller.transitionToIntro( self, self.blocking_gui )
 				#rospy.loginfo("TESTING STATE MACHINE.... bypass transitionToIntro")
 				#self.state = INSPIRE4Controller.INTRO
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
@@ -822,6 +860,7 @@ class INSPIRE4Controller( object ):
 			if not _unknown_flag:
 				#self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+				self.state = INSPIRE4Controller.STIMULI
 				INSPIRE4Controller.transitionToStimuli( self )
 ## KATE
 
@@ -832,34 +871,36 @@ class INSPIRE4Controller( object ):
 				## NOTE: This has blocking call (monitorMoveToGP)
 				self.lookStimuli.turnToScreen( right_screen=_right_screen )
 
-				self.state = INSPIRE4Controller.STIMULI
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 				self.exp_pub.publish('[state][detail] ' + _data)
 
 				if _data.endswith( "auto_return=True" ):
-					## add timed trigger 'watch stimuli' behavior 
-					## and followed by turning back to face the infant
-					INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
-				## TODO: Set a timer to enable blink and scan
+					if self.blocking_gui:
+						INSPIRE4Controller.runWatchStimuli( self, watch=True, auto_return=True )
+					else:
+						## add timed trigger 'watch stimuli' behavior 
+						## and followed by turning back to face the infant
+						INSPIRE4Controller.setAutoTransitionWatchStimuli( self )
+						## TODO: Set a timer to enable blink and scan
 
-		## TODO: FIX!!! REMOVE THIS CRUTCH
-		elif _data == "turnToInfant":
-			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
-
-			rospy.logwarn("====> turnToInfant")
-			INSPIRE4Controller.transitionToEngagement( self, _data )
-			self.exp_pub.publish('[state] ' + self.state_dict[self.state])
-			self.exp_pub.publish('[state][detail] ' + _data)
-			rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
-			self.interaction_count += 1
-			self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
-			rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
-			if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
-				pass
-				## TODO: automatically start playing startle game????
-			else:
-				rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
-				## TODO: automatically end????
+		### TODO: FIX!!! REMOVE THIS CRUTCH
+		#elif _data == "turnToInfant":
+		#	rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+		#
+		#	rospy.logwarn("====> turnToInfant")
+		#	INSPIRE4Controller.transitionToEngagement( self, _data )
+		#	self.exp_pub.publish('[state] ' + self.state_dict[self.state])
+		#	self.exp_pub.publish('[state][detail] ' + _data)
+		#	rospy.sleep(1.0)	## it takes 1 second to return from facing left/right screen
+		#	self.interaction_count += 1
+		#	self.exp_pub.publish('[interaction count] ' + str(self.interaction_count))
+		#	rospy.loginfo( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " INTERACTIONS have occurred" )
+		#	if self.interaction_count < INSPIRE4Controller.NUMBER_OF_INTERACTIONS:
+		#		pass
+		#		## TODO: automatically start playing startle game????
+		#	else:
+		#		rospy.loginfo ("======== MAXIMUM NUMBER OF INTERACTIONS REACHED: " + str(self.interaction_count))
+		#		## TODO: automatically end????
 
 		elif _data == "the end":
 			## We should be able to get to this state from ANY other
@@ -891,7 +932,6 @@ class INSPIRE4Controller( object ):
 
 
 
-## KATE
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
 		if self.ALIVE:
@@ -1029,7 +1069,6 @@ if __name__ == '__main__':
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.PRELUDE
 
-## KATE
 		elif _data == "runFamiliarizationSkit":
 			try:
 				thread.start_new_thread( INSPIRE4Controller.runFamiliarizationSkit, ( self,  ) )
