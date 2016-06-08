@@ -213,12 +213,11 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				rospy.logdebug("macroAsleep(): _adjust_sleep_ms = " + str(_adjust_sleep_ms))
 				self.SWW_WI.sleepWhileWaitingMS( _adjust_sleep_ms, increment=0.01 )
 
-			rospy.loginfo("-----------------")
 		else:
 			return
 
 		_duration = rospy.get_time() - _start_time
-		rospy.loginfo( "DURATION: " + str(_duration) + " seconds" )
+		rospy.logdebug( "DURATION: " + str(_duration) + " seconds" )
 
 		asleepAwake.__is_asleep = True
 		asleepAwake.__is_awake = False
@@ -330,12 +329,11 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				rospy.logdebug("macroAsleep(): _adjust_sleep_ms = " + str(_adjust_sleep_ms))
 				self.SWW_WI.sleepWhileWaitingMS( _adjust_sleep_ms, increment=0.01 )
 
-			rospy.loginfo("-----------------")
 		else:
 			return
 
 		_duration = rospy.get_time() - _start_time
-		rospy.loginfo( "DURATION: " + str(_duration) + " seconds" )
+		rospy.logdebug( "DURATION: " + str(_duration) + " seconds" )
 
 		asleepAwake.__is_awake = True
 		asleepAwake.__is_asleep = False

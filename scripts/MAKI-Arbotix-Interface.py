@@ -151,7 +151,7 @@ def sendToMAKI (message):
 			else:
 				try:
 					if maki_serial.isOpen:
-						rospy.loginfo( "sending command to Arbotix-M over serial: " + str(message.data) )
+						rospy.logdebug( "sending command to Arbotix-M over serial: " + str(message.data) )
 						_bytes_written = maki_serial.write(message.data)
 						rospy.logdebug( "command sent... _bytes_written=" + str(_bytes_written) )
 				except serial.serialutil.portNotOpenError as _e3:

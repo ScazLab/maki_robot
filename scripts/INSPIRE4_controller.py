@@ -910,7 +910,10 @@ class INSPIRE4Controller( object ):
 			rospy.logwarn( "UNKNOWN pilot command: " + str(_data) + "; REMAINS in self.state " + str(self.state) )
 
 		if self.state != self.previous_state:
-			rospy.loginfo("UPDATE self.state from previous " + str(self.previous_state) + " to " + str(self.state) + " current")
+			if self.previous_state == None:
+				rospy.loginfo("Update self.state from [None] to [" + self.state_dict[self.state] + "]")
+			else:
+				rospy.loginfo("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
 
 		rospy.logdebug("parse_pilot_command(): END")
 		return
