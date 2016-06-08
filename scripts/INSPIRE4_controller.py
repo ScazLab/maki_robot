@@ -84,6 +84,14 @@ class INSPIRE4Controller( object ):
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
 		INSPIRE4Controller.controllerReset( self )
+
+		## instead of passing messages, instantiate the behaviors
+		self.asleepAwake = asleepAwake( verbose_debug, self.ros_pub )
+		#self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
+		#self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
+		#self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
+		#self.blinking = blinking( verbose_debug, self.ros_pub )
+		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		return
 
 
@@ -223,7 +231,8 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.setBlinkAndScan( self, blink=False, scan=False )
 
 		## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
-		INSPIRE4Controller.pubTo_maki_macro( self, "asleep" )
+		#INSPIRE4Controller.pubTo_maki_macro( self, "asleep" )
+		self.asleepAwake.runAsleep()
 
 		#self.__is_setup_done = True
 		rospy.logdebug("doSetup(): END")	
@@ -466,13 +475,15 @@ class INSPIRE4Controller( object ):
 		_verbose = True
 		_thought = ""	## start off not thinking of anything, beginner's mind
 
-		AA = asleepAwake( _verbose, self.ros_pub )
+		#AA = asleepAwake( _verbose, self.ros_pub )
 		lookIntro = lookINSPIRE4Intro( _verbose, self.ros_pub )
 
 		## STEP -1: --- PRE-CHECK ---
 		## Assumes that Maki-ro begins in the asleep position
-		rospy.logdebug( "...\tPRE-CHECK...\tIs Maki-ro already sleeping? AA.asleep_p() = " + str( AA.asleep_p() ) )
-		if AA.asleep_p():
+		#rospy.logdebug( "...\tPRE-CHECK...\tIs Maki-ro already sleeping? AA.asleep_p() = " + str( AA.asleep_p() ) )
+		rospy.logdebug( "...\tPRE-CHECK...\tIs Maki-ro already sleeping? self.asleepAwake.asleep_p() = " + str( self.asleepAwake.asleep_p() ) )
+		#if AA.asleep_p():
+		if self.asleepAwake.asleep_p():
 			_thought = "Maki-ro is already asleep... ZZZzzzz ZZZZzzzzzz..."
 			INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 			rospy.logwarn("runFamiliarizationSkit(): " + _thought + " SKIP")
@@ -485,7 +496,8 @@ class INSPIRE4Controller( object ):
 			#_start_time = rospy.get_time()
 
 			## blocking until Maki-ro is in the asleep position
-			AA.runAsleep()
+			#AA.runAsleep()
+			self.asleepAwake.runAsleep()
 
 		## STEP 0: Officially declare the familiarization begun
 		lookIntro.introStart()
@@ -497,8 +509,10 @@ class INSPIRE4Controller( object ):
 		_thought = "Maki-ro, wake up!!! Face Friend..."
 		INSPIRE4Controller.pubTo_maki_internal_monologue( self, _thought )
 		rospy.logwarn("runFamiliarizationSkit(): " + _thought)
-		AA.runAwakeExperimenter( disable_ht=False )
-		rospy.logdebug("...\tMaki-ro should now be awake... AA.awake_p()=" + str( AA.awake_p() ))
+		#AA.runAwakeExperimenter( disable_ht=False )
+		#rospy.logdebug("...\tMaki-ro should now be awake... AA.awake_p()=" + str( AA.awake_p() ))
+		self.awakeAsleep.runAwakeExperimenter( disable_ht=False )
+		rospy.logdebug("...\tMaki-ro should now be awake... self.asleepAwake.awake_p()=" + str( self.asleepAwake.awake_p() ))
 
 		## STEP 3: Experimenter greets Maki-ro
 		rospy.sleep(0.75)	## 750 ms
