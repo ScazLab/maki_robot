@@ -253,7 +253,7 @@ def requestFeedback(feedbackString):
 			except ValueError as _e4_1:
 				rospy.logerr("ValueError: Unable to write serial output: " + str(_e4_1) )
 
-			rospy.logerr("requestFeedback: _bytes_written=" + str(_bytes_written))
+			rospy.logdebug("_bytes_written=" + str(_bytes_written))
 		else:
 			rospy.logwarn( "SIM = " + str(SIM) + "; nowhere to request feedback " + str(feedbackString) )
 			SIM_feedback_type = _feedback_type
