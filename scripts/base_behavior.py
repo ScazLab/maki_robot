@@ -318,11 +318,14 @@ class baseBehavior(object):
 		self.count_movements = self.count_movements +1
 
 		_stall_count = 0
+		_loop_count = 0
 		_old_makiPP = self.makiPP
 		_start_time = rospy.get_time()
 		### REPEAT SENDING THE COMMAND
 		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=False )
 		while not rospy.is_shutdown():
+			_loop_count += 1
+
 			## There is an implicit sleep in requestFeedback of 100ms (default)
 			baseBehavior.requestFeedback( self, SC_GET_PP ) 
 
@@ -369,9 +372,14 @@ class baseBehavior(object):
 			if _count_moving_flags == 0:	break
 
 			if (_old_makiPP == self.makiPP):
-				_stall_count = _stall_count + 1
+				_stall_count += 1
 				rospy.logdebug("... _stall_count = " + str(_stall_count) )
 				baseBehavior.requestFeedback( self, SC_GET_PP ) 
+				#baseBehavior.requestFeedback( self, SC_GET_PP, time_ms=250 ) 
+## KATE
+				if _stall_count != _loop_count:
+					rospy.loginfo("potential STALL RECOVERY?? _loop_count=" + str(_loop_count) + ", _stall_count=" + str(_stall_count))
+
 			if (_stall_count == 10):	
 				#rospy.logerr("STALLED!!!")
 				raise rospy.exceptions.ROSException("STALLED!!!! self.makiPP hasn't changed... is the motor at its limit?")
@@ -425,7 +433,7 @@ class headPanBaseBehavior(baseBehavior):
 
 			## update commandOut
 			commandOut = self.prefix_epgp + str(_ep_gp) + commandOut	
-			rospy.loginfo("headPanBaseBehavior.pubTo_maki_command(): Update commandOut to: " + str(commandOut))
+			rospy.logdebug("headPanBaseBehavior.pubTo_maki_command(): Update commandOut to: " + str(commandOut))
 		return commandOut
 
 	## Todorovic 2009: "In order to maintain the perceptions of fixed gaze, every 1% shift of
@@ -541,7 +549,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 
 			if not (_previous_pt == _current_pt):
-				rospy.loginfo("monitorMotorTemperature(): -------- Temperature change detected --------")
+				rospy.logdebug("monitorMotorTemperature(): -------- Temperature change detected --------")
 				rospy.logdebug("Previous temp (Celsius): " + str(_previous_pt))
 				rospy.logdebug("Current temp (Celsius): " + str(_current_pt))
 				rospy.logdebug("Change of 2 most recent readings: " + str(_delta_pt))
@@ -795,7 +803,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 	## override base class
 	def monitorMoveToGP( self, gp_cmd, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP, cmd_prop=True ):
-		rospy.loginfo("gp_cmd=" + str(gp_cmd) + ", hp_gp=" + str(hp_gp) + "ht_gp=" + str(ht_gp))
+		#rospy.loginfo("gp_cmd=" + str(gp_cmd) + ", hp_gp=" + str(hp_gp) + ", ht_gp=" + str(ht_gp))
 		## Check to see if goal position is specified for head tilt
 		## get HTGP value
 		_tmp = re.search( self.htgp_regex, gp_cmd )
