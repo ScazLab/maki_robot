@@ -537,6 +537,7 @@ if __name__ == '__main__':
 	_exit_flag = False
 	_auto_feedback_ER_timer_start = rospy.get_time()
 	#print "Start time: " + str(_auto_feedback_ER_timer_start)	## debugging
+	requestFeedback( "FPPZ" )	## 2016-06-09: MAKI should NOT recenter on startup; check pres position
 	_i = 0
 	_n = 0
 	if not SIM:	_n = maki_serial.inWaiting()

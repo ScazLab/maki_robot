@@ -120,7 +120,9 @@ void setup()
    
   commandString = String(" ");    // initalize
 
-  resetMotorPositions();    // loads bioloid pose; previously undefined -- DO NOT REMOVE
+  // 2016-06-09: ktsui: leave the motors in their current pose
+  //  do not automatically recenter in setup
+  //resetMotorPositions();    // loads bioloid pose; previously undefined -- DO NOT REMOVE
   errorCheck_timer = millis();
 
   if (my_verbose_debug)  printServoInfoHeader();
