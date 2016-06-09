@@ -87,7 +87,8 @@ unsigned int baud_rate = 19200;	//9600;    // NOTE: Make sure to set the serial 
 unsigned int interpolation_time = 500; // setup for interpolation from current->next over 1/2 second
 boolean my_verbose_debug = DEBUG;
 unsigned int EC_timer_duration = 30000;  // ms, or 30s
-                                                                            
+boolean DIAGNOSE_SERIAL_READ_BUFFER_OVERFLOW = false;  // default is False
+
 /* ---- DYNAMIC GLOBALS ---- modified programatically ---- */
 /* -------- DO NOT MODIFY -------- */
 String commandString;  // variable length string containing motor commands instead of char[]
@@ -279,6 +280,17 @@ void loop() {
     }
     
     if (break_flag == true) {
+      
+      if (DIAGNOSE_SERIAL_READ_BUFFER_OVERFLOW) {
+        // 2016-06-09: ktsui
+        //  THROW AWAY ANYTHING REMAINING IN INPUT BUFFER
+        //  like old school flush in Arduino v1.0 and prior
+        int tossInput_count = Serial.available();
+        for (int _tI_c=0; _tI_c<tossInput_count; _tI_c++) {
+          char tossInput = (char)Serial.read();    // clear rx buffer one byte at a time
+        }
+      }
+      
       if (my_verbose_debug) {
         // DEBUGGING
         //Serial.println("");
