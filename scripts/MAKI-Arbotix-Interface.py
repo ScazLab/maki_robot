@@ -589,6 +589,19 @@ if __name__ == '__main__':
 	rospy.loginfo( "SUCCESS (2/2): Robot successfully connected.")
 	exp_pub.publish('Robot is ready.')
 
+## KATE
+	## 2016-06-09: Disable HT motor on startup
+	##	safer than waiting for this to be done by a user
+	try:
+		if maki_serial.isOpen:
+			maki_serial.write( "HTTL0Z" )
+			rospy.loginfo( "Disable head tilt motor: DONE" )
+	except serial.serialutil.portNotOpenError as _e_ht_tl:
+		rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e_ht_tl) )
+	except ValueError as _e_ht_tl_1:
+		rospy.logerr( "ValueError: Unable to write serial output: " + str(_e_ht_tl_1) )
+	requestFeedback( "FTLZ" )
+
 	## ------------------------------
 	## END OF INITIALIZATION
 	## ------------------------------
