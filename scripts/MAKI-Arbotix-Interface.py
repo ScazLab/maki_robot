@@ -29,8 +29,9 @@ global BAUD_RATE
 global maki_serial
 global maki_port
 
+DIAGNOSE_SERIAL_OVERFLOW = False	## default is False
 SIM = False				## default is False
-# VERBOSE_DEBUG = True	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
+VERBOSE_DEBUG = False	## default is False, corresponding to log_level=rospy.INFO. True corresponds to log_level=rospy.DEBUG
 LATCH = False			## if LATCH==True, any new subscribers will see the most recent message published
 TTY_PORT = "USB0"		## default port for the MAKI Arbotix-M board
 
@@ -64,7 +65,9 @@ def recvFromArduino():
 	global ALIVE
 	global maki_serial
 	global TERM_CHAR_RECV
-	rospy.logdebug( "BEGIN" )
+
+	## TOO VERBOSE
+	#rospy.logdebug( "BEGIN" )
 
 	if SIM:
 		## shouldn't get here since publishFeedback will generate a SIM feedback message
@@ -81,6 +84,11 @@ def recvFromArduino():
 				_recv_msg += _m_char
 				if _m_char==TERM_CHAR_RECV:
 					_RECEIVING = False
+## KATE
+			elif DIAGNOSE_SERIAL_OVERFLOW:
+				return ''
+			else:
+				pass
 		except ValueError as e1:
 			rospy.logerr( "VALUE ERROR: Serial connection closed while reading: " + str(e1) )
 			_exit_flag = True
@@ -98,7 +106,8 @@ def recvFromArduino():
 	if _recv_msg != '' and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 
-	rospy.logdebug( "END" )
+	## TOO VERBOSE
+	#rospy.logdebug( "END" )
 	return _recv_msg
 
 def sendToMAKI (message): 
@@ -107,7 +116,8 @@ def sendToMAKI (message):
 	global feedback_strings
 	global maki_cmd_template
 
-	rospy.logdebug( "message received:\t" + str(message) )
+	## TOO VERBOSE
+	#rospy.logdebug( "message received:\t" + str(message) )
 
 	try:
 		if not SIM and maki_serial.isOpen:
@@ -130,11 +140,11 @@ def sendToMAKI (message):
 			try:
 				if maki_serial.isOpen:
 					maki_serial.write(resetSpeeds)
-					rospy.logdebug( "speeds reset DONE" )
+					rospy.loginfo( "speeds reset DONE: " + str(resetSpeeds) )
 
 					rospy.logdebug( "resetting positions: " + str(resetPositions) )
 					maki_serial.write(resetPositions)
-					rospy.logdebug( "positions reset DONE" )
+					rospy.loginfo( "positions reset DONE: " + str(resetPositions) )
 			except serial.serialutil.portNotOpenError as _e2:
 				rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e2) )
 			except ValueError as _e2_1:
@@ -155,7 +165,7 @@ def sendToMAKI (message):
 					if maki_serial.isOpen:
 						rospy.logdebug( "sending command to Arbotix-M over serial: " + str(message.data) )
 						_bytes_written = maki_serial.write(message.data)
-						rospy.logdebug( "command sent... _bytes_written=" + str(_bytes_written) )
+						rospy.loginfo( str(message.data) + " : command sent to Arbotix-M over serial... _bytes_written=" + str(_bytes_written) )
 				except serial.serialutil.portNotOpenError as _e3:
 					rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e3) )
 				except ValueError as _e3_1:
@@ -240,7 +250,8 @@ def requestFeedback(feedbackString):
 	global SIM, SIM_feedback_type
 	global maki_serial
 
-	rospy.logdebug( "About to request feedback; feedbackString=" + str(feedbackString) )
+	rospy.loginfo( "About to request feedback; feedbackString=" + str(feedbackString) )
+
 	_bytes_written = 0
 	_tmp = feedback_req_template.search(feedbackString)
 	## Yes, feedbackString has the expected format
@@ -280,6 +291,13 @@ def publishFeedback():
 		else:
 			return
 
+## KATE
+	if (DIAGNOSE_SERIAL_OVERFLOW and
+		(_recv_msg == None) or (_recv_msg == '')):
+		## TOO VERBOSE
+		#rospy.logdebug("nothing read from serial")
+		return
+
 	_tmp = feedback_resp_template.search(_recv_msg)
 	if _tmp != None:
 		_prefix = _tmp.group(1)
@@ -287,7 +305,7 @@ def publishFeedback():
 		rospy.logdebug( "Validated: prefix='" + str(_prefix) + "' and feedback_values='" + str(_feedback_values) + "'" )
 		if feedback_pub_dict.has_key(_prefix):
 			feedback_pub_dict[_prefix].publish(_recv_msg)
-			rospy.logdebug( "Published '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
+			rospy.loginfo( "Published '" + str(_recv_msg) + "' on rostopic " + str(feedback_topic_name_dict[_prefix]) ) 
 		
 			## reset after publishing to appropriate rostopic
 			if SIM:	SIM_feedback_type = None
@@ -464,10 +482,11 @@ if __name__ == '__main__':
 	## STEP 2: ROS SETUP
 	# Initialize ROS node
 	# see http://wiki.ros.org/rospy/Overview/Logging
-	# if VERBOSE_DEBUG:
-	# 	rospy.init_node('maki_arbotix_interface', log_level=rospy.DEBUG)
-	# else:
-	rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
+	if VERBOSE_DEBUG:
+		rospy.init_node('maki_arbotix_interface', log_level=rospy.DEBUG)
+	else:
+		rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
+	#rospy.init_node('maki_arbotix_interface')	## defaults to log_level=rospy.INFO
 	# Register shutdown hook
 	rospy.on_shutdown(makiExit)
 	# Setup regular expression templates for parsing feedback messages and ROS messages from maki_command rostopic
@@ -495,7 +514,11 @@ if __name__ == '__main__':
 	#	rospy.loginfo( str(maki_serial) )
 	#except serial.serialutil.SerialException as e0:
 	#	rospy.logerr( str(e0) )
-	openMAKISerialPort()
+## KATE
+	if DIAGNOSE_SERIAL_OVERFLOW:
+		openMAKISerialPort( timeout=1 )
+	else:
+		openMAKISerialPort()
 
 	## STEP 3B: ENSURE SERIAL COMMUNICATION WITH THE ROBOT
 	if maki_serial != None and maki_serial.isOpen():
