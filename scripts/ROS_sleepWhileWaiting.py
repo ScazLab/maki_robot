@@ -70,7 +70,7 @@ class ROS_sleepWhileWaiting_withInterrupt:
 		## ---- PREP, ERROR CHECKING, and ADJUSTMENT ----
 		## exit if sleep_time = 0
 		if (sleep_time == 0):
-			rospy.logerr( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
+			rospy.logdebug( "DONE: sleepWhileWaiting for " + str(sleep_time) + " seconds" )
 			return
 
 		## auto-adjust increment value
@@ -78,13 +78,13 @@ class ROS_sleepWhileWaiting_withInterrupt:
 		_adjust_start_time = rospy.get_time()
 		if (sleep_time < increment):
 			increment = sleep_time
-			rospy.logwarn("sleepWhileWaiting: **** sleep_time is less than increment; increment adjusted from " + str(_orig_increment) + " seconds to " + str(increment))
+			rospy.logdebug("sleepWhileWaiting: **** sleep_time is less than increment; increment adjusted from " + str(_orig_increment) + " seconds to " + str(increment))
 		if end_early:
 			sleep_time = sleep_time - increment
 
 			## exit if sleep_time = 0
 			if (sleep_time == 0):
-				rospy.logerr( "DONE: sleepWhileWaiting for adjusted " + str(sleep_time) + " seconds; end_early=" + str(end_early) )
+				rospy.logdebug( "DONE: sleepWhileWaiting for adjusted " + str(sleep_time) + " seconds; end_early=" + str(end_early) )
 				return
 
 		increment = max(self.step_resolution, increment)
@@ -101,7 +101,7 @@ class ROS_sleepWhileWaiting_withInterrupt:
 				## prevent from going beyond nanosecond resolution
 				if (increment < 2*self.step_resolution):
 					increment = self.step_resolution
-					rospy.logwarn("sleepWhileWaiting: **** ADJUSTMENT CUTOFF: increment auto-adjusted from " + str(_orig_increment) + " seconds to " + str(increment) )
+					rospy.logdebug("sleepWhileWaiting: **** ADJUSTMENT CUTOFF: increment auto-adjusted from " + str(_orig_increment) + " seconds to " + str(increment) )
 					break	## exit while loop
 			else:
 				if (increment != _orig_increment):
@@ -114,7 +114,7 @@ class ROS_sleepWhileWaiting_withInterrupt:
 
 		## exit if sleep_time <= 0
 		if (sleep_time <= 0):
-			rospy.logerr( "DONE: sleepWhileWaiting for adjusted " + str(sleep_time) + " seconds" )
+			rospy.logdebug( "DONE: sleepWhileWaiting for adjusted " + str(sleep_time) + " seconds" )
 			return
 
 
