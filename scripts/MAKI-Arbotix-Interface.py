@@ -524,7 +524,7 @@ if __name__ == '__main__':
 	if maki_serial != None and maki_serial.isOpen():
 		maki_serial.flushInput();	# clear the input buffer
 		maki_serial.flushOutput();	# clear the output buffer
-		rospy.loginfo( "SUCCESS: Opened serial connection to MAKI on " + str(maki_port) ) 
+		rospy.loginfo( "SUCCESS (1/2): Opened serial connection to MAKI on " + str(maki_port) + "\t...Waiting on initial transmission from Arbotix-M board" ) 
 	else:
 		if not SIM:
 			rospy.logerr( "Unable to connect to MAKI on " + str(maki_port) + ". Exiting..." )
@@ -584,7 +584,9 @@ if __name__ == '__main__':
 	## STEP 4: INIT ROBOT STATE
 	# Reset MAKI to default position and speed
 	defReset()
-	rospy.loginfo( "SUCCESS: Robot successfully connected.")
+## KATE
+	requestFeedback( "FPPZ" )	## 2016-06-09: MAKI should NOT recenter on startup; check pres position
+	rospy.loginfo( "SUCCESS (2/2): Robot successfully connected.")
 	exp_pub.publish('Robot is ready.')
 
 	## ------------------------------
