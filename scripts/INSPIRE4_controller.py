@@ -868,9 +868,14 @@ class INSPIRE4Controller( object ):
 		#exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
 
-	## NOTE: head tilt motor will be disabled after reset
+	## NOTE: head tilt motor will be disabled after reset movement
 	def controllerReset( self ):
 		_htBB = headTiltBaseBehavior( True, self.ros_pub )
+
+		## check if we are already in neutral before publishing the goal positions
+		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			return
+
 		try:
 			## THIS IS CUSTOM RESET
 			##      reset goal speeds and goal positions
@@ -878,24 +883,21 @@ class INSPIRE4Controller( object ):
 			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
 			_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
 
-		## TODO: CHECK TO SEE IF MOTORS ARRIVED IN THE NEUTRAL POSITION
-		##	IF YES, DON'T PRINT ERROR
-		##	IF NO, CHANGE PRINT TO WARN
 		except rospy.exceptions.ROSException as _e:
-			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position...STALLED??..." + str(_e))
-			_htBB.pubTo_maki_command( "reset" )
-			rospy.sleep(1.0)
+			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+				rospy.logwarn("controllerReset(): WARN: Could not complete monitoring move to neutral position...STALLED??...")
+				rospy.logdebug("controllerReset(): ERROR: " + str(_e))
+				_htBB.pubTo_maki_command( "reset" )
+				rospy.sleep(1.0)
 			_htBB.pubTo_maki_command( "HTTL0Z" )
+
 		except TypeError as _e1:
-			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position..." + str(_e1))
-			_htBB.pubTo_maki_command( "reset" )
-			rospy.sleep(1.0)
+			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
+				_htBB.pubTo_maki_command( "reset" )
+				rospy.sleep(1.0)
 			_htBB.pubTo_maki_command( "HTTL0Z" )
 		return
-
-	## TODO: CHECK TO SEE IF PRESENT MOTOR POSE IS NEUTRAL
-	def neutralPose_p( self ):
-		return False
 
 ## ------------------------------
 def signal_handler(signal, frame):

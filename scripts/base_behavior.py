@@ -391,8 +391,62 @@ class baseBehavior(object):
 		rospy.logdebug("**** DONE! movement took " + str(_duration) + " seconds")
 		return
 
-	def verifyPose( self, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP ):
+	## Funtion:	Verifes if the current pose matches the specified pose (within tolerance delta_pp)
+	## Returns:	True or False
+	def verifyPose( self, hp=None, ht=None, ll=None, lr=None, ep=None, et=None, delta_pp=DELTA_PP ):
 		_ret = False
+
+		_request_verify_flag = dict( zip(F_VAL_SEQ, [None]*len(F_VAL_SEQ)) )
+		_count_request_verify_flags = 0
+		if (hp != None) and (hp != INVALID_INT):	
+			_request_verify_flag["HP"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+		if (ht != None) and (ht != INVALID_INT):	
+			_request_verify_flag["HT"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+		if (ll != None) and (llp != INVALID_INT):	
+			_request_verify_flag["LL"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+		if (lr != None) and (lr != INVALID_INT):	
+			_request_verify_flag["LR"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+		if (ep != None) and (ep != INVALID_INT):	
+			_request_verify_flag["EP"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+		if (et != None) and (et != INVALID_INT):	
+			_request_verify_flag["ET"] = True
+			_count_request_verify_flags = _count_request_verify_flags +1
+
+		if _count_request_verify_flags == 0:	
+			rospy.logdebug("verifyPose(): INVALID goal poses")
+			return _ret	#False
+
+		## request feedback of present positions
+		baseBehavior.requestFeedback( self, SC_GET_PP )
+		_makiPP = self.makiPP
+
+		## build dictionary to verify
+		_verify_dict = {}
+		_verify_dict["HP"] = hp
+		_verify_dict["HT"] = ht
+		_verify_dict["EP"] = ep
+		_verify_dict["ET"] = et
+		_verify_dict["LL"] = ll
+		_verify_dict["LR"] = lr
+
+		for _motor in F_VAL_SEQ:
+			if _request_verify_flag[_motor]:
+				if (abs(_makiPP[_motor] - _verify_dict[_motor]) < delta_pp):
+					rospy.logdebug( _motor + " present position matches goal position")
+					_request_verify_flag[_motor] = False
+					_count_request_verify_flags = _count_request_verify_flags -1
+				else:
+					rospy.logdebug( _motor + " present position DOES NOT matches goal position")
+					_ret = False
+					#break	## break the for loop; no sense in performing unnecessary calculations
+		#end	for _motor in F_VAL_SEQ:
+
+		if _count_request_verify_flags == 0:	_ret = True
 
 		return _ret
 
