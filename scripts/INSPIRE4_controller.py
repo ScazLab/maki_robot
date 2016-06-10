@@ -630,6 +630,15 @@ class INSPIRE4Controller( object ):
 
 		return
 
+	## TO FIX: ENSURE THAT CANNOT BACKTRACK STATE
+	##	e.g., from state STIMULI, cannot transition to state SYNC
+	##
+	## TO FIX: ENSURE THAT INVALID STATE (None) CANNOT
+	##	TRANSITION TO ANY OTHER; only as intended to state READY	
+	##
+	## TO FIX: HANDLE QUEUED MESSAGES. VALID STATE TRANSITIONS
+	##	ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
+	##	BEHAVIORS, e.g., watchStimuli and engagementGame
 	def parse_pilot_command( self, msg ):
 		rospy.logdebug("parse_pilot_command(): BEGIN")
 		rospy.logdebug("received: " + str(msg))
@@ -868,6 +877,10 @@ class INSPIRE4Controller( object ):
 			##      and monitor moving into goal positions
 			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
 			_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+
+		## TODO: CHECK TO SEE IF MOTORS ARRIVED IN THE NEUTRAL POSITION
+		##	IF YES, DON'T PRINT ERROR
+		##	IF NO, CHANGE PRINT TO WARN
 		except rospy.exceptions.ROSException as _e:
 			rospy.logerr("controllerExit(): ERROR: Could not complete monitoring move to neutral position...STALLED??..." + str(_e))
 			_htBB.pubTo_maki_command( "reset" )
@@ -880,6 +893,9 @@ class INSPIRE4Controller( object ):
 			_htBB.pubTo_maki_command( "HTTL0Z" )
 		return
 
+	## TODO: CHECK TO SEE IF PRESENT MOTOR POSE IS NEUTRAL
+	def neutralPose_p( self ):
+		return False
 
 ## ------------------------------
 def signal_handler(signal, frame):
