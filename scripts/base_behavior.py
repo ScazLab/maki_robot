@@ -404,7 +404,7 @@ class baseBehavior(object):
 		if (ht != None) and (ht != INVALID_INT):	
 			_request_verify_flag["HT"] = True
 			_count_request_verify_flags = _count_request_verify_flags +1
-		if (ll != None) and (llp != INVALID_INT):	
+		if (ll != None) and (ll != INVALID_INT):	
 			_request_verify_flag["LL"] = True
 			_count_request_verify_flags = _count_request_verify_flags +1
 		if (lr != None) and (lr != INVALID_INT):	
