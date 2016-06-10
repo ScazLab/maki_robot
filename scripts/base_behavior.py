@@ -315,7 +315,9 @@ class baseBehavior(object):
 
 		if _count_moving_flags == 0:	return
 
-		self.count_movements = self.count_movements +1
+		## NOTE: COMMENTED OUT... Let the behaviors themselves increment
+		##	Otherwise, duplicative increment is likely
+		#self.count_movements = self.count_movements +1
 
 		_stall_count = 0
 		_loop_count = 0
@@ -389,6 +391,10 @@ class baseBehavior(object):
 		rospy.logdebug("**** DONE! movement took " + str(_duration) + " seconds")
 		return
 
+	def verifyPose( self, hp_gp=None, ht_gp=None, ll_gp=None, lr_gp=None, ep_gp=None, et_gp=None, delta_pp=DELTA_PP ):
+		_ret = False
+
+		return _ret
 
 ########################
 ## All behavior macros involving head pan (HP) will use this as base class
