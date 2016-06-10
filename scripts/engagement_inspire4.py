@@ -150,7 +150,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		## TODO: May have to adjust _wait_attend value
 		_wait_attend = 5	## wait 500 ms after arriving in startle position
-		self.count_movements = 0
+		_round_count = 0
+		_round_display_count = 1
 		_initial_startle = True
 		#_duration_to_startle = float( self.startle_action_duration ) 
 		_start_time = rospy.get_time()
@@ -209,7 +210,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					_initial_startle = False
 
 				## did self.repetitions rounds of infant engagement behavior max?
-				elif  (self.count_movements >= repetitions):
+				elif (_round_count >= repetitions):
 					rospy.logwarn(">>>>>>>>> runGame: The End... " + str(repetitions) + " IS THE MAXIMUM GAME ROUNDS PLAYED IN A SINGLE GAME!!... We could play again later...")
 					self.exp_pub.publish('[Engagement game] End of game play!! the maximum game round (6) is reached.')
 					self.game_state = engagementStartleGame.STATE_STARTLE_RELAX #9
@@ -219,8 +220,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					break	## jump out of the while loop
 
 				else:
-					rospy.logdebug("runGame(): STATE 1: Now playing ROUND #" + str(self.count_movements+1) + " of " + str(repetitions))
-					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(self.count_movements+1) + ' of ' + str(repetitions))
+					rospy.logdebug("runGame(): STATE 1: Now playing ROUND #" + str(_round_display_count) + " of " + str(repetitions))
+					self.exp_pub.publish('[Engagement game] Now playing ROUND #' + str(_round_display_count) + ' of ' + str(repetitions))
 					_default_cmd_prop_duration = 100
 					_c_duration = _wait_attend * _default_cmd_prop_duration
 					for _c in range(_wait_attend):	## 0, 1, 2, 3, 4
@@ -296,9 +297,13 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			if (self.game_state == engagementStartleGame.STATE_UNHIDE_INTO_STARTLE): #state 5
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: BEGIN")
 				rospy.logwarn("runGame(): STATE 5: Ready or not, here goes... Destination: Bugged Out Face!!")
-				self.count_movements = self.count_movements +1
+
+				rospy.logdebug("runGame(): DEBUGGING: BEFORE: _round_count=" + str(_round_count) + "; _round_display_count=" + str(_round_display_count))
+				_round_count += 1
+				_round_display_count += 1
+				rospy.logdebug("runGame(): DEBUGGING: AFTER: _round_count=" + str(_round_count) + "; _round_display_count=" + str(_round_display_count))
 				## FIXED: Only do full unhideIntoStartle while less than the number of repetitions
-				if (self.count_movements < repetitions):
+				if (_round_count < repetitions):
 					engagementStartleGame.unhideIntoStartle( self )
 				else:
 					## Hit MAX reptitions... only unhide. DO NOT startle again...
@@ -306,7 +311,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				self.game_state = engagementStartleGame.STATE_WAIT_FOR_INFANT
 				rospy.logwarn("runGame(): STATE 5: Maki-ro popped up so FAST... hopefully without whiplash!!!")
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: END... Changing back to STATE 1")
-				rospy.logerr("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(self.count_movements) + " >>>>>>>>>>>>>>>>>>>>")
+				rospy.logerr("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(_round_count) + " >>>>>>>>>>>>>>>>>>>>")
 				continue	## start fresh at the top of the while loop
 			#end	if (self.game_state == 5):
 
@@ -314,10 +319,10 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		#end	while self.ALIVE and not rospy.is_shutdown():
 
 		_duration = rospy.get_time() - _start_time
-		rospy.loginfo( "NUMBER OF STARTLE/HIDE ROUNDS: " + str(self.count_movements) )
+		rospy.loginfo( "NUMBER OF STARTLE/HIDE ROUNDS: " + str(_round_count) )
 		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
 
-		rospy.logwarn("runGame(): Main game complete after playing " + str(self.count_movements) + " rounds... but wait!! There's more... Cleanup from STATE " + str(self.game_state) + "...")
+		rospy.logwarn("runGame(): Main game complete after playing " + str(_round_count) + " rounds... but wait!! There's more... Cleanup from STATE " + str(self.game_state) + "...")
 		engagementStartleGame.__is_game_exit = True
 		engagementStartleGame.__is_game_running = False		## for good measure
 		rospy.logdebug("runGame: END")
