@@ -46,42 +46,34 @@ class INSPIRE4Controller( object ):
 
 	def __init__(self, verbose_debug, ros_pub):
 
-		self.ALIVE = True
 
-		INSPIRE4Controller.resetInteractionCount( self )
+		## primarily will publish to /maki_macro
+		if ros_pub == None:
+			self.initROS( self )
+		else:
+			self.ros_pub = ros_pub		## can we pass a ros publisher??? Apparently so!
+		INSPIRE4Controller.initROSPub( self )
+
+		## publisher for curated message to the experimenter 
+		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
+		## NOTE: seems that we can't publish from within __init__
+		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... Please wait.")
+
+		## secondarily may publish to /maki_internal_monologue when fancied
+		self.ros_pub_MIM = rospy.Publisher( "maki_internal_monologues", String, queue_size = 10)
+		self.MIM_count = 0
+
+		self.ALIVE = False
+		self.__is_robot_ready = False
 		self.__is_running_stimuli=False
-
-		self.data_logger_status = "unknown"
-		self.start_logger_timer = None
-		self.stop_logger_timer = None
+		INSPIRE4Controller.resetInteractionCount( self )
 
 		self.state = None
 		self.previous_state = None
 
 		self.durationHeadTurn = 1.0
 		self.durationWatchStimuli = 8.0
-
 		self.blocking_gui = True
-
-		## primarily will publish to /maki_macro
-		if ros_pub == None:
-			self.initROS( self )
-			#INSPIRE4Controller.initROS( self )
-		else:
-			self.ros_pub = ros_pub		## can we pass a ros publisher??? Apparently so!
-		INSPIRE4Controller.initROSPub( self )
-		#INSPIRE4Controller.initROSSub( self )
-
-		## secondarily may publish to /maki_internal_monologue when fancied
-		self.ros_pub_MIM = rospy.Publisher( "maki_internal_monologues", String, queue_size = 10)
-		self.MIM_count = 0
-
-		## publisher for the experimenter 
-		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
-
-		## always begin in neutral position
-		## NOTE: head tilt motor will be disabled after reset
-		INSPIRE4Controller.controllerReset( self )
 
 		## instead of passing messages, instantiate the behaviors
 		self.asleepAwake = asleepAwake( verbose_debug, self.ros_pub )
@@ -90,6 +82,11 @@ class INSPIRE4Controller( object ):
 		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
+
+		self.data_logger_status = "unknown"
+		self.start_logger_timer = None
+		self.stop_logger_timer = None
+
 		return
 
 	#def __del__(self):
@@ -99,6 +96,15 @@ class INSPIRE4Controller( object ):
 
 	def resetInteractionCount( self ):
 		self.interaction_count = 0
+		return
+
+	def start( self ):
+		## always begin in neutral position
+		## NOTE: head tilt motor will be disabled after reset
+		INSPIRE4Controller.controllerReset( self )
+		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
+		self.ALIVE = True
+		return
 
 	#####################
 	## Initialize ROS node 
@@ -630,6 +636,8 @@ class INSPIRE4Controller( object ):
 
 		return
 
+
+
 	## TO FIX: ENSURE THAT CANNOT BACKTRACK STATE
 	##	e.g., from state STIMULI, cannot transition to state SYNC
 	##
@@ -871,6 +879,7 @@ class INSPIRE4Controller( object ):
 	## NOTE: head tilt motor will be disabled after reset movement
 	def controllerReset( self ):
 		_htBB = headTiltBaseBehavior( True, self.ros_pub )
+		_htBB.start()
 
 		## check if we are already in neutral before publishing the goal positions
 		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
@@ -913,18 +922,23 @@ if __name__ == '__main__':
 
 	global controller 
 	controller = INSPIRE4Controller( True, None )
+	rospy.logdebug("-------- controller.__init__() DONE -----------")
 
 	# allow closing the program using CTRL+C
 	#signal.signal(signal.SIGINT, signal_handler)
 	# Register shutdown hook
 	rospy.on_shutdown(controller.controllerExit)
 
-	rospy.Subscriber( "/inspire_four_pilot_command", String, controller.parse_pilot_command )
-	rospy.logdebug( "now subscribed to /inspire_four_pilot_command" )
+	rospy.Subscriber( "inspire_four_pilot_command", String, controller.parse_pilot_command )
+	rospy.logdebug( "now subscribed to inspire_four_pilot_command" )
 
-	rospy.Subscriber( "/data_logger/status", String, controller.updateDataLoggerStatus_callback )
-	rospy.logdebug( "now subscribed to /data_logger/status" )
+	rospy.Subscriber( "data_logger/status", String, controller.updateDataLoggerStatus_callback )
+	rospy.logdebug( "now subscribed to data_logger/status" )
 
+	controller.start()
+	rospy.logdebug("-------- controller.start() DONE -----------")
+
+	rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
 	rospy.spin()   ## keeps python from exiting until this node is stopped
 
 	print "__main__: END"
