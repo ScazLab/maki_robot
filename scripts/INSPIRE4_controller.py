@@ -467,7 +467,7 @@ class INSPIRE4Controller( object ):
 	## "Friend" actor will adapt to Maki-ro's skit
 	def runFamiliarizationSkit( self ):
 		rospy.logdebug("runFamiliarizationSkit(): BEGIN")
-		self.exp_pub.publish('familiarization skit: BEGIN')
+		self.exp_pub.publish('familiarization skit: BEGIN... Please wait.')
 
 		_verbose = True
 		_thought = ""	## start off not thinking of anything, beginner's mind
