@@ -456,8 +456,10 @@ class INSPIRE4Controller( object ):
 
 			if self.data_logger_status == "started":
 				rospy.loginfo( "Toggle rosbag recording to ON" )
+				self.exp_pub.publish( "Toggle rosbag recording to ON" )
 			else:
 				rospy.loginfo( "Toggle rosbag recording to OFF" )
+				self.exp_pub.publish( "Toggle rosbag recording to OFF" )
 
 		rospy.logdebug( "updateDataLoggerStatus_callback(): END" )
 		return
