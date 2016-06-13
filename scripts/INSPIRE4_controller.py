@@ -1069,6 +1069,7 @@ class INSPIRE4Controller( object ):
 
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
+		INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
 		if self.ALIVE:
 			#self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
