@@ -41,7 +41,8 @@ class INSPIRE4Controller( object ):
 
 	NUMBER_OF_INTERACTIONS = 6
 
-	state_dict = {RESET_EXP: 'reset experiment', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
+	#state_dict = {RESET_EXP: 'reset experiment', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
+	state_dict = {RESET_EXP: 'RESET EXPERIMENT', READY: 'READY', SYNC: 'SYNC', INTRO: 'INTRO', ENGAGEMENT: 'ENGAGEMENT', STIMULI: 'STIMULI', END: 'THE END', INVALID_TRIAL: 'INVALID TRIAL'}
 
 
 	def __init__(self, verbose_debug, ros_pub):
@@ -697,36 +698,36 @@ class INSPIRE4Controller( object ):
 		if ((state == INSPIRE4Controller.READY) or
 			(state == INSPIRE4Controller.RESET_EXP) or
 			(state == INSPIRE4Controller.END)):
-			rospy.loginfo("[usage] You can transition from any state to this state " + self.state_dict[state] + " anytime")
-			self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state " + self.state_dict[state] + " anytime")
+			rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+			self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
 
 		if (state == INSPIRE4Controller.READY): 
-			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
-			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
+			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
 		
 		if (state == INSPIRE4Controller.SYNC):
 			if self.__is_sync_done:	
-				rospy.loginfo("[usage] From state " + self.state_dict[self.state] + " if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
-				self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + " if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+				rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "' if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+				self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "' if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
 			else:
-				rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
-				self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
+				rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
+				self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
 
 		if (state == INSPIRE4Controller.INTRO):
-			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
-			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press button 'Run Engagement Game'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press button 'Run Engagement Game'")
 
 		if (state == INSPIRE4Controller.ENGAGEMENT):
-			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
-			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
+			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
 
 		if (state == INSPIRE4Controller.STIMULI):
-			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
-			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
+			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
 
 		if (state == INSPIRE4Controller.INVALID_TRIAL):
-			rospy.loginfo( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
-			self.exp_pub.publish("[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+			rospy.loginfo( prefix_msg + "[usage] From state '" + self.state_dict[self.state] + "', you can choose to press button 'Run Engagement Game'")
+			self.exp_pub.publish("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press button 'Run Engagement Game'")
 
 		return
 
@@ -1057,7 +1058,7 @@ class INSPIRE4Controller( object ):
 				rospy.logdebug("Update self.state from [None] to [" + self.state_dict[self.state] + "]")
 			else:
 				rospy.logdebug("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
-			INSPIRE4Controller.transitionUsage( self, self.state , "NEW state\t")
+			INSPIRE4Controller.transitionUsage( self, self.state , "NEW state\t\t")
 
 		rospy.logdebug("parse_pilot_command(): END")
 		return
