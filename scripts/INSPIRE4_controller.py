@@ -1076,8 +1076,8 @@ class INSPIRE4Controller( object ):
 
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
-		rospy.logdebug( "controllerExit: EXIT INSPIRE4 EXPERIMENT..." )
-		self.exp_pub.publish('----- EXIT INSPIRE4 EXPERIMENT -----')
+		rospy.logdebug( "controllerExit: SHUTTING DOWN INSPIRE4 EXPERIMENT..." )
+		self.exp_pub.publish('----- SHUTTING DOWN INSPIRE4 EXPERIMENT -----')
 		rospy.logdebug("controllerExit(): END")
 		#exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
