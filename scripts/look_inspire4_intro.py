@@ -11,6 +11,7 @@ import random
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from base_behavior import * 	## classes baseBehavior, headTiltBaseBehavior, headPanBaseBehavior
+from lookAt import *
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
@@ -41,7 +42,8 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ##	- Experimenter removes ball and leaves
 ##	- Maki-ro looks at infant, as if studying infant's face
 ########################
-class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
+#class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
+class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 	## variables private to this class
 	## all instances of this class share the same value
 	__is_intro_running = None
@@ -72,7 +74,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	def __init__(self, verbose_debug, ros_pub):
 		## call base class' __init__
 		eyelidHeadTiltBaseBehavior.__init__( self, verbose_debug, ros_pub )
-		headPanBaseBehavior.__init__( self, verbose_debug, self.ros_pub )
+		#headPanBaseBehavior.__init__( self, verbose_debug, self.ros_pub )
+		lookAt.__init__( self, verbose_debug, self.ros_pub )
 		## add anything else needed by an instance of this subclass
 		self.DC_helper = dynamixelConversions()
 
@@ -169,8 +172,9 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	## override base class
 	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.5):
 		rospy.logdebug("lookINSPIRE4Intro.pubTo_maki_command(): BEGIN")
-		## call base class' pubTo_maki_command
-		headPanBaseBehavior.pubTo_maki_command( self, commandOut, fixed_gaze=fixed_gaze, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+		### call base class' pubTo_maki_command
+		#headPanBaseBehavior.pubTo_maki_command( self, commandOut, fixed_gaze=fixed_gaze, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+		lookAt.pubTo_maki_command( self, commandOut, fixed_gaze=fixed_gaze, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
 		rospy.logdebug("lookINSPIRE4Intro.pubTo_maki_command(): END")
 		return
 
@@ -286,6 +290,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	##		intro lookAtExperimenter
 	##
 	###########################
+	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	def macroLookAtExperimenter( self ):
 		rospy.logdebug("macrolookAtExperimenter(): BEGIN")
 
@@ -302,7 +307,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			else:
 				rospy.loginfo("-----------------")
 
-				lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
+				lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromInfant_toExperimenter )
 				#baseBehavior.pubTo_maki_command( self, str(self.look_at) )
 				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
@@ -321,6 +326,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	##		intro lookAtBallLocationRight upper
 	##
 	###########################
+	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	#def macroLookAtBallLocationRight( self, lower=False, upper=False, shift=True ):
 	def macroLookAtBallLocationRight( self, lower=False, upper=False ):
 		rospy.logdebug("macroLookAtBallLocationRight(): BEGIN")
@@ -348,10 +354,10 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
 				## From facing the Friend, Maki-ro looks at UPPER RIGHT first
-				if upper:	lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
+				if upper:	lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
 
 				## Then from facing upper right, Maki-ro looks at LOWER RIGHT
-				if lower:	lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
+				if lower:	lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
 				rospy.loginfo("-----------------")
 
@@ -367,6 +373,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 	##		intro lookAtInfant
 	##
 	###########################
+	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	def macroLookAtInfant( self ):
 		rospy.logdebug("macroAtInfant(): BEGIN")
 
@@ -387,7 +394,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 				## Maki-ro should have been previously looking at the lower right
 				##	calibration point
-				lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
+				lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
 				## TODO: Maki-ro doesn't quite return to HT_MIDDLE
 				lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
 
@@ -399,8 +406,10 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		rospy.logdebug("macroLookAtInfant(): END")
 		return
 
+	'''
 	###########################################
 	## This is a work in progress
+	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	def turnToScreen( self, right_screen=True ):
 		rospy.logdebug("turnToScreen(): BEGIN")
 
@@ -558,10 +567,11 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		rospy.logdebug("turnToScreen(): END")
 		return
+	'''
 
 	## TODO: lookAt should shift to new ground state
 	## This is a work in progress
-	def lookAt( self, commandOut, monitor=True, hp_gp=None, ht_gp=None ):
+	def lookAt_jointHeadAndEyePan( self, commandOut, monitor=True, hp_gp=None, ht_gp=None ):
 		rospy.logdebug("lookAt(): BEGIN")
 
 		if (monitor and
@@ -1299,17 +1309,17 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				lookINSPIRE4Intro.stopStartle( self, disable_ht=True )
 
 		elif msg.data == "intro lookAtExperimenter":
-			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromInfant_toExperimenter )
+			lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromInfant_toExperimenter )
 			#lookINSPIRE4Intro.macroLookAtExperimenter( self )
 
 		elif msg.data == "intro lookAtBallLocationUpperRight":
-			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
+			lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
 
 		elif msg.data == "intro lookAtBallLocationLowerRight":
-			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
+			lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
 		elif msg.data == "intro lookAtInfant":
-			lookINSPIRE4Intro.lookAt( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
+			lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
 			## TODO: Maki-ro doesn't quite return to HT_MIDDLE
 			lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
 
