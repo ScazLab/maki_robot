@@ -68,7 +68,7 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
 
 	## NOTE: Currently any head tilt command is addressed like head pan:
 	##	head tilt single movement from present position to goal postion
-	def shiftGazeVelocity( self, hp_gp=None, ep_gp_shift=None, ep_gp_fixed=None, ht_gp=None, hp_pp=None, ep_pp=None, ht_pp=None, duration_s=1.0 ):
+	def shiftGazeVelocity( self, hp_gp=None, ep_gp_shift=None, ep_gp_fixed=None, ht_gp=None, hp_pp=None, ep_pp=None, ht_pp=None, duration_s=1.0, padding=0.1 ):
 		rospy.loginfo("shiftGazeVelocity(): INITIAL INPUT: hp_gp=" + str(hp_gp) + ", ep_gp_shift=" + str(ep_gp_shift) + ", ep_gp_fixed=" + str(ep_gp_fixed) + ", ht_gp=" + str(ht_gp) + ", hp_pp=" + str(hp_pp) + ", ep_pp=" + str(ep_pp) + ", ht_pp=" + str(ht_pp) + ", duration_s=" + str(duration_s))
 
 		## check validity of inputs
@@ -136,14 +136,14 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
 			_hp_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_hp_pp, duration_s )
 		else:
 			_hp_gp = self.HP_GS_DEFAULT = 15
-		rospy.logerr( "STEP 5A: _delta_hp_pp = " + str(_delta_hp_pp) + "; _hp_gs = " + str(_hp_gs))
+		rospy.loginfo( "STEP 5A: _delta_hp_pp = " + str(_delta_hp_pp) + "; _hp_gs = " + str(_hp_gs))
 
 		## STEP 5B: calculate HT goal speed
 		if (_delta_ht_pp > 0):
 			_ht_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_ht_pp, duration_s )
 		else:
 			_ht_gs = self.HT_GS_DEFAULT = 51
-		rospy.logerr( "STEP 5B: _delta_ht_pp = " + str(_delta_ht_pp) + "; _ht_gs = " + str(_ht_gs))
+		rospy.loginfo( "STEP 5B: _delta_ht_pp = " + str(_delta_ht_pp) + "; _ht_gs = " + str(_ht_gs))
 
 		## STEP 6: calculate EP goal speed for counter rotation
 		##	2*_ep_gs is a good heuristic for shift movement
@@ -180,17 +180,24 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
 		lookAt.pubTo_maki_command( self, _pub_cmd, fixed_gaze=False )
 
 		## wait until counter duration
-		#_sleep_duration = _counter_duration - 0.1 	## compensate for the command propogation delay
+		#_sleep_duration = _counter_duration - 0.1 	## compensate for the command propogation delay		## doesn't make EP to far side
 ## KATE
-		_sleep_duration = _counter_duration	## need to sleep for full value of _counter_duration
+		#_sleep_duration = _counter_duration	## need to sleep for full value of _counter_duration	## doesn't stop with head pan
+		#_sleep_duration = _counter_duration - 0.05
+		_sleep_duration = _counter_duration - padding
 		rospy.sleep( _sleep_duration )
 		rospy.loginfo("shiftGazeVelocity(): counter!!! _sleep_duration=" + str(_sleep_duration))
-		lookAt.pubTo_maki_command( self, "EPGS" + str(_ep_gs) + "EPGP" + str(ep_gp_fixed) + TERM_CHAR_SEND, fixed_gaze=False )
+		#lookAt.pubTo_maki_command( self, "EPGS" + str(_ep_gs) + "EPGP" + str(ep_gp_fixed) + TERM_CHAR_SEND, fixed_gaze=False )
+		_pub_cmd = ""
+		_pub_cmd += "EPGS" + str(_ep_gs) + "EPGP" + str(ep_gp_fixed) 
+		_pub_cmd += TERM_CHAR_SEND
+		rospy.loginfo("shiftGazeVelocity(): send counter message: " + str(_pub_cmd))
+		lookAt.pubTo_maki_command( self, _pub_cmd, fixed_gaze=False )
 		## wait until duration_s
 		_sleep_duration = duration_s - _sleep_duration - 0.1 	## compensate for the command propogation delay
 		if (_sleep_duration > 0):	
 			rospy.sleep( _sleep_duration )
-		rospy.loginfo("shiftGazeVelocity(): finish!! _sleep-duration=" + str(_sleep_duration))
+		rospy.loginfo("shiftGazeVelocity(): finish!! _sleep_duration=" + str(_sleep_duration))
 
 		_duration = abs(rospy.get_time() - _start_time)
 		rospy.loginfo( "Duration: Expected = " + str(duration_s) + " seconds; elapsed = " + str(_duration) + " seconds" )
