@@ -96,6 +96,8 @@ class lookINSPIRE4Interaction( lookAt ):
 		self.ht_rand_min = lookINSPIRE4Interaction.HT_LEFT_SCREEN - self.delta_ht
 		self.ht_rand_max = lookINSPIRE4Interaction.HT_LEFT_SCREEN +- self.delta_ht
 
+		self.__use_shift_gaze = False	## CHANGE TO FALSE TO REVERT
+
 		self.ALIVE = True
 		return
 
@@ -152,8 +154,18 @@ class lookINSPIRE4Interaction( lookAt ):
 	## Default is right_screen == True, Maki-ro faces to rightScreen; 
 	##	otherwise if False, Maki-ro faces to leftScreen
 	###########################################
-	## TODO: use lookAt.shiftGazeVelocity()
 	def turnToScreen( self, right_screen=True ):
+		if self.__use_shift_gaze:
+			lookINSPIRE4Interaction.turnToScreen_new( self, right_screen=right_screen )
+		else:
+			lookINSPIRE4Interaction.turnToScreen_old( self, right_screen=right_screen )
+		return
+
+	def turnToScreen_new( self, right_screen=True ):
+		## TODO: use lookAt.shiftGazeVelocity()
+		pass
+
+	def turnToScreen_old( self, right_screen=True ):
 		rospy.logdebug("turnToScreen(): BEGIN")
 
 		if not isinstance(right_screen, bool):
@@ -301,8 +313,18 @@ class lookINSPIRE4Interaction( lookAt ):
 	##		
 	## Maki-ro turns back to facing the infant from previously looking at DIRECTION screen
 	###########################################
-	## TODO: use lookAt.shiftGazeVelocity()
 	def turnToInfant( self ):
+		if self.__use_shift_gaze:
+			lookINSPIRE4Interaction.turnToInfant_new( self )
+		else:
+			lookINSPIRE4Interaction.turnToInfant_old( self )
+		return
+
+	def turnToInfant_new( self ):
+		## TODO: use lookAt.shiftGazeVelocity()
+		pass
+
+	def turnToInfant_old( self ):
 		rospy.logdebug("turnToInfant(): BEGIN")
 
 		if (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
