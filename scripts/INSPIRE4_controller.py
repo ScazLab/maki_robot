@@ -30,7 +30,7 @@ from look_inspire4_interactions import *
 class INSPIRE4Controller( object ):
 	## all instances of this class will share the same value
 	## variables private to this class
-	INIT_GUI = 0
+	RESET_EXP = 0
 	READY = 1	
 	SYNC = 2	
 	INTRO = 3
@@ -41,7 +41,7 @@ class INSPIRE4Controller( object ):
 
 	NUMBER_OF_INTERACTIONS = 6
 
-	state_dict = {INIT_GUI: 'init gui', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
+	state_dict = {RESET_EXP: 'reset experiment', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
 
 
 	def __init__(self, verbose_debug, ros_pub):
@@ -87,6 +87,8 @@ class INSPIRE4Controller( object ):
 		self.start_logger_timer = None
 		self.stop_logger_timer = None
 
+		self.start_watch_timer = None
+		self.stop_watch_timer = None
 		return
 
 	#def __del__(self):
@@ -98,12 +100,40 @@ class INSPIRE4Controller( object ):
 		self.interaction_count = 0
 		return
 
-	def start( self ):
+	def start( self, neutral_head=True ):
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
-		INSPIRE4Controller.controllerReset( self )
+		if neutral_head:	INSPIRE4Controller.controllerReset( self )
 		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
+
+		self.__sync_count = 0
+		self.__is_sync_done = False
+		INSPIRE4Controller.resetInteractionCount( self )
+		self.state = None
+		self.previous_state = None
+		INSPIRE4Controller.cancelWatchStimuliCallbacks( self )
+
 		self.ALIVE = True
+		return
+
+	def stop( self, neutral_head=True, disable_ht=True ):
+		## STEP 1: CLEAN UP
+		##	return to neutral position
+		if self.previous_state == INSPIRE4Controller.ENGAGEMENT:
+			## if pressed during startleGame, then stop
+			self.startleGame.stopStartleGame( disable_ht=False )
+		elif self.previous_state == INSPIRE4Controller.STIMULI:
+			INSPIRE4Controller.cancelWatchStimuliCallbacks( self )
+			## also taken care of in runWatchStimuli
+			rospy.sleep(1)	## need time to face front
+			pass
+		else:
+			pass
+
+		## always begin in neutral position
+		## NOTE: head tilt motor will be disabled after reset
+		if neutral_head:	INSPIRE4Controller.controllerReset( self, disable_ht=disable_ht )
+
 		return
 
 	#####################
@@ -271,6 +301,23 @@ class INSPIRE4Controller( object ):
 		rospy.logdebug("setAutoTransitionFromStimuli(): END")
 		return
 
+	def cancelWatchStimuliCallbacks( self ):
+		rospy.logdebug("cancelWatchStimuliCallbacks(): BEGIN")
+
+		## neutralize outstanding timers
+		if self.stop_watch_timer != None:
+			self.stop_watch_timer.shutdown()
+			self.stop_watch_timer = None
+			rospy.logdebug("CANCELLED self.stop_watch_timer")
+
+		if self.start_watch_timer != None:
+			self.start_watch_timer.shutdown()
+			self.start_watch_timer = None
+			rospy.logdebug("CANCELLED self.start_watch_timer")
+
+		rospy.logdebug("cancelWatchStimuliCallbacks(): END")
+		return
+
 	def startWatchStimuli_callback( self, event ):
 		rospy.logdebug("startWatchStimuli(): BEGIN")
 		rospy.logdebug("startWatchStimuli_callback() called at " + str( event.current_real))
@@ -295,7 +342,10 @@ class INSPIRE4Controller( object ):
 			INSPIRE4Controller.setBlinkAndScan( self, blink=True, scan=False )
 			_elapsed_duration = rospy.get_time() - _start_time
 			while ((_elapsed_duration < self.durationWatchStimuli) and
-				not (self.state == INSPIRE4Controller.INVALID_TRIAL)):
+				not (self.state == INSPIRE4Controller.INVALID_TRIAL) and
+				not (self.state == INSPIRE4Controller.READY) and
+				not (self.state == INSPIRE4Controller.RESET_EXP) and
+				not (self.state == INSPIRE4Controller.END)):
 				_elapsed_duration = rospy.get_time() - _start_time
 				rospy.logdebug("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
 				self.exp_pub.publish("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
@@ -603,6 +653,7 @@ class INSPIRE4Controller( object ):
 	## ------------------------------
 	def transitionToReady( self, msg=None ):
 		rospy.logdebug("transitionToReady: BEGIN")
+
 		## STEP 0: Fall asleep
 		INSPIRE4Controller.doSetup( self )
 
@@ -611,8 +662,8 @@ class INSPIRE4Controller( object ):
 		INSPIRE4Controller.toggleDataLoggerRecording( self, "started" )	## we want to stop the rcording
 		INSPIRE4Controller.cancelAutoDataLoggerCallbacks( self )
 
-		## STEP 2: Reset number of interactions
-		INSPIRE4Controller.resetInteractionCount( self )
+		### STEP 2: Reset number of interactions
+		#INSPIRE4Controller.resetInteractionCount( self )
 
 		## STEP 3: Update state
 		self.state = INSPIRE4Controller.READY
@@ -636,14 +687,118 @@ class INSPIRE4Controller( object ):
 
 		return
 
+	def transitionUsage( self, state, prefix_msg="" ):
+
+		if (state == None):
+			rospy.loginfo("[usage] Press 'Get ready'")
+			self.exp_pub.publish( prefix_msg + "[usage] Press 'Get ready'")
+
+		## We should be able to get to these states at any time
+		if ((state == INSPIRE4Controller.READY) or
+			(state == INSPIRE4Controller.RESET_EXP) or
+			(state == INSPIRE4Controller.END)):
+			rospy.loginfo("[usage] You can transition from any state to this state " + self.state_dict[state] + " anytime")
+			self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state " + self.state_dict[state] + " anytime")
+
+		if (state == INSPIRE4Controller.READY): 
+			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
+		
+		if (state == INSPIRE4Controller.SYNC):
+			if self.__is_sync_done:	
+				rospy.loginfo("[usage] From state " + self.state_dict[self.state] + " if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+				self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + " if all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+			else:
+				rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
+				self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Tobii verify *', 'Visual clap sync', or 'Run Familiarization Skit'")
+
+		if (state == INSPIRE4Controller.INTRO):
+			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+
+		if (state == INSPIRE4Controller.ENGAGEMENT):
+			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Turn to LEFT SCREEN', 'Turn to RIGHT SCRREN', or 'Invalid Trial'")
+
+		if (state == INSPIRE4Controller.STIMULI):
+			rospy.loginfo("[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
+			self.exp_pub.publish( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press buttons: 'Run Engagement Game', or 'Invalid Trial'")
+
+		if (state == INSPIRE4Controller.INVALID_TRIAL):
+			rospy.loginfo( prefix_msg + "[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+			self.exp_pub.publish("[usage] From state " + self.state_dict[self.state] + ", you can choose to press button 'Run Engagement Game'")
+
+		return
 
 
-	## TO FIX: ENSURE THAT CANNOT BACKTRACK STATE
-	##	e.g., from state STIMULI, cannot transition to state SYNC
-	##
-	## TO FIX: ENSURE THAT INVALID STATE (None) CANNOT
-	##	TRANSITION TO ANY OTHER; only as intended to state READY	
-	##
+	def invalidTransition( self, current_state, future_state ):
+		_invalid_transition = True
+
+		#if (self.state == None) or (not isinstance(self.state, int)):
+		#	rospy.logerr("transitionToEngagement(): ERROR: Unknown self.state: " + self.state_dict[self.state])
+		#	rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO, STIMULI, or INVALID_TRIAL")
+		#	return
+
+
+		## We should be able to get to these states at any time
+		if ((future_state == INSPIRE4Controller.READY) or
+			(future_state == INSPIRE4Controller.RESET_EXP) or
+			(future_state == INSPIRE4Controller.END)):
+			rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
+			_invalid_transition = False
+
+		if (future_state == INSPIRE4Controller.SYNC):
+			if (current_state == INSPIRE4Controller.READY): 
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.SYNC):
+				_invalid_transition = False
+			else:
+				#if self.__is_sync_done:	
+				#	rospy.logwarn("Invalid transition... If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+				#else:
+				#	rospy.logwarn("Invalid transition... You can choose to press buttons: 'Tobii verify *' or  'Visual clap sync'")
+				rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
+				_invalid_transition = True
+
+		if (future_state == INSPIRE4Controller.INTRO):
+			if (current_state == INSPIRE4Controller.SYNC):
+				_invalid_transition = False
+			else:
+				#rospy.logwarn("Invalid transition... You can choose to press button 'Run Familiarization Skit'")
+				rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
+				_invalid_transition = True
+
+		if (future_state == INSPIRE4Controller.ENGAGEMENT):
+			if (current_state == INSPIRE4Controller.INTRO):
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.STIMULI):
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.INVALID_TRIAL):
+				_invalid_transition = False
+			else:
+				rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
+				_invalid_transition = True
+
+		if (future_state == INSPIRE4Controller.STIMULI):
+			if (current_state == INSPIRE4Controller.ENGAGEMENT):
+				_invalid_transition = False
+			else:
+				rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
+				_invalid_transition = True
+
+		if (future_state == INSPIRE4Controller.INVALID_TRIAL):
+			if (current_state == INSPIRE4Controller.ENGAGEMENT):
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.STIMULI):
+				_invalid_transition = False
+			else:
+				rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
+				_invalid_transition = True
+
+		return _invalid_transition
+
+
+
 	## TO FIX: HANDLE QUEUED MESSAGES. VALID STATE TRANSITIONS
 	##	ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
 	##	BEHAVIORS, e.g., watchStimuli and engagementGame
@@ -653,36 +808,58 @@ class INSPIRE4Controller( object ):
 
 		self.previous_state = self.state	## for later comparison
 		_unknown_flag = False
+		_invalid_transition = False
 		_data = str(msg.data)
 		rospy.logdebug("_data = " + _data)
 		if _data != 'turnToInfant':
 			self.exp_pub.publish('[button pressed] ' + _data)
 	
+
 		if _data == "reset experiment":
 			## STEP 0:
 			## We should always be able to get to this controller state from ANY other
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.RESET_EXP )
+
 			## TODO: Could depend on previous state
 			## need to issue '* stop'
 
-			## STEP 1: Move to ready state
-			self.exp_pub.publish('[RESET] reset experiment')
-			INSPIRE4Controller.transitionToReady( self, msg=_data )
+			if not _invalid_transition:
+				self.exp_pub.publish('[RESET] resetting experiment...')
+
+				## STEP 0: Reset self.state and self.previous_state
+				##	Reset interaction count
+				##	Reset to neutral pose
+				INSPIRE4Controller.stop( self, disable_ht=False )
+				INSPIRE4Controller.start( self )
+
+				## STEP 1: Move to ready state
+				INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
-			INSPIRE4Controller.transitionToReady( self, msg=_data )
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.READY )
+
+			if not _invalid_transition:
+				## STEP 0: Reset but don't move to neutral head pose first
+				INSPIRE4Controller.stop( self, neutral_head=False )
+				INSPIRE4Controller.start( self, neutral_head=False )
+
+				## STEP 1: Move to ready state
+				INSPIRE4Controller.transitionToReady( self, msg=_data )
 
 		elif _data.startswith( "sync" ):
 			## We should only be able to get to this controller state from READY
 			##	or if in SYNC state since there are multiple sync points to ePrime
-			if ((self.previous_state != INSPIRE4Controller.READY) and
-				(self.previous_state != INSPIRE4Controller.SYNC)):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + self.state_dict[self.state])
-				_unknown_flag = True
-				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-				## TODO: auto fix prior state
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.SYNC )
+			#if ((self.previous_state != INSPIRE4Controller.READY) and
+			#	(self.previous_state != INSPIRE4Controller.SYNC)):
+			#	rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + self.state_dict[self.state])
+			#	_invalid_transition = True
+			#	self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+			#	## TODO: auto fix prior state
 
-			elif (self.previous_state == INSPIRE4Controller.READY):
+			#elif (self.previous_state == INSPIRE4Controller.READY):
+			if (not _invalid_transition) and (self.previous_state == INSPIRE4Controller.READY):
 				if self.data_logger_status == "started":
 					## There is an actively recording rosbag,
 					##	so close the existing one and start a new one
@@ -706,7 +883,7 @@ class INSPIRE4Controller( object ):
 			else:
 				pass
 
-			if _unknown_flag:
+			if _invalid_transition:
 				pass	## jump past this logic
 			elif _data.endswith( "Tobii calibration start" ):
 				## no longer shown in pilt GUI
@@ -715,30 +892,39 @@ class INSPIRE4Controller( object ):
 				## no longer shown in pilt GUI
 				pass
 			elif _data.endswith( "visual clap" ):
+				self.__sync_count += 1
 				pass
 			elif _data.endswith( "Tobii verify left screen" ):
+				self.__sync_count += 1
 				pass
 			elif _data.endswith( "Tobii verify maki" ):
+				self.__sync_count += 1
 				pass
 			elif _data.endswith( "Tobii verify right screen" ):
+				self.__sync_count += 1
 				pass
 			else:
 				_unknown_flag = True
 
-			if not _unknown_flag:
+			if (not _unknown_flag) and (not _invalid_transition):
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.SYNC
 				self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 
+				if self.__sync_count == 4:
+					self.__is_sync_done = True
+					rospy.loginfo("If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+
 		elif _data == "runFamiliarizationSkit":
 			## We should only be able to get to this controller state from SYNC
-			if (self.previous_state != INSPIRE4Controller.SYNC):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + self.state_dict[self.state])
-				_unknown_flag = True
-				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-				## TODO: auto fix prior state
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.INTRO )
+			#if (self.previous_state != INSPIRE4Controller.SYNC):
+			#	rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + self.state_dict[self.state])
+			#	_unknown_flag = True
+			#	self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+			#	## TODO: auto fix prior state
 
-			if not _unknown_flag:	
+			if not _invalid_transition:	
 				self.exp_pub.publish('[state] run familiarization skit')
 				INSPIRE4Controller.transitionToIntro( self, self.blocking_gui )
 
@@ -746,19 +932,20 @@ class INSPIRE4Controller( object ):
 		elif (_data == "startleGame start" ):
 			## We should only be able to get to this controller state from 
 			##	INTRO, STIMULI, or INVALID_TRIAL
-			if ((self.previous_state != INSPIRE4Controller.INTRO) and 
-				(self.previous_state != INSPIRE4Controller.STIMULI) and
-				(self.previous_state != INSPIRE4Controller.INVALID_TRIAL)):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO, STIMULI, or INVALID_TRIAL...\tcurrent STATE = " + self.state_dict[self.state])
-				_unknown_flag = True
-				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-				## TODO: auto fix prior state
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.ENGAGEMENT )
+			#if ((self.previous_state != INSPIRE4Controller.INTRO) and 
+			#	(self.previous_state != INSPIRE4Controller.STIMULI) and
+			#	(self.previous_state != INSPIRE4Controller.INVALID_TRIAL)):
+			#	rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO, STIMULI, or INVALID_TRIAL...\tcurrent STATE = " + self.state_dict[self.state])
+			#	_unknown_flag = True
+			#	self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+			#	## TODO: auto fix prior state
 			
 			if self.__is_running_stimuli:
 				rospy.logerr("Do NOT attempt to interrupt the turnToScreen stimuli!!!")
 				_unknown_flag = True
 
-			if not _unknown_flag:
+			if not _invalid_transition:
 				self.exp_pub.publish('[state] startle game start')
 				rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
 				self.startleGame.startStartleGame()	## runs game in new thread
@@ -767,11 +954,12 @@ class INSPIRE4Controller( object ):
 
 		elif ("turnToScreen" in _data):
 			## We should only be able to get to this controller state from ENGAGEMENT
-			if (self.previous_state != INSPIRE4Controller.ENGAGEMENT):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + self.state_dict[self.state])
-				_unknown_flag = True
-				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-				## TODO: auto fix prior state
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.STIMULI )
+			#if (self.previous_state != INSPIRE4Controller.ENGAGEMENT):
+			#	rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + self.state_dict[self.state])
+			#	_unknown_flag = True
+			#	self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+			#	## TODO: auto fix prior state
 
 			_right_screen = None
 			if ("left" in _data):
@@ -782,7 +970,7 @@ class INSPIRE4Controller( object ):
 				_unknown_flag = True
 
 
-			if not _unknown_flag:
+			if (not _invalid_transition) and (not _unknown_flag):
 				#self.exp_pub.publish('[state] ' + str(self.state)) #cmhuang: TODO from here
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 				self.state = INSPIRE4Controller.STIMULI
@@ -807,40 +995,50 @@ class INSPIRE4Controller( object ):
 
 		elif _data == "reset interaction":
 			## We should only be able to get to this controller state from STIMULI or ENGAGEMENT
-			if ((self.previous_state != INSPIRE4Controller.ENGAGEMENT) and
-				(self.previous_state != INSPIRE4Controller.STIMULI)):
-				rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INVALID_TRIAL from ENGAGEMENT or STIMULI...\tcurrent STATE = " + self.state_dict[self.state])
-				_unknown_flag = True
-				self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.INVALID_TRIAL )
+			#if ((self.previous_state != INSPIRE4Controller.ENGAGEMENT) and
+			#	(self.previous_state != INSPIRE4Controller.STIMULI)):
+			#	rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INVALID_TRIAL from ENGAGEMENT or STIMULI...\tcurrent STATE = " + self.state_dict[self.state])
+			#	_unknown_flag = True
+			#	self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 
-			## STEP 1: update state
-			self.state = INSPIRE4Controller.INVALID_TRIAL
+			if not _invalid_transition:
+				## STEP 1: update state
+				self.state = INSPIRE4Controller.INVALID_TRIAL
 
-			## STEP 2: return to neutral position
-			if self.previous_state == INSPIRE4Controller.ENGAGEMENT:
-				## if pressed during startleGame, then stop
-				self.startleGame.stopStartleGame( disable_ht=False )
+				## STEP 2: return to neutral position
+				if self.previous_state == INSPIRE4Controller.ENGAGEMENT:
+					## if pressed during startleGame, then stop
+					self.startleGame.stopStartleGame( disable_ht=False )
 
-			elif self.previous_state == INSPIRE4Controller.STIMULI:
-				## added check for .__is_stimuli_running in runWatchStimuli()
-				pass
+				elif self.previous_state == INSPIRE4Controller.STIMULI:
+					## added check for .__is_stimuli_running in runWatchStimuli()
+					pass
 
-			else:
-				pass	## cannot get here
+				else:
+					pass	## cannot get here
 
-			## always begin in neutral position
-			## NOTE: head tilt motor will be disabled after reset
-			INSPIRE4Controller.controllerReset( self )
+				## always begin in neutral position
+				## NOTE: head tilt motor will be disabled after reset
+				INSPIRE4Controller.controllerReset( self )
 
-			self.exp_pub.publish( "Reset interaction; RE-DO interaction #" + str(self.interaction_count ) + "\tReady to resume at 'ENGAGEMENT GAME: Run'")
+				self.exp_pub.publish( "Reset interaction; RE-DO interaction #" + str(self.interaction_count ) + "\tPress button 'Run Engagement Game'")
 
 
 		elif _data == "the end":
 			## We should be able to get to this state from ANY other
-			rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
-			INSPIRE4Controller.transitionToReady(self, _data)
-			self.state = INSPIRE4Controller.END	## override state
-			self.exp_pub.publish('[state] ' + self.state_dict[self.state] + "\t---- END OF INSPIRE4 EXPERIMENT ----")
+			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.END )
+
+			if not _invalid_transition:
+				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
+	
+				## clean up first, and reset to neutral pose
+				INSPIRE4Controller.stop( self )
+
+				INSPIRE4Controller.transitionToReady(self, _data)
+				self.state = INSPIRE4Controller.END	## override state
+				self.exp_pub.publish( str(self.interaction_count) + " of " + str(INSPIRE4Controller.NUMBER_OF_INTERACTIONS) + " interactions performed with this participant")
+				self.exp_pub.publish('[state] ' + self.state_dict[self.state] + "\t---- END OF INSPIRE4 EXPERIMENT ----")
 
 
 		else:
@@ -849,12 +1047,17 @@ class INSPIRE4Controller( object ):
 
 		if _unknown_flag:	
 			rospy.logwarn( "UNKNOWN pilot command: " + str(_data) + "; REMAINS in self.state " + self.state_dict[self.state] )
+			INSPIRE4Controller.transitionUsage( self, self.state )
+
+		if ((self.state == None) or _invalid_transition):
+			INSPIRE4Controller.transitionUsage( self, self.state, "Invalid transition\t" )
 
 		if self.state != self.previous_state:
 			if self.previous_state == None:
-				rospy.loginfo("Update self.state from [None] to [" + self.state_dict[self.state] + "]")
+				rospy.logdebug("Update self.state from [None] to [" + self.state_dict[self.state] + "]")
 			else:
-				rospy.loginfo("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
+				rospy.logdebug("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
+			INSPIRE4Controller.transitionUsage( self, self.state , "NEW state\t")
 
 		rospy.logdebug("parse_pilot_command(): END")
 		return
@@ -877,35 +1080,64 @@ class INSPIRE4Controller( object ):
 
 
 	## NOTE: head tilt motor will be disabled after reset movement
-	def controllerReset( self ):
+	def controllerReset( self, disable_ht=True ):
+		_delta_pp = 2		#ticks
+		_reset_duration = 0	#ms
+		_reset_buffer = 500	#ms
+
 		_htBB = headTiltBaseBehavior( True, self.ros_pub )
 		_htBB.start()
 
 		## check if we are already in neutral before publishing the goal positions
-		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
 			return
+
+		_pub_reset = ""
+		_pub_reset += "HTGP" + str(HT_MIDDLE) + "HPGP" + str(HP_FRONT) + "LLGP" + str(LL_OPEN_DEFAULT) + "EPGP" + str(EP_FRONT) + "ETGP" + str(ET_MIDDLE)
+		if ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
+			(abs(_htBB.makiPP["HP"] - HP_FRONT) < 25) and
+			(abs(_htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
+			(abs(_htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
+			_reset_duration = 250
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 150)):
+			_reset_duration = 750
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 300)):
+			_reset_duration = 1250
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		else:
+			_reset_duration = 2000
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		_pub_reset += TERM_CHAR_SEND
+		rospy.loginfo("controllerReset(): _pub_reset = " + str(_pub_reset))
 
 		try:
 			## THIS IS CUSTOM RESET
 			##      reset goal speeds and goal positions
 			##      and monitor moving into goal positions
-			_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
-			_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+			#_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
+			_htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
+			if disable_ht:	_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
 
 		except rospy.exceptions.ROSException as _e:
 			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logwarn("controllerReset(): WARN: Could not complete monitoring move to neutral position...STALLED??...")
 				rospy.logdebug("controllerReset(): ERROR: " + str(_e))
-				_htBB.pubTo_maki_command( "reset" )
-				rospy.sleep(1.0)
-			_htBB.pubTo_maki_command( "HTTL0Z" )
+				#_htBB.pubTo_maki_command( "reset" )
+				#rospy.sleep(1.0)
+				_htBB.pubTo_maki_command( _pub_reset )
+				rospy.sleep( _reset_duration + _reset_buffer )
+			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
 
 		except TypeError as _e1:
-			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			if (not _htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
-				_htBB.pubTo_maki_command( "reset" )
-				rospy.sleep(1.0)
-			_htBB.pubTo_maki_command( "HTTL0Z" )
+				#_htBB.pubTo_maki_command( "reset" )
+				#rospy.sleep(1.0)
+				_htBB.pubTo_maki_command( _pub_reset )
+				rospy.sleep( _reset_duration + _reset_buffer )
+			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
 		return
 
 ## ------------------------------
