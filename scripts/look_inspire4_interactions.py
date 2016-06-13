@@ -11,6 +11,7 @@ import random
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from base_behavior import * 	## classes baseBehavior and headTiltBaseBehavior
+from lookAt import *
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
@@ -25,7 +26,8 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ##	- Maki-ro will watch the stimuli for 8 seconds
 ##	- Maki-ro will return to face center (1 second)
 ########################
-class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
+#class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
+class lookINSPIRE4Interaction( lookAt ):
 	## variables private to this class
 	## all instances of this class share the same value
 	HP_LEFT_SCREEN = None
@@ -46,9 +48,11 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 	FACING_INFANT = None
 
 	def __init__(self, verbose_debug, ros_pub):
+## KATE
 		## call base class' __init__
-		headTiltBaseBehavior.__init__( self, verbose_debug, ros_pub )
-		headPanBaseBehavior.__init__( self, verbose_debug, self.ros_pub )
+		lookAt.__init__( self, verbose_debug, ros_pub )
+		#headTiltBaseBehavior.__init__( self, verbose_debug, ros_pub )
+		#headPanBaseBehavior.__init__( self, verbose_debug, self.ros_pub )
 		## add anything else needed by an instance of this subclass
 		self.DC_helper = dynamixelConversions()
 
@@ -95,18 +99,20 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 		self.ALIVE = True
 		return
 
-	## override base class
-	def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.5):
-		rospy.logdebug("lookINSPIRE4Interaction.pubTo_maki_command(): BEGIN")
-		## call base class' pubTo_maki_command
-		headPanBaseBehavior.pubTo_maki_command( self, commandOut, fixed_gaze=fixed_gaze, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
-		rospy.logdebug("lookINSPIRE4Interaction.pubTo_maki_command(): END")
-		return
+## KATE
+	### override base class
+	#def pubTo_maki_command( self, commandOut, fixed_gaze=True, cmd_prop=True, time_ms=100, time_inc=0.5):
+	#	rospy.logdebug("lookINSPIRE4Interaction.pubTo_maki_command(): BEGIN")
+	#	## call base class' pubTo_maki_command
+	#	headPanBaseBehavior.pubTo_maki_command( self, commandOut, fixed_gaze=fixed_gaze, cmd_prop=cmd_prop, time_ms=time_ms, time_inc=time_inc )
+	#	rospy.logdebug("lookINSPIRE4Interaction.pubTo_maki_command(): END")
+	#	return
 
 	## override base class
 	def start( self, enable_ht=True ):
 		## call base class' start
-		headTiltBaseBehavior.start( self, enable_ht=enable_ht )
+		lookAt.start( self, enable_ht=enable_ht )
+		#headTiltBaseBehavior.start( self, enable_ht=enable_ht )
 
 		## CHECK TO SEE WHICH HEAD PAN POSITION IS CLOSEST
 		lookINSPIRE4Interaction.requestFeedback( self, SC_GET_PP )
@@ -131,10 +137,11 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 
 		return
 
-	## override base class
-	def stop( self, disable_ht=True ):
-		## call base class' stop
-		return headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
+## KATE
+	### override base class
+	#def stop( self, disable_ht=True ):
+	#	## call base class' stop
+	#	return headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
 
 	###########################################
 	##
@@ -145,6 +152,7 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 	## Default is right_screen == True, Maki-ro faces to rightScreen; 
 	##	otherwise if False, Maki-ro faces to leftScreen
 	###########################################
+	## TODO: use lookAt.shiftGazeVelocity()
 	def turnToScreen( self, right_screen=True ):
 		rospy.logdebug("turnToScreen(): BEGIN")
 
@@ -293,6 +301,7 @@ class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 	##		
 	## Maki-ro turns back to facing the infant from previously looking at DIRECTION screen
 	###########################################
+	## TODO: use lookAt.shiftGazeVelocity()
 	def turnToInfant( self ):
 		rospy.logdebug("turnToInfant(): BEGIN")
 
