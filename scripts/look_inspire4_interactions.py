@@ -96,7 +96,7 @@ class lookINSPIRE4Interaction( lookAt ):
 		self.ht_rand_min = lookINSPIRE4Interaction.HT_LEFT_SCREEN - self.delta_ht
 		self.ht_rand_max = lookINSPIRE4Interaction.HT_LEFT_SCREEN +- self.delta_ht
 
-		self.__use_shift_gaze = False	## CHANGE TO FALSE TO REVERT
+		self.__use_shift_gaze = True	## CHANGE TO FALSE TO REVERT
 
 		self.ALIVE = True
 		return
@@ -155,15 +155,34 @@ class lookINSPIRE4Interaction( lookAt ):
 	##	otherwise if False, Maki-ro faces to leftScreen
 	###########################################
 	def turnToScreen( self, right_screen=True ):
+		if not isinstance(right_screen, bool):
+			rospy.logerr("turnToScreen(): INVALID INPUT: right_screen should be boolean")
+			return
+
 		if self.__use_shift_gaze:
 			lookINSPIRE4Interaction.turnToScreen_new( self, right_screen=right_screen )
 		else:
 			lookINSPIRE4Interaction.turnToScreen_old( self, right_screen=right_screen )
 		return
 
+## KATE
 	def turnToScreen_new( self, right_screen=True ):
-		## TODO: use lookAt.shiftGazeVelocity()
-		pass
+		## Use lookAt.shiftGazeVelocity()
+		if right_screen:
+			_hp_gp = lookINSPIRE4Interaction.HP_RIGHT_SCREEN
+			_ep_gp_shift = lookINSPIRE4Interaction.EP_RIGHT_SCREEN_SACCADE
+		else:
+			_hp_gp = lookINSPIRE4Interaction.HP_LEFT_SCREEN
+			_ep_gp_shift = lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE
+
+		## remain looking at the screen
+		_ep_gp_fixed = _ep_gp_shift
+		_ht_gp = random.randint(self.ht_rand_min, self.ht_rand_max)
+		_duration_s = float(self.ipt_turn) / 1000.0	## seconds
+
+		## apparently requires a little extra time to EP to far side
+		lookINSPIRE4Interaction.shiftGazeVelocity( self, hp_gp=_hp_gp, ht_gp=_ht_gp, ep_gp_shift=_ep_gp_shift, ep_gp_fixed=_ep_gp_fixed, duration_s=_duration_s, padding=-0.1 )
+		return
 
 	def turnToScreen_old( self, right_screen=True ):
 		rospy.logdebug("turnToScreen(): BEGIN")
@@ -314,22 +333,36 @@ class lookINSPIRE4Interaction( lookAt ):
 	## Maki-ro turns back to facing the infant from previously looking at DIRECTION screen
 	###########################################
 	def turnToInfant( self ):
-		if self.__use_shift_gaze:
-			lookINSPIRE4Interaction.turnToInfant_new( self )
+		if (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
+			if (self.facing == lookINSPIRE4Interaction.FACING_INFANT):
+				rospy.logwarn("turnToInfant(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Interaction.FACING_INFANT)
+
+			if self.__use_shift_gaze:
+				lookINSPIRE4Interaction.turnToInfant_new( self )
+			else:
+				lookINSPIRE4Interaction.turnToInfant_old( self )
 		else:
-			lookINSPIRE4Interaction.turnToInfant_old( self )
+			rospy.logwarn("Cannot turnToInfant. Publish 'interaction start' first")
+			return
 		return
 
+## KATE
 	def turnToInfant_new( self ):
-		## TODO: use lookAt.shiftGazeVelocity()
-		pass
+		## Use lookAt.shiftGazeVelocity()
+		_hp_gp = lookINSPIRE4Interaction.HP_FACE_INFANT
+		_ht_gp = lookINSPIRE4Interaction.HT_FACE_INFANT
+		_duration_s = float(self.ipt_turn) / 1000.0	## seconds
+
+		## apparently requires a little extra time to EP to far side
+		lookINSPIRE4Interaction.shiftGazeVelocity( self, hp_gp=_hp_gp, ht_gp=_ht_gp, duration_s=_duration_s, padding=-0.1 )
+		return
 
 	def turnToInfant_old( self ):
 		rospy.logdebug("turnToInfant(): BEGIN")
 
 		if (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
-			if (self.facing == lookINSPIRE4Interaction.FACING_INFANT):
-				rospy.logwarn("turnToInfant(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Interaction.FACING_INFANT)
+		#	if (self.facing == lookINSPIRE4Interaction.FACING_INFANT):
+		#		rospy.logwarn("turnToInfant(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Interaction.FACING_INFANT)
 
 			_pub_cmd = ""
 
