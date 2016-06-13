@@ -312,7 +312,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 ## KATE
 				if self.__use_shift_gaze:
 					## Update to class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration_s)
-					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_EXPERIMENTER, ht_gp=lookINSPIRE4Intro.HT_EXPERIMENTER, duration_s=self.ipt_turn_s)
+					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_EXPERIMENTER, ht_gp=lookINSPIRE4Intro.HT_EXPERIMENTER, duration_s=self.ipt_turn_s, padding=-0.1)
 				else:	## REVERT
 					lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromInfant_toExperimenter )
 					##baseBehavior.pubTo_maki_command( self, str(self.look_at) )
@@ -364,7 +364,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 ## KATE
 					if self.__use_shift_gaze:
 						#lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT, duration_s=2.0*self.ipt_turn_s )
-						lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT, ep_gp_shift=lookAt.EP_MIN_LEFT, ht_gp=lookINSPIRE4Intro.HT_BALL_UPPER_RIGHT, duration_s=float(2.0*self.ipt_turn_s) )
+						lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT, ep_gp_shift=lookAt.EP_MIN_LEFT, ht_gp=lookINSPIRE4Intro.HT_BALL_UPPER_RIGHT, duration_s=float(2.0*self.ipt_turn_s), padding=-0.1 )
 					else:	## REVERT
 						lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
 
@@ -419,7 +419,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 				##	calibration point
 ## KATE
 				if self.__use_shift_gaze:
-					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_FACE_INFANT, ht_gp=lookINSPIRE4Intro.HT_FACE_INFANT )
+					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_FACE_INFANT, ht_gp=lookINSPIRE4Intro.HT_FACE_INFANT, padding=-0.1 )
 				else:	## REVERT
 					lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
 					## TODO: Maki-ro doesn't quite return to HT_MIDDLE
