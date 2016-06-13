@@ -66,7 +66,11 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
 		## call base class' stop
 		return headTiltBaseBehavior.stop( self, disable_ht=disable_ht )
 
-	def shiftGazeVelocity( self, hp_gp=None, ep_gp_shift=None, ep_gp_fixed=None, hp_pp=None, ep_pp=None, duration_s=1.0 ):
+	## NOTE: Currently any head tilt command is addressed like head pan:
+	##	head tilt single movement from present position to goal postion
+	def shiftGazeVelocity( self, hp_gp=None, ep_gp_shift=None, ep_gp_fixed=None, ht_gp=None, hp_pp=None, ep_pp=None, ht_pp=None, duration_s=1.0 ):
+		rospy.loginfo("shiftGazeVelocity(): INITIAL INPUT: hp_gp=" + str(hp_gp) + ", ep_gp_shift=" + str(ep_gp_shift) + ", ep_gp_fixed=" + str(ep_gp_fixed) + ", ht_gp=" + str(ht_gp) + ", hp_pp=" + str(hp_pp) + ", ep_pp=" + str(ep_pp) + ", ht_pp=" + str(ht_pp) + ", duration_s=" + str(duration_s))
+
 		## check validity of inputs
 		if ((hp_gp == None) or (not isinstance(hp_gp, int))):
 			rospy.logerr("shiftGazeVelocity(): INVALID INPUT: hp_gp = " + str(hp_gp) + "; expected int")
@@ -74,73 +78,119 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
 		if (ep_gp_fixed == None):
 			rospy.logwarn("shiftGazeVelocity(): INPUT NOT SPECIFIED: ep_gp_fixed = " + str(ep_gp_fixed) + "; auto correcting to neutral")
 			ep_gp_fixed = EP_FRONT
+		if (ht_gp == None):
+			rospy.logwarn("shiftGazeVelocity(): INPUT NOT SPECIFIED: ht_gp = " + str(ht_gp) + "; auto correcting to neutral")
+			ht_gp = HT_MIDDLE
 			
 		if ((hp_pp == None) or (not isinstance(hp_pp, int)) or
-			(ep_pp == None) or (not isinstance(ep_pp, int))):
+			(ep_pp == None) or (not isinstance(ep_pp, int)) or
+			(ht_pp == None) or (not isinstance(ht_pp, int))):
 			## get most recent values
-			lookAt.requestFeedback( SC_GET_PP )
+			lookAt.requestFeedback( self, SC_GET_PP )
 		## if present position is not specified, use the feedback values
 		if ((hp_pp == None) or (not isinstance(hp_pp, int))):	hp_pp = self.makiPP["HP"]
 		if ((ep_pp == None) or (not isinstance(ep_pp, int))):	ep_pp = self.makiPP["EP"]
+		if ((ht_pp == None) or (not isinstance(ht_pp, int))):	ht_pp = self.makiPP["HT"]
 
-		if (ep_gp_shift == None):
+		if ((ep_gp_shift == None) or (not isinstance(ep_gp_shift, int))):
 			rospy.logwarn("shiftGazeVelocity(): INPUT NOT SPECIFIED: ep_gp_shift = " + str(ep_gp_shift) + "; inferring from head pan present and goal positions")
 			if (hp_gp < hp_pp):	## turning to LEFT
-				ep_gp_shift = lookAt.EP_MIN_LEFT
+				_ep_gp_shift = lookAt.EP_MIN_LEFT
 			else:	## turning to RIGHT
-				ep_gp_shift = lookAt.EP_MAX_RIGHT
+				_ep_gp_shift = lookAt.EP_MAX_RIGHT
+		else:
+			_ep_gp_shift = ep_gp_shift
+
+		rospy.loginfo("shiftGazeVelocity(): ADJUSTED INPUT: hp_gp=" + str(hp_gp) + ", ep_gp_shift=" + str(_ep_gp_shift) + ", ep_gp_fixed=" + str(ep_gp_fixed) + ", ht_gp=" + str(ht_gp) + ", hp_pp=" + str(hp_pp) + ", ep_pp=" + str(ep_pp) + ", ht_pp=" + str(ht_pp) + ", duration_s=" + str(duration_s))
 
 		## STEP 0: calculate _delta_hp_pp
 		_delta_hp_pp = abs( hp_pp - hp_gp )
+		##	calculate _delta_ht_pp
+		_delta_ht_pp = abs( ht_pp - ht_gp )		
+		rospy.loginfo("STEP 0: _delta_hp_pp=" + str(_delta_hp_pp) + ", _delta_ht_pp=" + str(_delta_ht_pp))
 
 		## STEP 1: calculate HP degrees
 		_hp_degrees = self.DC_helper.convertToDegrees_ticks( _delta_hp_pp )
+		rospy.loginfo("STEP 1: _hp_degrees=" + str(_hp_degrees))
 
 		## STEP 2: calculate EP degrees
 		_delta_ep_pp_shift = abs( ep_pp - _ep_gp_shift )
 		#print _delta_ep_pp_shift
 		_ep_shift_degrees = self.DC_helper.convertToDegrees_ticks( _delta_ep_pp_shift )
+		rospy.loginfo("STEP 2: _delta_ep_pp_shift=" + str(_delta_ep_pp_shift) + ", _ep_shift_degrees=" + str(_ep_shift_degrees))
 
 		## STEP 3: subtract EP degrees
 		_counter_angle = abs( _hp_degrees - _ep_shift_degrees )
-		#print _counter_angle
+		rospy.loginfo("STEP 3: _counter_angle=" + str(_counter_angle))
 
 		## STEP 4: convert to duration 
 		##	AMOUNT OF TIME TO ELAPSE BEFORE COUNTERING EYE PAN
 		_counter_ticks = self.DC_helper.convertToTicks_degrees( _counter_angle )
 		_counter_ratio = float(_counter_ticks) / float(_delta_hp_pp)
 		_counter_duration = _counter_ratio * duration_s	## in seconds
-		#print _counter_duration
+		rospy.loginfo("STEP 4: _counter_ticks=" + str(_counter_ticks) + ", _counter_ratio=" + str(_counter_ratio) + ",  _counter_duration=" + str(_counter_duration))
 
-		## STEP 5: calculate HP goal speed
-		_hp_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_hp_pp, duration_s )
+		## STEP 5A: calculate HP goal speed
+## KATE
+		if (_delta_hp_pp > 0):
+			_hp_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_hp_pp, duration_s )
+		else:
+			_hp_gp = self.HP_GS_DEFAULT = 15
+		rospy.logerr( "STEP 5A: _delta_hp_pp = " + str(_delta_hp_pp) + "; _hp_gs = " + str(_hp_gs))
+
+		## STEP 5B: calculate HT goal speed
+		if (_delta_ht_pp > 0):
+			_ht_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_ht_pp, duration_s )
+		else:
+			_ht_gs = self.HT_GS_DEFAULT = 51
+		rospy.logerr( "STEP 5B: _delta_ht_pp = " + str(_delta_ht_pp) + "; _ht_gs = " + str(_ht_gs))
 
 		## STEP 6: calculate EP goal speed for counter rotation
 		##	2*_ep_gs is a good heuristic for shift movement
 		_ep_gs = self.DC_helper.getGoalSpeed_ticks_duration( abs(ep_gp_fixed - _ep_gp_shift), (duration_s - _counter_duration) )
 		#_ep_gs_shift = 2 * _ep_gs
 		_ep_gs_shift = self.DC_helper.getGoalSpeed_ticks_duration( _delta_ep_pp_shift, _counter_duration )
+		rospy.loginfo("STEP 6: _ep_gs=" + str(_ep_gs) + ", _ep_gs_shift=" + str(_ep_gs_shift))
 
 
 		## STEP 7: print
-		rospy.logdebug("t(0): hp_gp=" + str(hp_gp) + ", _hp_gs=" + str(_hp_gs) + "; ep_gp=" + str(_ep_gp_shift) + ", _ep_gs=" + str( _ep_gs_shift ))
-		rospy.logdebug("t(" + str(_counter_duration) + "): _ep_gp=" + str(ep_gp_fixed) + ", _ep_gs=" + str(_ep_gs))
-		rospy.logdebug("t(" + str(duration_s) + "): DONE")
+		rospy.loginfo("t(0): hp_gp=" + str(hp_gp) + ", _hp_gs=" + str(_hp_gs) + "; ep_gp=" + str(_ep_gp_shift) + ", _ep_gs=" + str( _ep_gs_shift ))
+		rospy.loginfo("t(" + str(_counter_duration) + "): _ep_gp=" + str(ep_gp_fixed) + ", _ep_gs=" + str(_ep_gs))
+		rospy.loginfo("t(" + str(duration_s) + "): DONE")
 	
 
 		## NOW ACTUATE THE MOVEMENT
 		## send the goal speeds first
-		lookAt.pubTo_maki_command( "HPGS" + str(_hp_gs) + "EPGS" + str(_ep_gs_shift) + TERM_CHAR_SEND, fixed_gaze=False )
+		#lookAt.pubTo_maki_command( "HPGS" + str(_hp_gs) + "EPGS" + str(_ep_gs_shift) + TERM_CHAR_SEND, fixed_gaze=False )
+		_pub_cmd = ""
+		if (_delta_hp_pp > 0):	_pub_cmd += "HPGS" + str(_hp_gs) + "EPGS" + str(_ep_gs_shift) 
+		if (_delta_ht_pp > 0):	_pub_cmd += "HTGS" + str(_ht_gs)
+		_pub_cmd += TERM_CHAR_SEND 
+		rospy.loginfo("shiftGazeVelocity(): send initial goal speeds: " + str(_pub_cmd))
+		lookAt.pubTo_maki_command( self, _pub_cmd, fixed_gaze=False )
 		_start_time = rospy.get_time()
+
 		## next send the goal positions
-		lookAt.pubTo_maki_command( "HPGP" + str(_hp_gp) + "EPGP" + str(_ep_gp_shift) + TERM_CHAR_SEND, fixed_gaze=False )
+		#lookAt.pubTo_maki_command( "HPGP" + str(hp_gp) + "EPGP" + str(_ep_gp_shift) + TERM_CHAR_SEND, fixed_gaze=False )
+		_pub_cmd = ""
+		if (_delta_hp_pp > 0):	_pub_cmd += "HPGP" + str(hp_gp) + "EPGP" + str(_ep_gp_shift) 
+		if (_delta_ht_pp > 0):	_pub_cmd += "HTGP" + str(ht_gp)
+		_pub_cmd += TERM_CHAR_SEND
+		rospy.loginfo("shiftGazeVelocity(): send initial goal positions: " + str(_pub_cmd))
+		lookAt.pubTo_maki_command( self, _pub_cmd, fixed_gaze=False )
+
 		## wait until counter duration
-		_sleep_duration = _counter_duration - 0.1 	## compensate for the command propogation delay
+		#_sleep_duration = _counter_duration - 0.1 	## compensate for the command propogation delay
+## KATE
+		_sleep_duration = _counter_duration	## need to sleep for full value of _counter_duration
 		rospy.sleep( _sleep_duration )
-		lookAt.pubTo_maki_command( "EPGS" + str(_ep_gs) + "EPGP" + str(EP_FRONT) + TERM_CHAR_SEND, fixed_gaze=False )
+		rospy.loginfo("shiftGazeVelocity(): counter!!! _sleep_duration=" + str(_sleep_duration))
+		lookAt.pubTo_maki_command( self, "EPGS" + str(_ep_gs) + "EPGP" + str(ep_gp_fixed) + TERM_CHAR_SEND, fixed_gaze=False )
 		## wait until duration_s
 		_sleep_duration = duration_s - _sleep_duration - 0.1 	## compensate for the command propogation delay
-		if (_sleep_duration > 0):	rospy.sleep( _sleep_duration )
+		if (_sleep_duration > 0):	
+			rospy.sleep( _sleep_duration )
+		rospy.loginfo("shiftGazeVelocity(): finish!! _sleep-duration=" + str(_sleep_duration))
 
 		_duration = abs(rospy.get_time() - _start_time)
 		rospy.loginfo( "Duration: Expected = " + str(duration_s) + " seconds; elapsed = " + str(_duration) + " seconds" )

@@ -129,6 +129,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 		self.facing = None
 
 		self.ipt_turn = 1000	## ms
+		self.ipt_turn_s = float(self.ipt_turn / 1000.0)	## s
 		#self.delta_ht = 10	## ticks
 		#self.ht_rand_min = lookINSPIRE4Intro.HT_EXPERIMENTER - self.delta_ht
 		#self.ht_rand_max = lookINSPIRE4Intro.HT_EXPERIMENTER +- self.delta_ht
@@ -165,6 +166,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 		#self.duration_between_startle_max = 5.0	## seconds
 
 		lookINSPIRE4Intro.calculatePose( self )
+
+		self.__use_shift_gaze = True	## CHANGE TO FALSE TO REVERT
 
 		self.ALIVE = True
 		return
@@ -290,7 +293,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 	##		intro lookAtExperimenter
 	##
 	###########################
-	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	def macroLookAtExperimenter( self ):
 		rospy.logdebug("macrolookAtExperimenter(): BEGIN")
 
@@ -307,9 +309,14 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 			else:
 				rospy.loginfo("-----------------")
 
-				lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromInfant_toExperimenter )
-				#baseBehavior.pubTo_maki_command( self, str(self.look_at) )
-				#self.sww_wi.sleepWhileWaitingMS( 2000 )
+## KATE
+				if self.__use_shift_gaze:
+					## Update to class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration_s)
+					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_EXPERIMENTER, ht_gp=lookINSPIRE4Intro.HT_EXPERIMENTER, duration_s=self.ipt_turn_s)
+				else:	## REVERT
+					lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromInfant_toExperimenter )
+					##baseBehavior.pubTo_maki_command( self, str(self.look_at) )
+					##self.sww_wi.sleepWhileWaitingMS( 2000 )
 
 				rospy.loginfo("-----------------")
 
@@ -326,7 +333,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 	##		intro lookAtBallLocationRight upper
 	##
 	###########################
-	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	#def macroLookAtBallLocationRight( self, lower=False, upper=False, shift=True ):
 	def macroLookAtBallLocationRight( self, lower=False, upper=False ):
 		rospy.logdebug("macroLookAtBallLocationRight(): BEGIN")
@@ -354,10 +360,28 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 				#self.sww_wi.sleepWhileWaitingMS( 2000 )
 
 				## From facing the Friend, Maki-ro looks at UPPER RIGHT first
-				if upper:	lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
+				if upper:	
+## KATE
+					if self.__use_shift_gaze:
+						#lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT, duration_s=2.0*self.ipt_turn_s )
+						lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_BALL_UPPER_RIGHT, ep_gp_shift=lookAt.EP_MIN_LEFT, ht_gp=lookINSPIRE4Intro.HT_BALL_UPPER_RIGHT, duration_s=float(2.0*self.ipt_turn_s) )
+					else:	## REVERT
+						lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromExperimenter_toBallUpperRight )
 
 				## Then from facing upper right, Maki-ro looks at LOWER RIGHT
-				if lower:	lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
+				if lower:	
+					if self.__use_shift_gaze:
+						_ipt = self.ipt_turn
+						_pub_cmd = ""
+						_pub_cmd += "EP" + SC_SET_GP + str(EP_FRONT)
+						_pub_cmd += "HP" + SC_SET_GP + str(lookINSPIRE4Intro.HP_BALL_LOWER_RIGHT)
+						_pub_cmd += "HT" + SC_SET_GP + str(lookINSPIRE4Intro.HT_BALL_LOWER_RIGHT)
+						_pub_cmd += SC_SET_IPT + str(_ipt)
+						_pub_cmd += TERM_CHAR_SEND
+						lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, _pub_cmd, monitor=True)
+						pass
+					else:	## REVERT
+						lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallUpperRight_toBallLowerRight )
 
 				rospy.loginfo("-----------------")
 
@@ -373,7 +397,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 	##		intro lookAtInfant
 	##
 	###########################
-	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
 	def macroLookAtInfant( self ):
 		rospy.logdebug("macroAtInfant(): BEGIN")
 
@@ -394,9 +417,13 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 
 				## Maki-ro should have been previously looking at the lower right
 				##	calibration point
-				lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
-				## TODO: Maki-ro doesn't quite return to HT_MIDDLE
-				lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
+## KATE
+				if self.__use_shift_gaze:
+					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_FACE_INFANT, ht_gp=lookINSPIRE4Intro.HT_FACE_INFANT )
+				else:	## REVERT
+					lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
+					## TODO: Maki-ro doesn't quite return to HT_MIDDLE
+					lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
 
 				rospy.loginfo("-----------------")
 
@@ -406,168 +433,6 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 		rospy.logdebug("macroLookAtInfant(): END")
 		return
 
-	'''
-	###########################################
-	## This is a work in progress
-	## TODO: update with class lookAt.shiftGazeVelocity( hp_gp, ep_gp_shift, ep_gp_fixed, hp_pp, ep_pp, duration)
-	def turnToScreen( self, right_screen=True ):
-		rospy.logdebug("turnToScreen(): BEGIN")
-
-		if not isinstance(right_screen, bool):
-			rospy.logerr("turnToScreen(): INVALID INPUT: right_screen should be boolean")
-			return
-
-		_pub_hp = True
-		_pub_ep = False
-		_pub_ht = True
-		_pub_ipt = True
-		_ipt_turn = self.ipt_turn
-
-		if right_screen and (self.facing == lookINSPIRE4Intro.FACING_RIGHT_SCREEN):
-			rospy.logwarn("turnToScreen(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Intro.FACING_RIGHT_SCREEN)
-
-		elif (not right_screen) and (self.facing == lookINSPIRE4Intro.FACING_EXPERIMENTER):
-			rospy.logwarn("turnToScreen(): WARNING: Maki-ro is reported as already facing " + lookINSPIRE4Intro.FACING_EXPERIMENTER)
-		
-		elif ((right_screen and (self.facing == lookINSPIRE4Intro.FACING_EXPERIMENTER)) or
-			((not right_screen) and (self.facing == lookINSPIRE4Intro.FACING_RIGHT_SCREEN))):
-			rospy.logwarn("turnToScreen(): WARNING: Maki-ro is NOT intended to move from looking at one screen to the other")
-			rospy.logwarn("turnToScreen(): _ipt_turn adjusted to 2x")
-			_ipt_turn = 2 * _ipt_turn
-
-		else:
-			pass
-
-		## from infant perspective <==> from robot perspective 
-		EP_RIGHT_SCREEN = EP_LEFT
-		EP_EXPERIMENTER = EP_RIGHT
-
-		_pub_cmd = ""
-
-		_start_time = rospy.get_time()
-		if (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
-			_loop_count = 0
-
-			if _pub_ep:	_ep_gp_saccade = EP_FRONT
-			if _pub_hp:	_hp_gp = HP_FRONT
-			if right_screen:	
-				if _pub_ep:	_ep_gp_saccade = EP_RIGHT_SCREEN
-				if _pub_hp:	_hp_gp = lookINSPIRE4Intro.HP_RIGHT_SCREEN
-			else:
-				if _pub_ep:	_ep_gp_saccade = EP_EXPERIMENTER
-				if _pub_hp:	_hp_gp = lookINSPIRE4Intro.HP_EXPERIMENTER
-			if _pub_ht:	_ht_gp = random.randint(self.ht_rand_min, self.ht_rand_max)
-
-			## set first goal positions including eye saccade
-			_pub_cmd = ""
-			if _pub_hp:	_pub_cmd += "HPGP" + str(_hp_gp)
-			if _pub_ht:	_pub_cmd += "HTGP" + str(_ht_gp)
-			if _pub_ep:	_pub_cmd += "EPGP" + str(_ep_gp_saccade)
-			if _pub_ipt:	_pub_cmd += "IPT" + str(_ipt_turn) 
-			_pub_cmd += TERM_CHAR_SEND
-			rospy.logwarn( _pub_cmd )
-			#lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			lookINSPIRE4Intro.monitorMoveToGP( self, _pub_cmd, hp_gp=_hp_gp, ht_gp=_ht_gp )
-
-			#lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
-			#if _pub_ep:	_ep_start_pp = self.makiPP["EP"]
-			#if _pub_hp:	_hp_start_pp = self.makiPP["HP"]
-			#if _pub_ht:
-			#	_ht_start_pp = self.makiPP["HT"] 
-			#	_gs_ht = self.DC_helper.getGoalSpeed_ticks_durationMS( abs(_ht_gp - _ht_start_pp), _ipt_turn )
-			#
-			#_pub_cmd = ""
-			#if _pub_hp:	_pub_cmd += "HPGS" + str(_gs_hp)
-			#if _pub_ht:	_pub_cmd += "HTGS" + str(_gs_ht)
-			#if _pub_ep:	_pub_cmd += "EPGS" + str(_gs_ep)
-			#_pub_cmd += TERM_CHAR_SEND
-			#rospy.loginfo( _pub_cmd )
-			#lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			### has 100 ms delay for propogation to motors
-			#
-			## COMMENTED OUT becuase couldn't find a smooth velocity profile
-			### (_gs_hp, _gs_ep)
-			##_gs_sequence = ((48,97), (95,24), (59,24), (24,24), (12,24))
-			##_gs_sequence = ((44,10), (132,29), (176,39), (88,19))
-			##_gs_sequence = ((44,10), (99,22), (154,34), (99,22), (44,10))
-			##_gs_sequence = ((66,15), (176,39), (121,27), (66,15), (11,2))
-			#_gs_sequence = ((88,19), (88,19), (88,19), (88,19), (88,19))
-			#_step_duration = float( _ipt_turn / len(_gs_sequence) )
-			#
-			#_loop_count = 0
-			#_first_pass = True
-			#if _pub_ep:	_ep_phase0 = True	## True = saccade towards screen; otherise fixate
-			#for _gs_hp, _gs_ep in _gs_sequence:
-			#	_start_time_step = rospy.get_time()
-			#
-			#	_pub_cmd = ""
-			#	if _pub_hp:	_pub_cmd += "HPGS" + str(_gs_hp)
-			#	if _pub_ht:	_pub_cmd += "HTGS" + str(_gs_ht)
-			#	if _pub_ep:	_pub_cmd += "EPGS" + str(_gs_ep)
-			#	_pub_cmd += TERM_CHAR_SEND
-			#	rospy.loginfo( _pub_cmd )
-			#	lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			#	## has 100 ms delay for propogation to motors
-			#
-			#	## set first goal positions including eye saccade
-			#	if _first_pass:
-			#		_pub_cmd = ""
-			#		if _pub_hp:	_pub_cmd += "HPGP" + str(_hp_gp)
-			#		if _pub_ht:	_pub_cmd += "HTGP" + str(_ht_gp)
-			#		if _pub_ht:	_pub_cmd += "EPGP" + str(_ep_gp_saccade)
-			#		_pub_cmd += TERM_CHAR_SEND
-			#		rospy.logwarn( _pub_cmd )
-			#		lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			#		_first_pass = False
-			#
-			#	## set eye pan goal position after completing eye saccade
-			#	elif _pub_ep and _ep_phase0:
-			#		_pub_cmd = ""
-			#		_pub_cmd += "EPGP" + str(EP_FRONT)
-			#		_pub_cmd += TERM_CHAR_SEND
-			#		rospy.logwarn( _pub_cmd )
-			#		lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
-			#		_ep_phase0 = False
-			#	else:
-			#		pass
-			#
-			#	if (abs(rospy.get_time() - _start_time) < _ipt_turn):
-			#		## has 100 ms delay for propogation to motors
-			#		lookINSPIRE4Intro.requestFeedback( self, SC_GET_PP )
-			#
-			#		## compensate to maintain pacing of 200 ms apart
-			#		_adjusted_sleep = _step_duration - abs(rospy.get_time() - _start_time_step)
-			#		if (_adjusted_sleep <= 0):
-			#			rospy.logdebug("... no sleep _step_duration adjustment")
-			#		else:	
-			#			rospy.logdebug( str(_adjusted_sleep) + " milliseconds more are needed to fulfill _step_duration pacing")
-			#			self.SWW_WI.sleepWhileWaitingMS( _adjusted_sleep, end_early=False )
-			#
-			#		_loop_count = _loop_count +1
-			#	else:
-			#		rospy.logdebug("TIME IS UP")
-			#		break	
-			#
-			#end	for _gs_hp, _gs_ep in _gs_sequence:
-
-			if right_screen:
-				self.facing = lookINSPIRE4Intro.FACING_RIGHT_SCREEN
-			else:
-				self.facing = lookINSPIRE4Intro.FACING_EXPERIMENTER
-
-			## TODO: keep track of INSPIRE4 state
-		else:
-			rospy.logwarn("Cannot turnToScreen. Publish 'interaction start' first")
-			return
-		#end	if (self.ALIVE) and (not self.mTT_INTERRUPT) and (not rospy.is_shutdown()):
-
-		_duration = abs(rospy.get_time() - _start_time)
-		rospy.loginfo( "NUMBER OF TIMESTEPS: " + str(_loop_count) )
-		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
-
-		rospy.logdebug("turnToScreen(): END")
-		return
-	'''
 
 	## TODO: lookAt should shift to new ground state
 	## This is a work in progress
@@ -579,7 +444,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 			((ht_gp != None) and isinstance(ht_gp, int))):
 			pass
 		else:
-			rospy.logwarn("lookAt(): INVALID INPUTS: monitor must be True AND hp_gp and ht_gp must be valid integers")
+			rospy.logwarn("lookAt(): INVALID INPUTS: monitor must be True AND hp_gp and ht_gp must be valid integers; set monitor to False")
 			monitor=False
 
 		## TODO: Check validity of changing from pose to another... INTENDED vs. not
@@ -604,6 +469,11 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 					lookINSPIRE4Intro.monitorMoveToGP( self, _pub_cmd, hp_gp=hp_gp, ht_gp=ht_gp )
 				except rospy.exceptions.ROSException as _e:
 					rospy.logerr("lookAt(): " + str(_e))
+					_tmp = re.search( "IPT([0-9]+)", _pub_cmd )
+					lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
+					if _tmp != None:
+						self.SWW_WI.sleepWhileWaitingMS( int(_tmp.group(1))-100, end_early=False )
+		
 			else:
 				_tmp = re.search( "IPT([0-9]+)", _pub_cmd )
 				lookINSPIRE4Intro.pubTo_maki_command( self, _pub_cmd, cmd_prop=True )
