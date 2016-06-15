@@ -948,7 +948,7 @@ class INSPIRE4Controller( object ):
 				rospy.logerr("Do NOT attempt to interrupt the turnToScreen stimuli!!!")
 				_unknown_flag = True
 
-			if not _invalid_transition:
+			if (not _invalid_transition) and (not _unknown_flag):
 				self.exp_pub.publish('[state] startle game start')
 				rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
 				self.startleGame.startStartleGame()	## runs game in new thread
