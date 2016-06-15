@@ -228,10 +228,12 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 						if self.mTT_INTERRUPT:	return
 ## KATE
 						## 2016-06-09: TO TEST
-						#if not engagementStartleGame.__is_game_running: 
-						#	rospy.loginfo("runGame(): STATE 1: INTERRUPTED pause")
-						#	_break_flag = True
-						#	break	## jump out of while loop
+						if not engagementStartleGame.__is_game_running: 
+							rospy.logwarn("runGame(): STATE 1: INTERRUPTED during pause")
+## 2016-06-15: KATE
+							engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
+							_break_flag = True
+							break	## jump out of while loop
 
 						#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )
 						## FPTZ request published takes 100ms to propogate
@@ -279,19 +281,31 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					_state4_first_pass = False
 
 				_remaining_hide_duration = self.next_startle_time - rospy.get_time()
-				if (_remaining_hide_duration > 0.01):	## 100 ms
-					rospy.loginfo("STATE 4: _remaining_hide_duration is " + str(_remaining_hide_duration) + " seconds")
+				#if (_remaining_hide_duration > 0.01):	## 100 ms
+## 2016-06-15: KATE
+				#if (_remaining_hide_duration > 0.01) and engagementStartleGame.__is_game_running:	## 100 ms
+				if (_remaining_hide_duration > 0.01):
 
-					### FPTZ request published takes 100ms to propogate
-					engagementStartleGame.requestFeedback( self, SC_GET_PT )
-					self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
+## 2016-06-15: KATE
+					if not engagementStartleGame.__is_game_running:
+						## END EARLY!!		
+						engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
+						_break_flag = True
+						break	## jump out of while loop
+					else:
+
+						rospy.loginfo("STATE 4: _remaining_hide_duration is " + str(_remaining_hide_duration) + " seconds")
+
+						### FPTZ request published takes 100ms to propogate
+						engagementStartleGame.requestFeedback( self, SC_GET_PT )
+						self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
 ## KATE
-					## TO TEST: 2016-06-09
-					#self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
+						## TO TEST: 2016-06-09
+						#self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
 
-					## TODO: SHOULD DO SOMETHING TO MAKE SURE HT IS NOT OVERHEATING
+						## TODO: SHOULD DO SOMETHING TO MAKE SURE HT IS NOT OVERHEATING
 
-					continue	## start fresh at the top of the while loop
+						continue	## start fresh at the top of the while loop
 				else:
 					### FPPZ request published takes 100ms to propogate
 					engagementStartleGame.requestFeedback( self, SC_GET_PP )
@@ -313,14 +327,15 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				rospy.logdebug("runGame(): DEBUGGING: AFTER: _round_count=" + str(_round_count) + "; _round_display_count=" + str(_round_display_count))
 				## FIXED: Only do full unhideIntoStartle while less than the number of repetitions
 				if (_round_count < repetitions):
-					engagementStartleGame.unhideIntoStartle( self )
+					#engagementStartleGame.unhideIntoStartle( self )
 
-					## TO TEST: 2016-06-09
-					#if engagementStartleGame.__is_game_running:
-					#	engagementStartleGame.unhideIntoStartle( self )
-					#else:
-					#	engagementStartleGame.unhideIntoStartle( self, unhide=True, startle=False )
-					#	self.game_state = engagementStartleGame.STATE_STARTLE_RELAX #9
+					# TO TEST: 2016-06-09
+					if engagementStartleGame.__is_game_running:
+						engagementStartleGame.unhideIntoStartle( self )
+					else:
+						rospy.logwarn("INTERRUPT... No final startle")
+						engagementStartleGame.unhideIntoStartle( self, unhide=True, startle=False )
+						self.game_state = engagementStartleGame.STATE_STARTLE_RELAX #9
 				else:
 					## Hit MAX reptitions... only unhide. DO NOT startle again...
 					engagementStartleGame.unhideIntoStartle( self, unhide=True, startle=False )
