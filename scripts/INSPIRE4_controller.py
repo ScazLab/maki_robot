@@ -917,6 +917,7 @@ class INSPIRE4Controller( object ):
 				if self.__sync_count == 4:
 					self.__is_sync_done = True
 					rospy.loginfo("If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+					self.exp_pub.publish("If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
 
 		elif _data == "runFamiliarizationSkit":
 			## We should only be able to get to this controller state from SYNC
