@@ -61,7 +61,7 @@ class INSPIRE4Controller( object ):
 		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... Please wait.")
 
 		## secondarily may publish to /maki_internal_monologue when fancied
-		self.ros_pub_MIM = rospy.Publisher( "maki_internal_monologues", String, queue_size = 10)
+		self.ros_pub_MIM = rospy.Publisher( "maki_internal_monologue", String, queue_size = 10)
 		self.MIM_count = 0
 
 		self.ALIVE = False
