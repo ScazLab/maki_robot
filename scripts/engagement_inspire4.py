@@ -327,7 +327,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				self.game_state = engagementStartleGame.STATE_WAIT_FOR_INFANT
 				rospy.logdebug("runGame(): STATE 5: Maki-ro popped up so FAST... hopefully without whiplash!!!")
 				rospy.logdebug("runGame(): STATE 5: move out of hiding into startle: END... Changing back to STATE 1")
-				rospy.logerr("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(_round_count) + " >>>>>>>>>>>>>>>>>>>>")
+				rospy.loginfo("<<<<<<<<<<<<<<<<<<<<<<< END OF ROUND #" + str(_round_count) + " >>>>>>>>>>>>>>>>>>>>")
 				continue	## start fresh at the top of the while loop
 			#end	if (self.game_state == 5):
 
@@ -385,7 +385,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				engagementStartleGame.monitorMoveToGP( self, "reset", ht_gp=self.HT_NEUTRAL, ll_gp=self.LL_NEUTRAL )
 				rospy.logwarn("cleanupGame(): POKE!! Wake up sleepy-head Maki-ro... Infant either likes your hair, or wants to see a movie...")
 			except rospy.exceptions.ROSException as _e:
-				rospy.logerr("cleanupGame(): ERROR: UNABLE TO RESET MAKI-RO TO NEUTRAL POSITIONS: " + str(_e))
+				rospy.logwarn("cleanupGame(): ERROR: UNABLE TO RESET MAKI-RO TO NEUTRAL POSITIONS: " + str(_e))
 				### Uh-oh... this is a last ditch effort
 				#engagementStartleGame.pubTo_maki_command( self, "reset" )
 				#return False
@@ -606,7 +606,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				try:
 					engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_NEUTRAL, ht_gp=self.HT_NEUTRAL )
 				except rospy.exceptions.ROSException as _e:
-					rospy.logerr( str(_e) )
+					rospy.logwarn( str(_e) )
 				#self.SWW_WI.sleepWhileWaiting(1)	## 1 second	## debugging
 
 		_duration = abs(rospy.get_time() -_start_time)
@@ -663,7 +663,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					## than _duration_startle and will cause delay)
 					#engagementStartleGame.monitorMoveToGP( self, _pub_cmd, ll_gp=self.LL_STARTLE, ht_gp=self.HT_STARTLE)
 				except rospy.exceptions.ROSException as e1:
-					rospy.logerr( str(e1) )
+					rospy.logwarn( str(e1) )
 				_duration = abs(_start_time_startle - rospy.get_time())
 				rospy.logdebug( "Startle duration: " + str(_duration) + " seconds" )
 
@@ -735,7 +735,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 						engagementStartleGame.pubTo_maki_command( self, _pub_cmd )
 						self.SWW_WI.sleepWhileWaitingMS( _duration_relax_wait, end_early=False)
 					except rospy.exceptions.ROSException as e2:
-						rospy.logerr( str(e2) )
+						rospy.logwarn( str(e2) )
 				#end	while relax and (not rospy.is_shutdown()):
 
 				_duration = abs(_start_time_relax - rospy.get_time())
