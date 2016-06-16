@@ -903,6 +903,8 @@ class eyelidBaseBehavior( baseBehavior ):
 		return
 
 	def setEyelidRange( self, ll, ll_delta=None, ll_close=None):
+		_start_time = rospy.get_time()
+
 		if ll_delta == None and ll_close == None:	
 			ll_delta = self.ll_delta_range	
 		elif ll_delta == None and ll_close != None:
@@ -919,9 +921,13 @@ class eyelidBaseBehavior( baseBehavior ):
 		if self.ll_close < LL_CLOSE_MAX:	self.ll_close = LL_CLOSE_MAX
 		if self.ll_open > LL_OPEN_MAX:	self.ll_open = LL_OPEN_MAX
 		rospy.logdebug("Eyelid range: (" + str(self.ll_close) + ", " + str(self.ll_open) + ")")
+
+		rospy.loginfo("setEyelidRange(): elapsed time = " + str( rospy.get_time() - _start_time ) + " seconds" )
 		return
 
 	def setEyelidNeutralPose( self, ll, monitor=False, cmd_prop=False):
+		_start_time = rospy.get_time()
+
 		self.origin_ll = ll
 		_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
 
@@ -933,6 +939,9 @@ class eyelidBaseBehavior( baseBehavior ):
 				#eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+
+		
+		rospy.loginfo("setEyelidNeutralPose(): elapsed time = " + str( rospy.get_time() - _start_time ) + " seconds" )
 		return
 
 	def eyelidClose( self, ll_close=None, monitor=False, cmd_prop=False ):
@@ -953,6 +962,8 @@ class eyelidBaseBehavior( baseBehavior ):
 		return
 		
 	def eyelidOpen( self, ll_open=None, monitor=False, cmd_prop=False ):
+		_start_time = rospy.get_time()
+
 		_pub_cmd = "LLGP" 
 		if ll_open !=None:
 			_pub_cmd += str(ll_open)
@@ -967,6 +978,8 @@ class eyelidBaseBehavior( baseBehavior ):
 				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
+		
+		rospy.logdebug("eyelidOpen(): elapsed time = " + str( rospy.get_time() - _start_time ) + " seconds" )
 		return
 
 
