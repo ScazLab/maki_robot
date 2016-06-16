@@ -614,7 +614,7 @@ class INSPIRE4Controller( object ):
 
 		## STEP 13: Friend moves the flashing ball between the infant and Maki-ro
 		##	and jiggles it to attract Maki-ro's attention
-		rospy.sleep(0.5)
+		#rospy.sleep(0.5)
 
 		## KATE 14:39
 		### STEP 14: Maki-ro looks at the infant
@@ -622,7 +622,7 @@ class INSPIRE4Controller( object ):
 		self.lookIntro.macroLookAtInfant()
 
 		# STEP 15: Friend retracts the flashy ball wand
-		rospy.sleep(0.5)
+		rospy.sleep(0.75)
 
 		## STEP 16: Maki-ro follows the ball and faces Friend
 		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow and follow, follow the flashy ball... Oh hiya, Friend!!!...")
