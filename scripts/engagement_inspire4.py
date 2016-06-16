@@ -89,6 +89,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		## publisher for the experimenter 
 		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
+		self.game_break_flag = False
 
 		return
 
