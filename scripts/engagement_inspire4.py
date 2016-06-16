@@ -84,8 +84,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		self.repetitions = 6	## do 6 rounds of infant engagement behavior max
 
 ## KATE
-		self.duration_between_startle_min = 0.5	#1.0		#2.0	## seconds
-		self.duration_between_startle_max = 1.25	#2.0	#2.5		#5.0	## seconds
+		self.duration_between_startle_min = 0.1	#0.5	#1.0		#2.0	## seconds
+		self.duration_between_startle_max = 0.75	#1.25	#2.0	#2.5		#5.0	## seconds
 
 		## publisher for the experimenter 
 		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
