@@ -65,9 +65,11 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		## NOTE: should be the same values as look_inspire4_intro.py
 		if asleepAwake.HP_ASLEEP == None:
-			asleepAwake.HP_ASLEEP = HP_LEFT
+			asleepAwake.HP_ASLEEP = HP_LEFT	#312
 		if asleepAwake.HT_ASLEEP == None:
-			asleepAwake.HT_ASLEEP = HT_DOWN
+## 2016-06-16, KATE
+			#asleepAwake.HT_ASLEEP = HT_DOWN	## 460
+			asleepAwake.HT_ASLEEP = HT_MIN		## 445
 		if asleepAwake.LL_ASLEEP == None:
 			asleepAwake.LL_ASLEEP = LL_CLOSE_MAX
 		if asleepAwake.EP_ASLEEP == None:

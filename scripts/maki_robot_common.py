@@ -83,9 +83,11 @@ HP_RIGHT = 712
 #HP_LEFT = 404	## demo
 #HP_RIGHT = 620	## demo
 
+HT_MAX = 575	## update 2016-06-16; HT motor replacement
 HT_UP = 540
 HT_MIDDLE = 505
 HT_DOWN = 460
+HT_MIN = 445	## update 2016-06-16; HT motor replacement
 
 HP_ALISSA = 620
 HT_ALISSA = 540
@@ -105,9 +107,9 @@ LL_CLOSE_MAX = 361
 
 ###################################
 #( "LR", "LL", "EP", "ET", "HT", "HP" )	
-SERVO_MIN = ( 484, 361, 460, 425, 442, 256 )
+SERVO_MIN = ( 484, 361, 460, 425, 445, 256 )
 SERVO_NEUTRAL = ( 525, 500, 512, 512, 512, 512 )
-SERVO_MAX = ( 666, 535, 578, 610, 582, 768 )
+SERVO_MAX = ( 666, 535, 578, 610, 575, 768 )
 
 DELTA_PP = 5
 ###################################
