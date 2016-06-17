@@ -83,6 +83,8 @@ class INSPIRE4Controller( object ):
 		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
+		## and a generic one for dealing with resetting to neutral
+		self.htBB = headTiltBaseBehavior( False, self.ros_pub )
 
 		self.data_logger_status = "unknown"
 		self.start_logger_timer = None
@@ -104,8 +106,10 @@ class INSPIRE4Controller( object ):
 	def start( self, neutral_head=True ):
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
-		if neutral_head:	INSPIRE4Controller.controllerReset( self )
-		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
+		if neutral_head:	
+			rospy.loginfo("start(): call to controllerReset()")
+			INSPIRE4Controller.controllerReset( self )
+		#self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 		self.__sync_count = 0
 		self.__is_sync_done = False
@@ -114,6 +118,7 @@ class INSPIRE4Controller( object ):
 		self.previous_state = None
 		INSPIRE4Controller.cancelWatchStimuliCallbacks( self )
 
+		self.htBB.start()
 		self.ALIVE = True
 		return
 
@@ -134,7 +139,9 @@ class INSPIRE4Controller( object ):
 
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
-		if neutral_head:	INSPIRE4Controller.controllerReset( self, disable_ht=disable_ht )
+		if neutral_head:	
+			rospy.loginfo("stop(): call to controllerReset()")
+			INSPIRE4Controller.controllerReset( self, disable_ht=disable_ht )
 
 		return
 
@@ -700,12 +707,25 @@ class INSPIRE4Controller( object ):
 			rospy.loginfo("[usage] Press 'Get ready'")
 			self.exp_pub.publish( prefix_msg + "[usage] Press 'Get ready'")
 
+## 2016-06-16, KATE
 		## We should be able to get to these states at any time
-		if ((state == INSPIRE4Controller.READY) or
-			(state == INSPIRE4Controller.RESET_EXP) or
+		#if ((state == INSPIRE4Controller.READY) or
+		#	(state == INSPIRE4Controller.RESET_EXP) or
+		#	(state == INSPIRE4Controller.END)):
+		#	rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+		#	self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+
+		## We should be able to transition into this state from EVERY state
+		if (state == INSPIRE4Controller.READY):
+			rospy.loginfo("[usage] You can transition from every state (including itself) to this state '" + self.state_dict[state] + "' anytime")
+			self.exp_pub.publish("[usage] You can transition from every state (including itself) to this state '" + self.state_dict[state] + "' anytime")
+
+		## We should be able to transition into this state from ANY OTHER
+		if ((state == INSPIRE4Controller.RESET_EXP) or
 			(state == INSPIRE4Controller.END)):
-			rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
-			self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+			rospy.loginfo("[usage] You can transition from any state (except itself) to this state '" + self.state_dict[state] + "' anytime")
+			self.exp_pub.publish("[usage] You can transition from any state (except itself) to this state '" + self.state_dict[state] + "' anytime")
+
 
 		if (state == INSPIRE4Controller.READY): 
 			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
@@ -747,15 +767,38 @@ class INSPIRE4Controller( object ):
 		#	return
 
 
+## 2016-06-16, KATE
 		## We should be able to get to these states at any time
-		if ((future_state == INSPIRE4Controller.READY) or
-			(future_state == INSPIRE4Controller.RESET_EXP) or
-			(future_state == INSPIRE4Controller.END)):
+		#if ((future_state == INSPIRE4Controller.READY) or
+		#	(future_state == INSPIRE4Controller.RESET_EXP) or
+		#	(future_state == INSPIRE4Controller.END)):
+		#	rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
+		#	_invalid_transition = False
+
+		if (future_state == INSPIRE4Controller.READY):
 			rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
 			_invalid_transition = False
 
+		if (future_state == INSPIRE4Controller.RESET_EXP):
+			## Don't allow clicking multiple times on "reset experiment"
+			if (current_state == INSPIRE4Controller.RESET_EXP):
+				_invalid_transition = True 
+			## But otherwise, we should be able to get to this state from any other
+			else:
+				_invalid_transition = False
+
+		if (future_state == INSPIRE4Controller.END):
+			## Don't allow clicking multiple times on "the end"
+			if (current_state == INSPIRE4Controller.END):
+				_invalid_transition = True 
+			## But otherwise, we should be able to get to this state from any other
+			else:
+				_invalid_transition = False
+
 		if (future_state == INSPIRE4Controller.SYNC):
 			if (current_state == INSPIRE4Controller.READY): 
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.RESET_EXP):
 				_invalid_transition = False
 			elif (current_state == INSPIRE4Controller.SYNC):
 				_invalid_transition = False
@@ -842,6 +885,9 @@ class INSPIRE4Controller( object ):
 				## STEP 1: Move to ready state
 				INSPIRE4Controller.transitionToReady( self, msg=_data )
 
+				## override state
+				self.state = INSPIRE4Controller.RESET_EXP
+
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
 			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.READY )
@@ -921,6 +967,7 @@ class INSPIRE4Controller( object ):
 				if self.__sync_count == 4:
 					self.__is_sync_done = True
 					rospy.loginfo("If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+					self.exp_pub.publish("If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
 
 		elif _data == "runFamiliarizationSkit":
 			## We should only be able to get to this controller state from SYNC
@@ -1027,6 +1074,7 @@ class INSPIRE4Controller( object ):
 
 				## always begin in neutral position
 				## NOTE: head tilt motor will be disabled after reset
+				rospy.loginfo("INVALID TRIAL BUTTON: call to controllerReset()")
 				INSPIRE4Controller.controllerReset( self )
 
 				self.exp_pub.publish( "Reset interaction; RE-DO interaction #" + str(self.interaction_count ) + "\tPress button 'Run Engagement Game'")
@@ -1077,7 +1125,15 @@ class INSPIRE4Controller( object ):
 		if self.ALIVE:
 			#self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
+			rospy.loginfo("controllerExit(): call to controllerReset()")
 			INSPIRE4Controller.controllerReset( self )
+
+## 2016-06-16, KATE
+		## nicely exit the behaviors too
+		self.asleepAwake.abort()
+		self.lookIntro.abort()
+		self.startleGame.abort()
+		self.lookStimuli.abort()
 
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
@@ -1088,30 +1144,37 @@ class INSPIRE4Controller( object ):
 
 
 	## NOTE: head tilt motor will be disabled after reset movement
+	#def controllerReset( self, disable_ht=True ):
 	def controllerReset( self, disable_ht=True ):
+## 2016-06-16, KATE
+		## TODO: FIX: There seems to be a lot of lag time in this function
+
 		_delta_pp = 2		#ticks
 		_reset_duration = 0	#ms
 		_reset_buffer = 500	#ms
 
-		_htBB = headTiltBaseBehavior( True, self.ros_pub )
-		_htBB.start()
+		## NOTE: changed to self.htBB since instantiating this behavior
+		##	has become expensive given the number of times controllerReset()
+		##	is called
+		#_htBB = headTiltBaseBehavior( True, self.ros_pub )
+		self.htBB.start()
 
 		## check if we are already in neutral before publishing the goal positions
-		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
+		if (self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
 			return
 
 		_pub_reset = ""
 		_pub_reset += "HTGP" + str(HT_MIDDLE) + "HPGP" + str(HP_FRONT) + "LLGP" + str(LL_OPEN_DEFAULT) + "EPGP" + str(EP_FRONT) + "ETGP" + str(ET_MIDDLE)
-		if ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
-			(abs(_htBB.makiPP["HP"] - HP_FRONT) < 25) and
-			(abs(_htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
-			(abs(_htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
+		if ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
+			(abs(self.htBB.makiPP["HP"] - HP_FRONT) < 25) and
+			(abs(self.htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
+			(abs(self.htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
 			_reset_duration = 250
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
-		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 150)):
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 150)):
 			_reset_duration = 750
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
-		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 300)):
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 300)):
 			_reset_duration = 1250
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
 		else:
@@ -1121,31 +1184,30 @@ class INSPIRE4Controller( object ):
 		rospy.loginfo("controllerReset(): _pub_reset = " + str(_pub_reset))
 
 		try:
-			## THIS IS CUSTOM RESET
-			##      reset goal speeds and goal positions
-			##      and monitor moving into goal positions
-			#_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
-			_htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
-			if disable_ht:	_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+			if (_reset_duration >= 300):	## ms
+				## THIS IS CUSTOM RESET
+				##      reset goal speeds and goal positions
+				##      and monitor moving into goal positions
+				self.htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
+			else:	## monitoring is a waste for anything less than 300 ms
+				self.htBB.pubTo_maki_command( _pub_reset )
+
+			if disable_ht:	self.htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
 
 		except rospy.exceptions.ROSException as _e:
-			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			if (not self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logwarn("controllerReset(): WARN: Could not complete monitoring move to neutral position...STALLED??...")
 				rospy.logdebug("controllerReset(): ERROR: " + str(_e))
-				#_htBB.pubTo_maki_command( "reset" )
-				#rospy.sleep(1.0)
-				_htBB.pubTo_maki_command( _pub_reset )
+				self.htBB.pubTo_maki_command( _pub_reset )
 				rospy.sleep( _reset_duration + _reset_buffer )
-			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
 
 		except TypeError as _e1:
-			if (not _htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			if (not self.htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
-				#_htBB.pubTo_maki_command( "reset" )
-				#rospy.sleep(1.0)
-				_htBB.pubTo_maki_command( _pub_reset )
+				self.htBB.pubTo_maki_command( _pub_reset )
 				rospy.sleep( _reset_duration + _reset_buffer )
-			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
 		return
 
 ## ------------------------------
@@ -1163,6 +1225,7 @@ if __name__ == '__main__':
 	global controller 
 	controller = INSPIRE4Controller( True, None )
 	rospy.logdebug("-------- controller.__init__() DONE -----------")
+	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... Please wait.")
 
 	# allow closing the program using CTRL+C
 	#signal.signal(signal.SIGINT, signal_handler)
@@ -1177,6 +1240,7 @@ if __name__ == '__main__':
 
 	controller.start()
 	rospy.logdebug("-------- controller.start() DONE -----------")
+	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 	rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
 	rospy.spin()   ## keeps python from exiting until this node is stopped

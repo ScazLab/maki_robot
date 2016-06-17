@@ -30,8 +30,10 @@ class baseBehavior(object):
 	def __init__(self, verbose_debug, ros_pub):
 		self.count_movements = 0
 		self.ALIVE = True
-		self.mTT_INTERRUPT = True
-		# self.VERBOSE_DEBUG = verbose_debug	## default is False
+		#self.mTT_INTERRUPT = True
+## 2016-06-16, KATE
+		self.mTT_INTERRUPT = False
+		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		self.DC_helper = dynamixelConversions()
 
@@ -61,7 +63,10 @@ class baseBehavior(object):
 		baseBehavior.requestFeedback( self, str(SC_GET_PP) )
 
 		## check to see if there is an entry with key "PP"
-		while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
+		#while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
+## 1026-06-12, KATE
+		## while ros is running and no interruptions have occurred
+		while (not rospy.is_shutdown() and not self.mTT_INTERRUPT):
 			## LEGACY CHECK
 			## if we were passed a valid makiPP 
 			if (makiPP != None) and (makiPP != _invalid_entry):
@@ -82,7 +87,8 @@ class baseBehavior(object):
 			baseBehavior.requestFeedback( self, str(SC_GET_PP), time_ms=500 )
 		#end	while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
 
-		self.ALIVE = True
+## 2016-06-16, KATE
+		#self.ALIVE = True
 		self.mTT_INTERRUPT = False
 		return
 
@@ -325,7 +331,9 @@ class baseBehavior(object):
 		_start_time = rospy.get_time()
 		### REPEAT SENDING THE COMMAND
 		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=False )
-		while not rospy.is_shutdown():
+		#while not rospy.is_shutdown():
+## 2016-06-16, KATE
+		while ((not rospy.is_shutdown()) and (not self.mTT_INTERRUPT)):
 			_loop_count += 1
 
 			## There is an implicit sleep in requestFeedback of 100ms (default)
@@ -380,7 +388,7 @@ class baseBehavior(object):
 				#baseBehavior.requestFeedback( self, SC_GET_PP, time_ms=250 ) 
 ## KATE
 				if _stall_count != _loop_count:
-					rospy.loginfo("potential STALL RECOVERY?? _loop_count=" + str(_loop_count) + ", _stall_count=" + str(_stall_count))
+					rospy.logdebug("potential STALL RECOVERY?? _loop_count=" + str(_loop_count) + ", _stall_count=" + str(_stall_count))
 
 			if (_stall_count == 10):	
 				#rospy.logerr("STALLED!!!")
@@ -441,9 +449,11 @@ class baseBehavior(object):
 					_request_verify_flag[_motor] = False
 					_count_request_verify_flags = _count_request_verify_flags -1
 				else:
-					rospy.logdebug( _motor + " present position DOES NOT matches goal position")
 					_ret = False
-					#break	## break the for loop; no sense in performing unnecessary calculations
+					if self.VERBOSE_DEBUG:
+						rospy.logwarn("verifyPose(): " + _motor + " present position (" + str(_makiPP[_motor]) + ") DOES NOT matches goal position (" + str(_verify_dict[_motor]) + ")" )
+					else:
+						break	## break the for loop; no sense in performing unnecessary calculations
 		#end	for _motor in F_VAL_SEQ:
 
 		if _count_request_verify_flags == 0:	_ret = True
@@ -568,12 +578,14 @@ class headTiltBaseBehavior(baseBehavior):
 
 		headTiltBaseBehavior.requestFeedback( self, SC_GET_PT )
 		## check to see if there is an entry with key "PT"
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			## if we got a message on /maki_feedback_pres_temp
 			if ( str(SC_GET_PT) in self.maki_feedback_values ):
 				break	## break the while loop
 			else:
-				rospy.loginfo("Waiting for a message on /maki_feedback_pres_temp...")
+				rospy.logdebug("Waiting for a message on /maki_feedback_pres_temp...")
 				## request a feedback message
 				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_PT) )
 				rospy.sleep(30)	## wait for 30 seconds
@@ -594,7 +606,9 @@ class headTiltBaseBehavior(baseBehavior):
 
 		_loop_count = 1
 		_ht_pt = _current_pt["HT"]
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			_loop_count += 1
 			rospy.sleep(60.0 * 2.5)	## sample motors' present temperature every 2.5 minutes
 			#rospy.sleep(30.0)	## faster for debugging
@@ -675,7 +689,9 @@ class headTiltBaseBehavior(baseBehavior):
 		baseBehavior.start( self, makiPP )
 
 		## check to see if there is an entry with key "TL"
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			## if we got a message on /maki_feedback_torque_limit
 			if ( str(SC_GET_TL) in self.maki_feedback_values ):
 				break	## break the while loop
@@ -722,6 +738,7 @@ class headTiltBaseBehavior(baseBehavior):
 		while (((self.makiPP == None) or 
 			(not (SC_GET_PP in self.maki_feedback_values)) or
 			(not (SC_GET_TL in self.maki_feedback_values))) and
+			(not self.mTT_INTERRUPT) and		## 2016-06-16, KATE
 			(not rospy.is_shutdown())):
 			if (_loop_count == 0):
 				## request current servo motor values
@@ -740,7 +757,7 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_enabled = True
 			return
 
-		## HT TL is 0%
+		## Otherwise, HT TL is 0%
 		## Set the goal position as the present position
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
@@ -800,19 +817,19 @@ class headTiltBaseBehavior(baseBehavior):
 		return
 
 
-	## TODO: bug fix -- need to replicate bug first!
-	def reset( self ):
-
-		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
-			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
-		
-		## send enable command
-		headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
-		headTiltBaseBehavior.__ht_enabled = True
-
-		## publish "reset" to /maki_command
-		headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
+	### TODO: bug fix -- need to replicate bug first!
+	#def reset( self ):
+	#
+	#	if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
+	#		_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
+	#		baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+	#	
+	#	## send enable command
+	#	headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
+	#	headTiltBaseBehavior.__ht_enabled = True
+	#
+	#	## publish "reset" to /maki_command
+	#	headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
 
 
 	## override base class
@@ -935,8 +952,10 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
-				#eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 
@@ -956,6 +975,9 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_close )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
@@ -975,6 +997,9 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_open )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)

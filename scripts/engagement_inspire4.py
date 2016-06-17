@@ -942,6 +942,73 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		return
 
+'''
+	def controllerReset( self, disable_ht=True ):
+## 2016-06-16, KATE
+		## TODO: FIX: There seems to be a lot of lag time in this function
+
+		_delta_pp = 2		#ticks
+		_reset_duration = 0	#ms
+		_reset_buffer = 500	#ms
+
+		## NOTE: changed to self.htBB since instantiating this behavior
+		##	has become expensive given the number of times controllerReset()
+		##	is called
+		#_htBB = headTiltBaseBehavior( True, self.ros_pub )
+		self.htBB.start()
+
+		## check if we are already in neutral before publishing the goal positions
+		if (self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
+			return
+
+		_pub_reset = ""
+		_pub_reset += "HTGP" + str(HT_MIDDLE) + "HPGP" + str(HP_FRONT) + "LLGP" + str(LL_OPEN_DEFAULT) + "EPGP" + str(EP_FRONT) + "ETGP" + str(ET_MIDDLE)
+		if ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
+			(abs(self.htBB.makiPP["HP"] - HP_FRONT) < 25) and
+			(abs(self.htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
+			(abs(self.htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
+			_reset_duration = 250
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 150)):
+			_reset_duration = 750
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 300)):
+			_reset_duration = 1250
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		else:
+			_reset_duration = 2000
+			_pub_reset += SC_SET_IPT + str(_reset_duration)
+		_pub_reset += TERM_CHAR_SEND
+		rospy.loginfo("controllerReset(): _pub_reset = " + str(_pub_reset))
+
+		try:
+			if (_reset_duration >= 300):	## ms
+				## THIS IS CUSTOM RESET
+				##      reset goal speeds and goal positions
+				##      and monitor moving into goal positions
+				self.htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
+			else:	## monitoring is a waste for anything less than 300 ms
+				self.htBB.pubTo_maki_command( _pub_reset )
+
+			if disable_ht:	self.htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+
+		except rospy.exceptions.ROSException as _e:
+			if (not self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+				rospy.logwarn("controllerReset(): WARN: Could not complete monitoring move to neutral position...STALLED??...")
+				rospy.logdebug("controllerReset(): ERROR: " + str(_e))
+				self.htBB.pubTo_maki_command( _pub_reset )
+				rospy.sleep( _reset_duration + _reset_buffer )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
+
+		except TypeError as _e1:
+			if (not self.htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
+				self.htBB.pubTo_maki_command( _pub_reset )
+				rospy.sleep( _reset_duration + _reset_buffer )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
+		return
+'''
+
 if __name__ == '__main__':
         print "__main__: BEGIN"
 	E = engagementStartleGame( True, None )

@@ -65,9 +65,11 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		## NOTE: should be the same values as look_inspire4_intro.py
 		if asleepAwake.HP_ASLEEP == None:
-			asleepAwake.HP_ASLEEP = HP_LEFT
+			asleepAwake.HP_ASLEEP = HP_LEFT	#312
 		if asleepAwake.HT_ASLEEP == None:
-			asleepAwake.HT_ASLEEP = HT_DOWN
+## 2016-06-16, KATE
+			#asleepAwake.HT_ASLEEP = HT_DOWN	## 460
+			asleepAwake.HT_ASLEEP = HT_MIN		## 445
 		if asleepAwake.LL_ASLEEP == None:
 			asleepAwake.LL_ASLEEP = LL_CLOSE_MAX
 		if asleepAwake.EP_ASLEEP == None:
@@ -151,6 +153,13 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 
 		if (self.ALIVE and (not self.mTT_INTERRUPT) and
 			(not rospy.is_shutdown())):
+
+			## FIRST! Check to see if we are already positioned in asleep
+			if asleepAwake.verifyPose( self, ll=asleepAwake.LL_ASLEEP, ht=asleepAwake.HT_ASLEEP, hp=asleepAwake.HP_ASLEEP ):	
+				rospy.logdebug("macroAsleep(): already asleep... SKIP!!!!!")
+				asleepAwake.__is_asleep = True
+				asleepAwake.__is_awake = False
+				return
 
 			asleepAwake.requestFeedback( self, SC_GET_PP )
 			if _pub_ll:

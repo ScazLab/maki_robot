@@ -116,6 +116,9 @@ class lookINSPIRE4Interaction( lookAt ):
 		lookAt.start( self, enable_ht=enable_ht )
 		#headTiltBaseBehavior.start( self, enable_ht=enable_ht )
 
+## KATE 15:25
+## NOTE: self.facing isn't well used in new turn behaviors
+##	We could save time here...
 		## CHECK TO SEE WHICH HEAD PAN POSITION IS CLOSEST
 		lookINSPIRE4Interaction.requestFeedback( self, SC_GET_PP )
 		_hp_pp = self.makiPP["HP"]	
