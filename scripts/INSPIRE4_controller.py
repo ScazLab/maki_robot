@@ -1087,8 +1087,16 @@ class INSPIRE4Controller( object ):
 			if not _invalid_transition:
 				rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )
 	
-				## clean up first, and reset to neutral pose
-				INSPIRE4Controller.stop( self )
+				## HACK to shorten ending
+				## if 6 interactions have taken place without any issue and we've
+				##	just finished watching stimuli, then the robot is already
+				##	in neutral pose... SKIP
+				if (self.state == INSPIRE4Controller.STIMULI) and (self.interaction_count >= INSPIRE4Controller.NUMBER_OF_INTERACTIONS):
+					INSPIRE4Controller.cancelWatchStimuliCallbacks( self )	## just in case
+					pass
+				else:
+					## clean up first, and reset to neutral pose
+					INSPIRE4Controller.stop( self )
 
 				INSPIRE4Controller.transitionToReady(self, _data)
 				self.state = INSPIRE4Controller.END	## override state
