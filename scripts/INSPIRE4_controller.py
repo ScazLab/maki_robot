@@ -893,12 +893,13 @@ class INSPIRE4Controller( object ):
 			_invalid_transition = INSPIRE4Controller.invalidTransition( self, self.state, INSPIRE4Controller.READY )
 
 			if not _invalid_transition:
-				## STEP 0: Reset but don't move to neutral head pose first
-				INSPIRE4Controller.stop( self, neutral_head=False )
-				INSPIRE4Controller.start( self, neutral_head=False )
-
-				## STEP 1: Move to ready state
-				INSPIRE4Controller.transitionToReady( self, msg=_data )
+				### STEP 0: Reset but don't move to neutral head pose first
+				#INSPIRE4Controller.stop( self, neutral_head=False )
+				#INSPIRE4Controller.start( self, neutral_head=False )
+				#
+				### STEP 1: Move to ready state
+				#INSPIRE4Controller.transitionToReady( self, msg=_data )
+				INSPIRE4Controller.doGetReady( self, msg=_data )
 
 		elif _data.startswith( "sync" ):
 			## We should only be able to get to this controller state from READY
@@ -1126,6 +1127,14 @@ class INSPIRE4Controller( object ):
 		return
 
 
+	def doGetReady( self, msg=None ):
+		## STEP 0: Reset but don't move to neutral head pose first
+		INSPIRE4Controller.stop( self, neutral_head=False )
+		INSPIRE4Controller.start( self, neutral_head=False )
+
+		## STEP 1: Move to ready state
+		INSPIRE4Controller.transitionToReady( self, msg=msg )
+		return
 
 	def controllerExit( self ):
 		rospy.logdebug("controllerExit(): BEGIN")
@@ -1257,6 +1266,9 @@ if __name__ == '__main__':
 	## hack to make sure that the head tilt motor is shutoff after controllerReset() in start
 	controller.htBB.stop()	## make sure that the head tilt motor is disengaged
 	controller.htBB.requestFeedback( SC_GET_TL )		## debugging
+
+	rospy.sleep(0.5)	## tiny sleep
+	controller.doGetReady( msg="__main__" )	## when controller comes up, just IMMEDIATELY put Maki-ro into 'get ready'
 
 	rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
 	rospy.spin()   ## keeps python from exiting until this node is stopped
