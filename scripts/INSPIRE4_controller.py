@@ -1142,6 +1142,7 @@ class INSPIRE4Controller( object ):
 		self.lookIntro.abort()
 		self.startleGame.abort()
 		self.lookStimuli.abort()
+		self.htBB.stop()	## make sure that the head tilt motor is disengaged
 
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
@@ -1200,7 +1201,10 @@ class INSPIRE4Controller( object ):
 			else:	## monitoring is a waste for anything less than 300 ms
 				self.htBB.pubTo_maki_command( _pub_reset )
 
-			if disable_ht:	self.htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+			if disable_ht:	
+				rospy.logdebug("controllerReset(): publish reset command... Now STOP using self.htBB.stop()")	## debugging
+				self.htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+				self.htBB.requestFeedback( SC_GET_TL )	## debugging
 
 		except rospy.exceptions.ROSException as _e:
 			if (not self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
@@ -1249,6 +1253,10 @@ if __name__ == '__main__':
 	controller.start()
 	rospy.logdebug("-------- controller.start() DONE -----------")
 	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
+
+	## hack to make sure that the head tilt motor is shutoff after controllerReset() in start
+	controller.htBB.stop()	## make sure that the head tilt motor is disengaged
+	controller.htBB.requestFeedback( SC_GET_TL )		## debugging
 
 	rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
 	rospy.spin()   ## keeps python from exiting until this node is stopped
