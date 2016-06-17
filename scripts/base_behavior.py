@@ -935,8 +935,10 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
-				#eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 
@@ -956,6 +958,9 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_close )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
@@ -975,6 +980,9 @@ class eyelidBaseBehavior( baseBehavior ):
 			try:
 				eyelidBaseBehavior.monitorMoveToGP( self, _pub_cmd, ll_gp=self.ll_open )
 			except rospy.exceptions.ROSException as e:
+## 2016-06-16, KATE
+				## last effort before raising exception
+				eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
 				raise e
 		else:
 			eyelidBaseBehavior.pubTo_maki_command( self, _pub_cmd, cmd_prop=cmd_prop)
