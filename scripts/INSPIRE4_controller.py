@@ -83,6 +83,8 @@ class INSPIRE4Controller( object ):
 		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
+		## and a generic one for dealing with resetting to neutral
+		self.htBB = headTiltBaseBehavior( True, self.ros_pub )
 
 		self.data_logger_status = "unknown"
 		self.start_logger_timer = None
@@ -104,7 +106,9 @@ class INSPIRE4Controller( object ):
 	def start( self, neutral_head=True ):
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
-		if neutral_head:	INSPIRE4Controller.controllerReset( self )
+		if neutral_head:	
+			rospy.loginfo("start(): call to controllerReset()")
+			INSPIRE4Controller.controllerReset( self )
 		#self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 		self.__sync_count = 0
@@ -114,6 +118,7 @@ class INSPIRE4Controller( object ):
 		self.previous_state = None
 		INSPIRE4Controller.cancelWatchStimuliCallbacks( self )
 
+		self.htBB.start()
 		self.ALIVE = True
 		return
 
@@ -134,7 +139,9 @@ class INSPIRE4Controller( object ):
 
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
-		if neutral_head:	INSPIRE4Controller.controllerReset( self, disable_ht=disable_ht )
+		if neutral_head:	
+			rospy.loginfo("stop(): call to controllerReset()")
+			INSPIRE4Controller.controllerReset( self, disable_ht=disable_ht )
 
 		return
 
@@ -1067,6 +1074,7 @@ class INSPIRE4Controller( object ):
 
 				## always begin in neutral position
 				## NOTE: head tilt motor will be disabled after reset
+				rospy.loginfo("INVALID TRIAL BUTTON: call to controllerReset()")
 				INSPIRE4Controller.controllerReset( self )
 
 				self.exp_pub.publish( "Reset interaction; RE-DO interaction #" + str(self.interaction_count ) + "\tPress button 'Run Engagement Game'")
@@ -1117,6 +1125,7 @@ class INSPIRE4Controller( object ):
 		if self.ALIVE:
 			#self.ALIVE = False
 			## NOTE: head tilt motor will be disabled after reset
+			rospy.loginfo("controllerExit(): call to controllerReset()")
 			INSPIRE4Controller.controllerReset( self )
 
 ## 2016-06-16, KATE
@@ -1135,30 +1144,37 @@ class INSPIRE4Controller( object ):
 
 
 	## NOTE: head tilt motor will be disabled after reset movement
+	#def controllerReset( self, disable_ht=True ):
 	def controllerReset( self, disable_ht=True ):
+## 2016-06-16, KATE
+		## TODO: FIX: There seems to be a lot of lag time in this function
+
 		_delta_pp = 2		#ticks
 		_reset_duration = 0	#ms
 		_reset_buffer = 500	#ms
 
-		_htBB = headTiltBaseBehavior( True, self.ros_pub )
-		_htBB.start()
+		## NOTE: changed to self.htBB since instantiating this behavior
+		##	has become expensive given the number of times controllerReset()
+		##	is called
+		#_htBB = headTiltBaseBehavior( True, self.ros_pub )
+		self.htBB.start()
 
 		## check if we are already in neutral before publishing the goal positions
-		if (_htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
+		if (self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE, delta_pp=_delta_pp )):
 			return
 
 		_pub_reset = ""
 		_pub_reset += "HTGP" + str(HT_MIDDLE) + "HPGP" + str(HP_FRONT) + "LLGP" + str(LL_OPEN_DEFAULT) + "EPGP" + str(EP_FRONT) + "ETGP" + str(ET_MIDDLE)
-		if ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
-			(abs(_htBB.makiPP["HP"] - HP_FRONT) < 25) and
-			(abs(_htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
-			(abs(_htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
+		if ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 10) and 
+			(abs(self.htBB.makiPP["HP"] - HP_FRONT) < 25) and
+			(abs(self.htBB.makiPP["ET"] - ET_MIDDLE) < 10) and
+			(abs(self.htBB.makiPP["LL"] - LL_OPEN_DEFAULT) < 25)):
 			_reset_duration = 250
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
-		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 150)):
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 50) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 150)):
 			_reset_duration = 750
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
-		elif ((abs(_htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(_htBB.makiPP["HP"] - HP_FRONT) < 300)):
+		elif ((abs(self.htBB.makiPP["HT"] - HT_MIDDLE) < 100) and (abs(self.htBB.makiPP["HP"] - HP_FRONT) < 300)):
 			_reset_duration = 1250
 			_pub_reset += SC_SET_IPT + str(_reset_duration)
 		else:
@@ -1168,31 +1184,30 @@ class INSPIRE4Controller( object ):
 		rospy.loginfo("controllerReset(): _pub_reset = " + str(_pub_reset))
 
 		try:
-			## THIS IS CUSTOM RESET
-			##      reset goal speeds and goal positions
-			##      and monitor moving into goal positions
-			#_htBB.monitorMoveToGP( "reset", ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE )
-			_htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
-			if disable_ht:	_htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
+			if (_reset_duration >= 300):	## ms
+				## THIS IS CUSTOM RESET
+				##      reset goal speeds and goal positions
+				##      and monitor moving into goal positions
+				self.htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
+			else:	## monitoring is a waste for anything less than 300 ms
+				self.htBB.pubTo_maki_command( _pub_reset )
+
+			if disable_ht:	self.htBB.stop()	## NOTE: .stop() is closed loop and depends on feedback from motors
 
 		except rospy.exceptions.ROSException as _e:
-			if (not _htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			if (not self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logwarn("controllerReset(): WARN: Could not complete monitoring move to neutral position...STALLED??...")
 				rospy.logdebug("controllerReset(): ERROR: " + str(_e))
-				#_htBB.pubTo_maki_command( "reset" )
-				#rospy.sleep(1.0)
-				_htBB.pubTo_maki_command( _pub_reset )
+				self.htBB.pubTo_maki_command( _pub_reset )
 				rospy.sleep( _reset_duration + _reset_buffer )
-			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
 
 		except TypeError as _e1:
-			if (not _htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
+			if (not self.htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
 				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
-				#_htBB.pubTo_maki_command( "reset" )
-				#rospy.sleep(1.0)
-				_htBB.pubTo_maki_command( _pub_reset )
+				self.htBB.pubTo_maki_command( _pub_reset )
 				rospy.sleep( _reset_duration + _reset_buffer )
-			if disable_ht:	_htBB.pubTo_maki_command( "HTTL0Z" )
+			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
 		return
 
 ## ------------------------------
