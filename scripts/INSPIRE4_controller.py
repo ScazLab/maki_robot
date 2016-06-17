@@ -105,7 +105,7 @@ class INSPIRE4Controller( object ):
 		## always begin in neutral position
 		## NOTE: head tilt motor will be disabled after reset
 		if neutral_head:	INSPIRE4Controller.controllerReset( self )
-		self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
+		#self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 		self.__sync_count = 0
 		self.__is_sync_done = False
@@ -1160,6 +1160,7 @@ if __name__ == '__main__':
 	global controller 
 	controller = INSPIRE4Controller( True, None )
 	rospy.logdebug("-------- controller.__init__() DONE -----------")
+	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... Please wait.")
 
 	# allow closing the program using CTRL+C
 	#signal.signal(signal.SIGINT, signal_handler)
@@ -1174,6 +1175,7 @@ if __name__ == '__main__':
 
 	controller.start()
 	rospy.logdebug("-------- controller.start() DONE -----------")
+	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 	rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
 	rospy.spin()   ## keeps python from exiting until this node is stopped
