@@ -380,7 +380,7 @@ class baseBehavior(object):
 				#baseBehavior.requestFeedback( self, SC_GET_PP, time_ms=250 ) 
 ## KATE
 				if _stall_count != _loop_count:
-					rospy.loginfo("potential STALL RECOVERY?? _loop_count=" + str(_loop_count) + ", _stall_count=" + str(_stall_count))
+					rospy.logdebug("potential STALL RECOVERY?? _loop_count=" + str(_loop_count) + ", _stall_count=" + str(_stall_count))
 
 			if (_stall_count == 10):	
 				#rospy.logerr("STALLED!!!")
@@ -573,7 +573,7 @@ class headTiltBaseBehavior(baseBehavior):
 			if ( str(SC_GET_PT) in self.maki_feedback_values ):
 				break	## break the while loop
 			else:
-				rospy.loginfo("Waiting for a message on /maki_feedback_pres_temp...")
+				rospy.logdebug("Waiting for a message on /maki_feedback_pres_temp...")
 				## request a feedback message
 				headTiltBaseBehavior.requestFeedback( self, str(SC_GET_PT) )
 				rospy.sleep(30)	## wait for 30 seconds
@@ -740,7 +740,7 @@ class headTiltBaseBehavior(baseBehavior):
 			headTiltBaseBehavior.__ht_enabled = True
 			return
 
-		## HT TL is 0%
+		## Otherwise, HT TL is 0%
 		## Set the goal position as the present position
 		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
@@ -800,19 +800,19 @@ class headTiltBaseBehavior(baseBehavior):
 		return
 
 
-	## TODO: bug fix -- need to replicate bug first!
-	def reset( self ):
-
-		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
-			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
-			baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
-		
-		## send enable command
-		headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
-		headTiltBaseBehavior.__ht_enabled = True
-
-		## publish "reset" to /maki_command
-		headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
+	### TODO: bug fix -- need to replicate bug first!
+	#def reset( self ):
+	#
+	#	if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
+	#		_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
+	#		baseBehavior.pubTo_maki_command( self, str(_pub_cmd_GP) )
+	#	
+	#	## send enable command
+	#	headTiltBaseBehavior.pubTo_maki_command( self, str(headTiltBaseBehavior.__ht_enable_cmd) )
+	#	headTiltBaseBehavior.__ht_enabled = True
+	#
+	#	## publish "reset" to /maki_command
+	#	headTiltBaseBehavior.pubTo_maki_command( self, "reset" )
 
 
 	## override base class
