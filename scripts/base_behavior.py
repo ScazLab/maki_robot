@@ -30,7 +30,9 @@ class baseBehavior(object):
 	def __init__(self, verbose_debug, ros_pub):
 		self.count_movements = 0
 		self.ALIVE = True
-		self.mTT_INTERRUPT = True
+		#self.mTT_INTERRUPT = True
+## 2016-06-16, KATE
+		self.mTT_INTERRUPT = False
 		# self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		self.DC_helper = dynamixelConversions()
@@ -61,7 +63,10 @@ class baseBehavior(object):
 		baseBehavior.requestFeedback( self, str(SC_GET_PP) )
 
 		## check to see if there is an entry with key "PP"
-		while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
+		#while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
+## 1026-06-12, KATE
+		## while ros is running and no interruptions have occurred
+		while (not rospy.is_shutdown() and not self.mTT_INTERRUPT):
 			## LEGACY CHECK
 			## if we were passed a valid makiPP 
 			if (makiPP != None) and (makiPP != _invalid_entry):
@@ -82,7 +87,8 @@ class baseBehavior(object):
 			baseBehavior.requestFeedback( self, str(SC_GET_PP), time_ms=500 )
 		#end	while (not rospy.is_shutdown() and self.mTT_INTERRUPT):
 
-		self.ALIVE = True
+## 2016-06-16, KATE
+		#self.ALIVE = True
 		self.mTT_INTERRUPT = False
 		return
 
@@ -325,7 +331,9 @@ class baseBehavior(object):
 		_start_time = rospy.get_time()
 		### REPEAT SENDING THE COMMAND
 		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=False )
-		while not rospy.is_shutdown():
+		#while not rospy.is_shutdown():
+## 2016-06-16, KATE
+		while ((not rospy.is_shutdown()) and (not self.mTT_INTERRUPT)):
 			_loop_count += 1
 
 			## There is an implicit sleep in requestFeedback of 100ms (default)
@@ -568,7 +576,9 @@ class headTiltBaseBehavior(baseBehavior):
 
 		headTiltBaseBehavior.requestFeedback( self, SC_GET_PT )
 		## check to see if there is an entry with key "PT"
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			## if we got a message on /maki_feedback_pres_temp
 			if ( str(SC_GET_PT) in self.maki_feedback_values ):
 				break	## break the while loop
@@ -594,7 +604,9 @@ class headTiltBaseBehavior(baseBehavior):
 
 		_loop_count = 1
 		_ht_pt = _current_pt["HT"]
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			_loop_count += 1
 			rospy.sleep(60.0 * 2.5)	## sample motors' present temperature every 2.5 minutes
 			#rospy.sleep(30.0)	## faster for debugging
@@ -675,7 +687,9 @@ class headTiltBaseBehavior(baseBehavior):
 		baseBehavior.start( self, makiPP )
 
 		## check to see if there is an entry with key "TL"
-		while (not rospy.is_shutdown()):
+		#while (not rospy.is_shutdown()):
+## 2016-06-16, KATE
+		while (not rospy.is_shutdown()) and self.ALIVE:
 			## if we got a message on /maki_feedback_torque_limit
 			if ( str(SC_GET_TL) in self.maki_feedback_values ):
 				break	## break the while loop
@@ -722,6 +736,7 @@ class headTiltBaseBehavior(baseBehavior):
 		while (((self.makiPP == None) or 
 			(not (SC_GET_PP in self.maki_feedback_values)) or
 			(not (SC_GET_TL in self.maki_feedback_values))) and
+			(not self.mTT_INTERRUPT) and		## 2016-06-16, KATE
 			(not rospy.is_shutdown())):
 			if (_loop_count == 0):
 				## request current servo motor values

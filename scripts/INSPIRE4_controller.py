@@ -1119,6 +1119,13 @@ class INSPIRE4Controller( object ):
 			## NOTE: head tilt motor will be disabled after reset
 			INSPIRE4Controller.controllerReset( self )
 
+## 2016-06-16, KATE
+		## nicely exit the behaviors too
+		self.asleepAwake.abort()
+		self.lookIntro.abort()
+		self.startleGame.abort()
+		self.lookStimuli.abort()
+
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
 		rospy.logdebug( "controllerExit: SHUTTING DOWN INSPIRE4 EXPERIMENT..." )
