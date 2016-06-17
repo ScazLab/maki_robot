@@ -126,7 +126,8 @@ class INSPIRE4Controller( object ):
 		elif self.previous_state == INSPIRE4Controller.STIMULI:
 			INSPIRE4Controller.cancelWatchStimuliCallbacks( self )
 			## also taken care of in runWatchStimuli
-			rospy.sleep(1)	## need time to face front
+			## KATE 14:39
+			#rospy.sleep(1)	## need time to face front
 			pass
 		else:
 			pass
@@ -615,11 +616,12 @@ class INSPIRE4Controller( object ):
 		##	and jiggles it to attract Maki-ro's attention
 		rospy.sleep(0.5)
 
-		## STEP 14: Maki-ro looks at the infant
+		## KATE 14:39
+		### STEP 14: Maki-ro looks at the infant
 		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow, follow, follow, follow the flashy ball...")
 		self.lookIntro.macroLookAtInfant()
 
-		## STEP 15: Friend retracts the flashy ball wand
+		# STEP 15: Friend retracts the flashy ball wand
 		rospy.sleep(0.5)
 
 		## STEP 16: Maki-ro follows the ball and faces Friend
@@ -628,7 +630,9 @@ class INSPIRE4Controller( object ):
 
 		## STEP 17: Maki-ro watches Friend leave
 		self.publishMonologue('runFamiliarizationSkit', "Hey, wait!!! Where did Friend go?? Maki-ro was playing with Friend...")
-		rospy.sleep(0.5)
+		#rospy.sleep(0.5)
+		## KATE 14:39
+		rospy.sleep(1.0)
 
 		## STEP 18: Maki-ro turns back to Infant
 		self.publishMonologue('runFamiliarizationSkit', "Maki-ro misses Friend... Sad... Lonely... Who will play with Maki-ro now??...")

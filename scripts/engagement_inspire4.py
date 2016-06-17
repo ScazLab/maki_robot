@@ -83,14 +83,31 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		self.repetitions = 6	## do 6 rounds of infant engagement behavior max
 
-		self.duration_between_startle_min = 1.0		#2.0	## seconds
-		self.duration_between_startle_max = 2.0	#2.5		#5.0	## seconds
+## KATE
+		self.duration_between_startle_min = 0.5	#1.0		#2.0	## seconds
+		self.duration_between_startle_max = 1.25	#2.0	#2.5		#5.0	## seconds
 
 		## publisher for the experimenter 
 		self.exp_pub = rospy.Publisher("experiment_info", String, queue_size = 10)
 
 		return
 
+	def checkContinueGame( self ):
+		rospy.logdebug("checkContinueGame(): .__is_game_running = " + str(engagementStartleGame.__is_game_running) + ", .__is_game_exit = " + str(engagementStartleGame.__is_game_exit) + ", self.game_break_flag = " + str(self.game_break_flag))
+
+		if (engagementStartleGame.__is_game_running and
+			(not engagementStartleGame.__is_game_exit) and 
+			(not self.game_break_flag) and
+			self.ALIVE and
+			(not rospy.is_shutdown())):
+			return True
+		elif self.mTT_INTERRUPT:	
+			return False
+		else:
+			return False
+
+		return False		## shouldn't get here
+	#end	def checkContinueGame( self ):
 
 	#################################
 	##
@@ -102,6 +119,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 	##
 	#################################
 	def runGame( self, repetitions=None, duration=None ):
+		_start_rg_time = rospy.get_time()
+
 		## duration in seconds
 		rospy.logdebug("runGame: BEGIN")
 
@@ -159,6 +178,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		engagementStartleGame.__is_game_exit = False
 		_break_flag = False
 
+		_timing_loop_count_top = 0	## used for testing if continue functions properly
+		_timing_loop_count_bottom = 0	## used for testing if continue functions properly
 		rospy.logdebug("runGame: NEW GAME CREATED... Welcome!! Let's play a game...")
 		## this is a nested while loop
 		## A Python error was VERY PROBABLY being thrown here
@@ -166,6 +187,9 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		while (engagementStartleGame.__is_game_running and (not engagementStartleGame.__is_game_exit) and 
 			(not _break_flag) and self.ALIVE and (not rospy.is_shutdown())):
 			_duration = abs(rospy.get_time() - _start_time)
+
+			rospy.loginfo("engagementStartleGame(): runGame(): _timing_loop_count_top = " + str(_timing_loop_count_top) + "; _timing_loop_count_bottom = " + str(_timing_loop_count_bottom))
+			_timing_loop_count_top += 1	## used for testing if continue functions properly
 
 			## NOTE: This outer while loop will cease IF:
 			##	1) __is_game_running is toggled to False
@@ -259,6 +283,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 			## STEP 3: choose some random amout of time before trying again
 			if (self.game_state == engagementStartleGame.STATE_SETTING_WAIT_TIME): #state 3
+				_start_hw_time = rospy.get_time()
+
 				rospy.logdebug("runGame(): STATE 3: choose next startle time: BEGIN")
 				rospy.logdebug("runGame(): STATE 3: How long should Maki-ro stay hidden?...")
 				## random.uniform yeilds a float
@@ -266,9 +292,12 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				rospy.logdebug("runGame(): STATE 3: I'm thinking of a (floating point) number between " + str(self.duration_between_startle_min) + " and " + str(self.duration_between_startle_max) + "... Yup, you guessed it!! Maki-ro stay hidden for " + str(_next_seconds) + " seconds" )
 				self.next_startle_time = rospy.get_time() + _next_seconds
 				rospy.loginfo("runGame(): next startle in " + str(_next_seconds) + " seconds at time " + str(self.next_startle_time))
+				self.exp_pub.publish("Maki-ro will hide for " + str(_next_seconds) + " seconds")
 				self.game_state = engagementStartleGame.STATE_WAITING #state 4
 				_state4_first_pass = True
 				rospy.logdebug("runGame(): STATE 3: choose next startle time: END... Changing to STATE 4")
+	
+				rospy.loginfo("runGame(): Choose wait time... elapsed duration = " + str( rospy.get_time() - _start_hw_time ) + " seconds")
 				continue	## start fresh at the top of the while loop
 			#end	if (self.game_state == 3):
 
@@ -298,7 +327,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 						### FPTZ request published takes 100ms to propogate
 						engagementStartleGame.requestFeedback( self, SC_GET_PT )
-						self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
+## KATE 14:39
+						#self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
 ## KATE
 						## TO TEST: 2016-06-09
 						#self.SWW_WI.sleepWhileWaiting( 0.25, increment=0.05 )
@@ -346,6 +376,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 				continue	## start fresh at the top of the while loop
 			#end	if (self.game_state == 5):
 
+			_timing_loop_count_bottom += 1	## used for testing if continue functions properly
 
 		#end	while self.ALIVE and not rospy.is_shutdown():
 
@@ -358,6 +389,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		engagementStartleGame.__is_game_running = False		## for good measure
 		rospy.logdebug("runGame: END")
 		return
+	#end	def runGame( self, repetitions=None, duration=None ):
 
 	def cleanupGame( self ):
 		rospy.logdebug("cleanupGame(): BEGIN")
@@ -410,6 +442,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 		rospy.logdebug("cleanupGame(): END")
 		return True
+	#end	def cleanupGame( self ):
 
 	############################
 	##
@@ -443,6 +476,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			
 			_loop_count = 0
 			_first_pass = True
+			## KATE 17:25	Could make this interruptable???
 			for _gs_ll, _gs_ht in _gs_sequence:
 				_start_time_step = rospy.get_time()
 
@@ -552,12 +586,16 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			## meanwhile, print out the present speeds while moving
 			#for _i in range(10):
 			for _i in range(4):
+				## KATE: POTENTIAL PLACE TO INTERRUPT
+
 				engagementStartleGame.requestFeedback( self, SC_GET_PS )
 				#self.SWW_WI.sleepWhileWaitingMS( 100, end_early=False )		
 				self.SWW_WI.sleepWhileWaitingMS( 250, end_early=False )		
 			rospy.logdebug("unhideIntoStartle(): unhide behavior executed")
 
 		if startle:
+			## KATE: POTENTIAL PLACE TO INTERRUPT
+
 			## move into startle
 			engagementStartleGame.macroStartleRelax( self, relax=False )
 			rospy.logdebug("unhideIntoStartle(): startle behavior executed")
@@ -681,6 +719,7 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 					rospy.logwarn( str(e1) )
 				_duration = abs(_start_time_startle - rospy.get_time())
 				rospy.logdebug( "Startle duration: " + str(_duration) + " seconds" )
+				rospy.loginfo( "macroStartleRelax(): Startle intended duration = " + str( _duration_startle + _duration_startle ) + " milliseconds; elapsed duration = " + str(_duration) + " seconds" )
 
 				engagementStartleGame.__is_startled = True
 				rospy.logdebug("Done: STARTLE ====")
@@ -793,13 +832,17 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 
 	def startStartleGame( self ):
+		_start_time = rospy.get_time()
+
 		## call base class' start function
 		eyelidHeadTiltBaseBehavior.start(self)
 
+		## inherently uses base class function
 		engagementStartleGame.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, monitor=True )
 
 		engagementStartleGame.requestFeedback( self, SC_GET_PP )
 		## set to startle game values for neutral eyelid
+		## uses overriden function below
 		engagementStartleGame.setEyelidRange( self, self.makiPP["LL"], ll_startle=LL_OPEN_MAX, ll_close=LL_CLOSE_MAX )
 
 		## NOTE: This call is blocking
@@ -808,6 +851,8 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 			thread.start_new_thread(engagementStartleGame.runGame, ( self, ) )
 		except:
 			rospy.logerr("Unable to start new thread for engagementStartleGame.runGame()")
+
+		rospy.loginfo("engagementStartleGame(): startStartleGame(): elapsed time = " + str( rospy.get_time() - _start_time ) + " seconds")
 		return
 
 
@@ -836,6 +881,9 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 
 	## override
 	def setEyelidRange( self, ll, ll_delta=None, ll_close=None, ll_startle=None ):
+		## KATE 16:46
+		_start_time = rospy.get_time()
+
 		## call to base class' function; eyelidBaseBehavior in this case
 		eyelidBaseBehavior.setEyelidRange( self, ll, ll_delta, ll_close )
 
@@ -847,6 +895,9 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		## check range values
 		if self.ll_startle > LL_OPEN_MAX:	self.ll_startle = LL_OPEN_MAX
 		rospy.logdebug("Startle -- Eyelid range: (" + str(self.ll_close) + ", " + str(self.ll_open) + ", " + str(self.ll_startle) + ")")
+
+		## KATE 16:46
+		rospy.loginfo("engagementStartleGame: setEyelidRange(): elapsed time = " + str( rospy.get_time() - _start_time ) + " seconds" )
 		return
 
 	def parse_maki_macro( self, msg ):
