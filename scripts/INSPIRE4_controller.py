@@ -700,12 +700,25 @@ class INSPIRE4Controller( object ):
 			rospy.loginfo("[usage] Press 'Get ready'")
 			self.exp_pub.publish( prefix_msg + "[usage] Press 'Get ready'")
 
+## 2016-06-16, KATE
 		## We should be able to get to these states at any time
-		if ((state == INSPIRE4Controller.READY) or
-			(state == INSPIRE4Controller.RESET_EXP) or
+		#if ((state == INSPIRE4Controller.READY) or
+		#	(state == INSPIRE4Controller.RESET_EXP) or
+		#	(state == INSPIRE4Controller.END)):
+		#	rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+		#	self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+
+		## We should be able to transition into this state from EVERY state
+		if (state == INSPIRE4Controller.READY):
+			rospy.loginfo("[usage] You can transition from every state (including itself) to this state '" + self.state_dict[state] + "' anytime")
+			self.exp_pub.publish("[usage] You can transition from every state (including itself) to this state '" + self.state_dict[state] + "' anytime")
+
+		## We should be able to transition into this state from ANY OTHER
+		if ((state == INSPIRE4Controller.RESET_EXP) or
 			(state == INSPIRE4Controller.END)):
-			rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
-			self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+			rospy.loginfo("[usage] You can transition from any state (except itself) to this state '" + self.state_dict[state] + "' anytime")
+			self.exp_pub.publish("[usage] You can transition from any state (except itself) to this state '" + self.state_dict[state] + "' anytime")
+
 
 		if (state == INSPIRE4Controller.READY): 
 			rospy.loginfo("[usage] From state '" + self.state_dict[self.state] + "', you can choose to press buttons: 'Tobii verify *' or 'Visual clap sync'")
@@ -747,15 +760,38 @@ class INSPIRE4Controller( object ):
 		#	return
 
 
+## 2016-06-16, KATE
 		## We should be able to get to these states at any time
-		if ((future_state == INSPIRE4Controller.READY) or
-			(future_state == INSPIRE4Controller.RESET_EXP) or
-			(future_state == INSPIRE4Controller.END)):
+		#if ((future_state == INSPIRE4Controller.READY) or
+		#	(future_state == INSPIRE4Controller.RESET_EXP) or
+		#	(future_state == INSPIRE4Controller.END)):
+		#	rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
+		#	_invalid_transition = False
+
+		if (future_state == INSPIRE4Controller.READY):
 			rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
 			_invalid_transition = False
 
+		if (future_state == INSPIRE4Controller.RESET_EXP):
+			## Don't allow clicking multiple times on "reset experiment"
+			if (current_state == INSPIRE4Controller.RESET_EXP):
+				_invalid_transition = True 
+			## But otherwise, we should be able to get to this state from any other
+			else:
+				_invalid_transition = False
+
+		if (future_state == INSPIRE4Controller.END):
+			## Don't allow clicking multiple times on "the end"
+			if (current_state == INSPIRE4Controller.END):
+				_invalid_transition = True 
+			## But otherwise, we should be able to get to this state from any other
+			else:
+				_invalid_transition = False
+
 		if (future_state == INSPIRE4Controller.SYNC):
 			if (current_state == INSPIRE4Controller.READY): 
+				_invalid_transition = False
+			elif (current_state == INSPIRE4Controller.RESET_EXP):
 				_invalid_transition = False
 			elif (current_state == INSPIRE4Controller.SYNC):
 				_invalid_transition = False
@@ -841,6 +877,9 @@ class INSPIRE4Controller( object ):
 
 				## STEP 1: Move to ready state
 				INSPIRE4Controller.transitionToReady( self, msg=_data )
+
+				## override state
+				self.state = INSPIRE4Controller.RESET_EXP
 
 		elif _data == "get ready":
 			## We should always be able to get to this controller state from ANY other
