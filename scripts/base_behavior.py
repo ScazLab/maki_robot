@@ -33,7 +33,7 @@ class baseBehavior(object):
 		#self.mTT_INTERRUPT = True
 ## 2016-06-16, KATE
 		self.mTT_INTERRUPT = False
-		# self.VERBOSE_DEBUG = verbose_debug	## default is False
+		self.VERBOSE_DEBUG = verbose_debug	## default is False
 		self.SWW_WI = ROS_sleepWhileWaiting_withInterrupt()
 		self.DC_helper = dynamixelConversions()
 
@@ -449,9 +449,11 @@ class baseBehavior(object):
 					_request_verify_flag[_motor] = False
 					_count_request_verify_flags = _count_request_verify_flags -1
 				else:
-					rospy.logdebug( _motor + " present position DOES NOT matches goal position")
 					_ret = False
-					#break	## break the for loop; no sense in performing unnecessary calculations
+					if self.VERBOSE_DEBUG:
+						rospy.logwarn("verifyPose(): " + _motor + " present position (" + str(_makiPP[_motor]) + ") DOES NOT matches goal position (" + str(_verify_dict[_motor]) + ")" )
+					else:
+						break	## break the for loop; no sense in performing unnecessary calculations
 		#end	for _motor in F_VAL_SEQ:
 
 		if _count_request_verify_flags == 0:	_ret = True

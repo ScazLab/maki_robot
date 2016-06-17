@@ -84,7 +84,7 @@ class INSPIRE4Controller( object ):
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		## and a generic one for dealing with resetting to neutral
-		self.htBB = headTiltBaseBehavior( True, self.ros_pub )
+		self.htBB = headTiltBaseBehavior( False, self.ros_pub )
 
 		self.data_logger_status = "unknown"
 		self.start_logger_timer = None
