@@ -194,7 +194,7 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				if _pub_ll and (_delta_ticks_LL>0):	_gs_LL = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_LL, _ms_duration_eyes) ) + 1
 				if _pub_et and (_delta_ticks_ET>0):	_gs_ET = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_ET, _ms_duration_eyes) ) + 1
 				if _pub_ep and (_delta_ticks_EP>0):	_gs_EP = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_EP, _ms_duration_eyes) ) + 1
-				rospy.logerr("ms_duration_eyes = " + str(_ms_duration_eyes) + "ms")
+				rospy.logdebug("ms_duration_eyes = " + str(_ms_duration_eyes) + "ms")
 
 				## preset eyelid to open GoalSpeed
 				if _pub_ll and (_delta_ticks_LL>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_LL) 
@@ -216,11 +216,13 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			_pub_cmd += TERM_CHAR_SEND
 			#asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
 			try:
+				_start_time_pub = rospy.get_time()
 				asleepAwake.monitorMoveToGP( self, str(_pub_cmd), hp_gp=asleepAwake.HP_ASLEEP, ht_gp=asleepAwake.HT_ASLEEP, ll_gp=asleepAwake.LL_ASLEEP )
 			except Exception as _e:
-				rospy.logerr("macroAsleep(): ERROR: " + str(_e) )
+				#rospy.logerr("macroAsleep(): ERROR: " + str(_e) )
+				rospy.logwarn("macroAsleep(): WARNING: " + str(_e) )
 				asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
-				_adjust_sleep_ms = int(((rospy.get_time() - _start_time) * 1000) + 0.5)
+				_adjust_sleep_ms = _ms_duration - int(((rospy.get_time() - _start_time_pub) * 1000) + 0.5)
 				rospy.logdebug("macroAsleep(): _adjust_sleep_ms = " + str(_adjust_sleep_ms))
 				self.SWW_WI.sleepWhileWaitingMS( _adjust_sleep_ms, increment=0.01 )
 
@@ -307,7 +309,7 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 				if _pub_ll and (_delta_ticks_LL>0):	_gs_LL = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_LL, _ms_duration_eyes) ) + 1
 				if _pub_et and (_delta_ticks_ET>0):	_gs_ET = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_ET, _ms_duration_eyes) ) + 1
 				if _pub_ep and (_delta_ticks_EP>0):	_gs_EP = int( self.DC_helper.getGoalSpeed_ticks_durationMS(_delta_ticks_EP, _ms_duration_eyes) ) + 1
-				rospy.logerr("ms_duration_eyes = " + str(_ms_duration_eyes) + "ms")
+				rospy.logdebug("ms_duration_eyes = " + str(_ms_duration_eyes) + "ms")
 
 				## preset eyelid to open GoalSpeed
 				if _pub_ll and (_delta_ticks_LL>0):	_pub_cmd += "LL" + SC_SET_GS + str(_gs_LL) 
@@ -327,18 +329,22 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			if _pub_ep:	_pub_cmd += "EP" + SC_SET_GP + str(EP_AWAKE)
 			if _pub_ipt:	_pub_cmd += SC_SET_IPT + str(_ms_duration)
 			_pub_cmd += TERM_CHAR_SEND
+			rospy.logdebug( "macroAwake(): _pub_cmd = " + _pub_cmd )
 
 ## KATE
 			## TODO: Try uncommented to see if Maki-ro responds more quickly to the issued command
 			#asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
+			_start_time_pub = rospy.get_time()
 			try:
 				asleepAwake.monitorMoveToGP( self, str(_pub_cmd), hp_gp=HP_AWAKE, ht_gp=HT_AWAKE, ll_gp=LL_AWAKE )
 			except Exception as _e:
-				rospy.logerr("macroAwake(): ERROR: " + str(_e) )
+				#rospy.logerr("macroAwake(): ERROR: " + str(_e) )
+				rospy.logwarn("macroAwake(): WARNING: " + str(_e) )
 				asleepAwake.pubTo_maki_command( self, str(_pub_cmd) )
-				_adjust_sleep_ms = int(((rospy.get_time() - _start_time) * 1000) + 0.5)
-				rospy.logdebug("macroAsleep(): _adjust_sleep_ms = " + str(_adjust_sleep_ms))
-				self.SWW_WI.sleepWhileWaitingMS( _adjust_sleep_ms, increment=0.01 )
+				_adjust_sleep_ms = _ms_duration - int(((rospy.get_time() - _start_time_pub) * 1000) + 0.5)
+				rospy.logdebug("macroAwake(): _adjust_sleep_ms = " + str(_adjust_sleep_ms))
+				if _adjust_sleep_ms > 0:
+					self.SWW_WI.sleepWhileWaitingMS( _adjust_sleep_ms, increment=0.01 )
 
 		else:
 			return
