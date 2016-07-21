@@ -92,6 +92,9 @@ HT_MIN = 444	## update 2016-07-20; HT motor replacement
 HP_ALISSA = 620
 HT_ALISSA = 540
 
+HP_EXPERIMENTER = 620
+HT_EXPERIMENTER = 555 #560	#565	#570
+
 EP_LEFT = 468
 EP_FRONT = 512
 EP_RIGHT = 556
@@ -106,10 +109,13 @@ LL_CLOSE_HALF = 430
 LL_CLOSE_MAX = 361
 
 ###################################
+## 2016-07-20 ktsui: replace HT and EP motors; full disassembly, update values
+## 2016-06-15 ktsui: replace HT motor; full disassembly, update values
+
 #( "LR", "LL", "EP", "ET", "HT", "HP" )	
-SERVO_MIN = ( 484, 361, 460, 425, 445, 256 )
+SERVO_MIN = ( 484, 361, 460, 423, 444, 256 )
 SERVO_NEUTRAL = ( 525, 500, 512, 512, 512, 512 )
-SERVO_MAX = ( 666, 535, 578, 610, 575, 768 )
+SERVO_MAX = ( 666, 535, 578, 607, 583, 768 )
 
 DELTA_PP = 5
 ###################################
