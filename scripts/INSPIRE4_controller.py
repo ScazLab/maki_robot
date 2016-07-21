@@ -1098,7 +1098,8 @@ class INSPIRE4Controller( object ):
 					pass
 				else:
 					## clean up first, and reset to neutral pose
-					INSPIRE4Controller.stop( self )
+					## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
+					INSPIRE4Controller.stop( self, disable_ht=False )
 
 				INSPIRE4Controller.transitionToReady(self, _data)
 				self.state = INSPIRE4Controller.END	## override state
@@ -1160,7 +1161,7 @@ class INSPIRE4Controller( object ):
 		_BB = baseBehavior( False, self.ros_pub )
 		_BB.start()
 		#_BB.requestFeedback( SC_GET_PP )
-		rospy.logerr( "HT PP=" + str(_BB.makiPP["HT"]) )
+		rospy.loginfo( "controllerExit: Cleanup to prevent HT jerking... HT PP=" + str(_BB.makiPP["HT"]) )
 		_BB.pubTo_maki_command( "HTGP" + str(_BB.makiPP["HT"]) + TERM_CHAR_SEND)	## after head has fallen down, make nice
 		_BB.requestFeedback( SC_GET_GP )
 
