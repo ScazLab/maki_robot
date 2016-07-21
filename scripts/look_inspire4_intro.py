@@ -421,8 +421,10 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 				if self.__use_shift_gaze:
 					lookINSPIRE4Intro.shiftGazeVelocity( self, hp_gp=lookINSPIRE4Intro.HP_FACE_INFANT, ht_gp=lookINSPIRE4Intro.HT_FACE_INFANT, padding=-0.1 )
 ## 2016-06-16, KATE
-					## HACK... it looks weird for the robot to finally adjust its eye tilt when exiting the whole experiment... and then fall asleep...
+					### HACK... it looks weird for the robot to finally adjust its eye tilt when exiting the whole experiment... and then fall asleep...
 					#lookINSPIRE4Intro.pubTo_maki_command( self, "reset" )
+					## 2016-06-17, ktsui: This still didn't quite look right, so commented out
+
 				else:	## REVERT
 					lookINSPIRE4Intro.lookAt_jointHeadAndEyePan( self, self.pub_cmd_look_fromBallLowerRight_toInfant )
 					## TODO: Maki-ro doesn't quite return to HT_MIDDLE

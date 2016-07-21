@@ -759,7 +759,7 @@ class headTiltBaseBehavior(baseBehavior):
 
 		## Otherwise, HT TL is 0%
 		## Set the goal position as the present position
-		if (self.makiPP["HT"] <= HT_UP and self.makiPP["HT"] >= HT_DOWN):
+		if (self.makiPP["HT"] <= HT_MAX and self.makiPP["HT"] >= HT_MIN):
 			_pub_cmd_GP = "HT" + str(SC_SET_GP) + str(self.makiPP["HT"]) + str(TERM_CHAR_SEND)
 			## bypass headTiltBaseBehavior.pubTo_maki_command() since in this
 			##	one case, we want to set the goal position first
