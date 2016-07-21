@@ -89,9 +89,11 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 			asleepAwake.ET_AWAKE = ET_MIDDLE
 
 		if asleepAwake.HP_AWAKE_EXP == None:
-			asleepAwake.HP_AWAKE_EXP = 620	#HP_RIGHT was too far; experimenter would have had to be standing behind left_screen
+			#asleepAwake.HP_AWAKE_EXP = 620	#HP_RIGHT was too far; experimenter would have had to be standing behind left_screen
+			asleepAwake.HP_AWAKE_EXP = HP_EXPERIMENTER	## ticks
 		if asleepAwake.HT_AWAKE_EXP == None:
-			asleepAwake.HT_AWAKE_EXP = 565	#562	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response ==> 20 ticks
+			#asleepAwake.HT_AWAKE_EXP = 565	#562	## HT_UP is maxed out at 582; NOTE: we still need some room for startle response ==> 20 ticks
+			asleepAwake.HT_AWAKE_EXP = HT_EXPERIMENTER	## ticks
 		if asleepAwake.LL_AWAKE_EXP == None:
 			asleepAwake.LL_AWAKE_EXP = asleepAwake.LL_AWAKE
 		if asleepAwake.EP_AWAKE_EXP == None:
@@ -360,12 +362,12 @@ class asleepAwake( eyelidHeadTiltBaseBehavior, headPanBaseBehavior ):
 		return
 
 
-	def runAwake( self ):
+	def runAwake( self, disable_ht=True ):
 		asleepAwake.start( self )
 		asleepAwake.macroAwake( self, look_experimenter=False )
 		## TODO: Maki-ro doesn't quite return to HT_MIDDLE
 		asleepAwake.pubTo_maki_command( self, "reset" )
-		asleepAwake.stop( self, disable_ht=True )
+		asleepAwake.stop( self, disable_ht=disable_ht )
 		## TODO: May need to change to False when whole INSPIRE4
 		##	script and control program are in place
 		return
