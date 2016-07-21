@@ -108,7 +108,8 @@ class INSPIRE4Controller( object ):
 		## NOTE: head tilt motor will be disabled after reset
 		if neutral_head:	
 			rospy.loginfo("start(): call to controllerReset()")
-			INSPIRE4Controller.controllerReset( self )
+			#INSPIRE4Controller.controllerReset( self )
+			INSPIRE4Controller.controllerReset( self, disable_ht=False )
 		#self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
 		self.__sync_count = 0
@@ -1153,6 +1154,16 @@ class INSPIRE4Controller( object ):
 		self.lookStimuli.abort()
 		self.htBB.stop()	## make sure that the head tilt motor is disengaged
 
+		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
+
+		## 2016-07-20, ktsui: nicely deal with neck; don't jerk up when restarted
+		_BB = baseBehavior( False, self.ros_pub )
+		_BB.start()
+		#_BB.requestFeedback( SC_GET_PP )
+		rospy.logerr( "HT PP=" + str(_BB.makiPP["HT"]) )
+		_BB.pubTo_maki_command( "HTGP" + str(_BB.makiPP["HT"]) + TERM_CHAR_SEND)	## after head has fallen down, make nice
+		_BB.requestFeedback( SC_GET_GP )
+
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
 		rospy.logdebug( "controllerExit: SHUTTING DOWN INSPIRE4 EXPERIMENT..." )
@@ -1263,8 +1274,9 @@ if __name__ == '__main__':
 	rospy.logdebug("-------- controller.start() DONE -----------")
 	controller.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
+
 	## hack to make sure that the head tilt motor is shutoff after controllerReset() in start
-	controller.htBB.stop()	## make sure that the head tilt motor is disengaged
+	#controller.htBB.stop()	## make sure that the head tilt motor is disengaged
 	controller.htBB.requestFeedback( SC_GET_TL )		## debugging
 
 	rospy.sleep(0.5)	## tiny sleep
