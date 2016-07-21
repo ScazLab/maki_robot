@@ -83,11 +83,11 @@ HP_RIGHT = 712
 #HP_LEFT = 404	## demo
 #HP_RIGHT = 620	## demo
 
-HT_MAX = 575	## update 2016-06-16; HT motor replacement
+HT_MAX = 583	## update 2016-07-20; HT motor replacement
 HT_UP = 540
 HT_MIDDLE = 505
 HT_DOWN = 460
-HT_MIN = 445	## update 2016-06-16; HT motor replacement
+HT_MIN = 444	## update 2016-07-20; HT motor replacement
 
 HP_ALISSA = 620
 HT_ALISSA = 540
