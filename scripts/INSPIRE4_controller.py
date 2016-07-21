@@ -592,7 +592,7 @@ class INSPIRE4Controller( object ):
 		rospy.sleep(0.5)	## 500 ms
 
 		## TODO: Insert agentic behaviors where appropriate
-		INSPIRE4Controller.setBlinkAndScan( self, blink=True )
+		#INSPIRE4Controller.setBlinkAndScan( self, blink=True )
 
 		## STEP 8: Maki-ro nods
 		self.publishMonologue('runFamiliarizationSkit', "Oooo a blinky... Maki-ro tries to nod enthusiastically...")
@@ -625,7 +625,7 @@ class INSPIRE4Controller( object ):
 
 		## KATE 14:39
 		### STEP 14: Maki-ro looks at the infant
-		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow, follow, follow, follow the flashy ball...")
+		self.publishMonologue('runFamiliarizationSkit', "Maki-ro... Follow, follow, follow, follow the flashy ball... to in front of the infant...")
 		self.lookIntro.macroLookAtInfant()
 
 		# STEP 15: Friend retracts the flashy ball wand
