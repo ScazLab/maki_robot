@@ -298,6 +298,8 @@ class baseBehavior(object):
 		### SEND THE COMMAND
 		baseBehavior.pubTo_maki_command( self, gp_cmd, cmd_prop=cmd_prop )
 
+		rospy.logdebug("monitorMoveToGP(): delta_pp=" + str(delta_pp) + "; gp_cmd=" + gp_cmd)
+
 		_moving_flag = dict( zip(F_VAL_SEQ, [None]*len(F_VAL_SEQ)) )
 		_count_moving_flags = 0
 		if (hp_gp != None) and (hp_gp != INVALID_INT):	
@@ -349,32 +351,32 @@ class baseBehavior(object):
 			#	continue	## jump back to the top of the loop
 			
 
-			if _moving_flag["HP"] and (abs(self.makiPP["HP"] - hp_gp) < delta_pp):
+			if _moving_flag["HP"] and (abs(self.makiPP["HP"] - hp_gp) <= delta_pp):
 				rospy.logdebug("HP done moving")
 				_moving_flag["HP"] = False
 				_count_moving_flags = _count_moving_flags -1
 
-			if _moving_flag["HT"] and (abs(self.makiPP["HT"] - ht_gp) < delta_pp):
+			if _moving_flag["HT"] and (abs(self.makiPP["HT"] - ht_gp) <= delta_pp):
 				rospy.logdebug("HT done moving")
 				_moving_flag["HT"] = False
 				_count_moving_flags = _count_moving_flags -1
 
-			if _moving_flag["EP"] and (abs(self.makiPP["EP"] - ep_gp) < delta_pp):
+			if _moving_flag["EP"] and (abs(self.makiPP["EP"] - ep_gp) <= delta_pp):
 				rospy.logdebug("EP done moving")
 				_moving_flag["EP"] = False
 				_count_moving_flags = _count_moving_flags -1
 
-			if _moving_flag["ET"] and (abs(self.makiPP["ET"] - et_gp) < delta_pp):
+			if _moving_flag["ET"] and (abs(self.makiPP["ET"] - et_gp) <= delta_pp):
 				rospy.logdebug("ET done moving")
 				_moving_flag["ET"] = False
 				_count_moving_flags = _count_moving_flags -1
 
-			if _moving_flag["LL"] and (abs(self.makiPP["LL"] - ll_gp) < delta_pp):
+			if _moving_flag["LL"] and (abs(self.makiPP["LL"] - ll_gp) <= delta_pp):
 				rospy.logdebug("LL done moving")
 				_moving_flag["LL"] = False
 				_count_moving_flags = _count_moving_flags -1
 
-			if _moving_flag["LR"] and (abs(self.makiPP["LR"] - lr_gp) < delta_pp):
+			if _moving_flag["LR"] and (abs(self.makiPP["LR"] - lr_gp) <= delta_pp):
 				rospy.logdebug("LR done moving")
 				_moving_flag["LR"] = False
 				_count_moving_flags = _count_moving_flags -1
@@ -384,7 +386,8 @@ class baseBehavior(object):
 			if (_old_makiPP == self.makiPP):
 				_stall_count += 1
 				rospy.logdebug("... _stall_count = " + str(_stall_count) )
-				baseBehavior.requestFeedback( self, SC_GET_PP ) 
+				## 2016-07-21 ktsui: comment out
+				#baseBehavior.requestFeedback( self, SC_GET_PP ) 
 				#baseBehavior.requestFeedback( self, SC_GET_PP, time_ms=250 ) 
 ## KATE
 				if _stall_count != _loop_count:
@@ -396,7 +399,7 @@ class baseBehavior(object):
 				break
 			_old_makiPP = self.makiPP
 		_duration = abs(rospy.get_time() - _start_time)
-		rospy.logdebug("**** DONE! movement took " + str(_duration) + " seconds")
+		rospy.logdebug("monitorMoveToGP() **** DONE! movement took " + str(_duration) + " seconds")
 		return
 
 	## Funtion:	Verifes if the current pose matches the specified pose (within tolerance delta_pp)
