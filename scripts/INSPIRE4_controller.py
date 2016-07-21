@@ -105,10 +105,9 @@ class INSPIRE4Controller( object ):
 
 	def start( self, neutral_head=True ):
 		## always begin in neutral position
-		## NOTE: head tilt motor will be disabled after reset
 		if neutral_head:	
 			rospy.loginfo("start(): call to controllerReset()")
-			#INSPIRE4Controller.controllerReset( self )
+			## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
 			INSPIRE4Controller.controllerReset( self, disable_ht=False )
 		#self.exp_pub.publish("...\tInitializing INSPIRE4 experiment controller... DONE")
 
@@ -880,6 +879,7 @@ class INSPIRE4Controller( object ):
 				## STEP 0: Reset self.state and self.previous_state
 				##	Reset interaction count
 				##	Reset to neutral pose
+				## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
 				INSPIRE4Controller.stop( self, disable_ht=False )
 				INSPIRE4Controller.start( self )
 
@@ -1075,9 +1075,9 @@ class INSPIRE4Controller( object ):
 					pass	## cannot get here
 
 				## always begin in neutral position
-				## NOTE: head tilt motor will be disabled after reset
+				## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
 				rospy.loginfo("INVALID TRIAL BUTTON: call to controllerReset()")
-				INSPIRE4Controller.controllerReset( self )
+				INSPIRE4Controller.controllerReset( self, disable_ht=False )
 
 				self.exp_pub.publish( "Reset interaction; RE-DO interaction #" + str(self.interaction_count ) + "\tPress button 'Run Engagement Game'")
 
@@ -1131,7 +1131,8 @@ class INSPIRE4Controller( object ):
 
 	def doGetReady( self, msg=None ):
 		## STEP 0: Reset but don't move to neutral head pose first
-		INSPIRE4Controller.stop( self, neutral_head=False )
+		## 2016-07-21 ktsui: to prevent HT jerk, don't disable HT motor
+		INSPIRE4Controller.stop( self, neutral_head=False , disable_ht=False)
 		INSPIRE4Controller.start( self, neutral_head=False )
 
 		## STEP 1: Move to ready state
