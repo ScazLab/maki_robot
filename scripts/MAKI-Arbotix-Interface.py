@@ -115,6 +115,7 @@ def sendToMAKI (message):
 	global maki_serial
 	global feedback_strings
 	global maki_cmd_template
+	_bytes_written = 0
 
 	## TOO VERBOSE
 	#rospy.logdebug( "message received:\t" + str(message) )
@@ -139,12 +140,14 @@ def sendToMAKI (message):
 			rospy.logdebug( "resetting speeds: " + str(resetSpeeds) )
 			try:
 				if maki_serial.isOpen:
-					maki_serial.write(resetSpeeds)
-					rospy.loginfo( "speeds reset DONE: " + str(resetSpeeds) )
+					_bytes_written = maki_serial.write(resetSpeeds)
+					rospy.loginfo( "speeds reset DONE: " + str(resetSpeeds) + "... " + str(_bytes_written) + " bytes written" )
+					rospy.sleep(0.1)	## 100ms to propogate to servos
 
 					rospy.logdebug( "resetting positions: " + str(resetPositions) )
-					maki_serial.write(resetPositions)
-					rospy.loginfo( "positions reset DONE: " + str(resetPositions) )
+					_bytes_written = maki_serial.write(resetPositions)
+					rospy.loginfo( "positions reset DONE: " + str(resetPositions) + "... " + str(_bytes_written) + " bytes written" )
+					rospy.sleep(0.1)	## 100ms to propogate to servos
 			except serial.serialutil.portNotOpenError as _e2:
 				rospy.logerr( "portNotOpenError: Unable to write serial output: " + str(_e2) )
 			except ValueError as _e2_1:
