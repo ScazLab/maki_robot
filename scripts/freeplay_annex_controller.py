@@ -861,6 +861,49 @@ class freeplayAnnexController( object ):
 		_invalid_transition = False
 		_data = str(msg.data)
 		rospy.logdebug("_data = " + _data)
+
+		if _data == "start":
+			## DON'T ENABLE HEAD TILT SERVO
+			## Done during awake behavior
+			self.lookIntro.introStart( enable_ht=False )
+			self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
+
+		elif _data == "end":
+			## TODO!!!!!!!!
+			self.lookIntro.stop()
+			self.lookStimuli.stop()
+			pass
+
+		elif _data == "asleep":
+			## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
+			self.asleepAwake.runAsleep()
+
+		elif _data == "awake":
+			## AWAKE TO FACE INFANT
+			self.asleepAwake.runAwake( disable_ht=False )
+
+		elif (_data == "greeting" or _data == "headnod"):
+			## ONE HEAD NOD
+			self.lookIntro.macroGreeting()
+
+		elif _data == "startle":
+			## ONE STARTLE WITH RELAX
+			self.lookIntro.startStartle( relax=True )
+
+		elif _data == "lookAt Alyssa":
+			## NOTE: This has blocking call (monitorMoveToGP)
+			self.lookStimuli.turnToScreen( right_screen=True )
+
+		elif _data == "lookAt infant":
+			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+
+		elif _data == "reset neutral":
+			freeplayAnnexController.controllerReset( self, disable_ht=False )
+
+		else:
+			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
+
+		'''
 		if _data != 'turnToInfant':
 			self.exp_pub.publish('[button pressed] ' + _data)
 	
@@ -1124,6 +1167,7 @@ class freeplayAnnexController( object ):
 			else:
 				rospy.logdebug("Update self.state from [" + self.state_dict[self.previous_state] + "] to [" + self.state_dict[self.state] + "]")
 			freeplayAnnexController.transitionUsage( self, self.state , "NEW state\t\t")
+		'''
 
 		rospy.logdebug("parse_annex_command(): END")
 		return
@@ -1272,7 +1316,7 @@ if __name__ == '__main__':
 	rospy.Subscriber( "data_logger/status", String, controller.updateDataLoggerStatus_callback )
 	rospy.logdebug( "now subscribed to data_logger/status" )
 
-	controller.start()
+	controller.start( neutral_head=False )
 	rospy.logdebug("-------- controller.start() DONE -----------")
 	controller.exp_pub.publish("...\tInitializing Freeplay annex controller... DONE")
 
