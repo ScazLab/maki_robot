@@ -225,14 +225,17 @@ class freeplayAnnexController( object ):
 		return
 
 
-	def setBlinkAndScan( self, blink=False, scan=False, disable_ht=False ):
+	def setBlinkAndScan( self, blink=False, auto_reset_eyelid=True, scan=False, disable_ht=False ):
 		rospy.logdebug("setBlinkAndScan(): BEGIN")
 		_pub_cmd = ""
 
 		if (isinstance(blink, bool) and blink):
 			freeplayAnnexController.pubTo_maki_macro( self, "spontaneousBlink start" )
 		else:
-			freeplayAnnexController.pubTo_maki_macro( self, "spontaneousBlink stop" )
+			if auto_reset_eyelid:
+				freeplayAnnexController.pubTo_maki_macro( self, "spontaneousBlink stop auto_reset_eyelid" )
+			else:
+				freeplayAnnexController.pubTo_maki_macro( self, "spontaneousBlink stop" )
 
 		if (isinstance(scan, bool) and scan):
 			freeplayAnnexController.pubTo_maki_macro( self, "visualScan start" )
@@ -874,45 +877,54 @@ class freeplayAnnexController( object ):
 		## TODO: ADD START LOGGING
 
 		if _data == "start":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			## DON'T ENABLE HEAD TILT SERVO
 			## Done during awake behavior
 			self.lookIntro.introStart( enable_ht=False )
 			self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
 
 		elif _data == "end":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			self.lookIntro.stop()
 			self.lookStimuli.stop()
-			pass
 
 		elif _data == "asleep":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 			## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
 			self.asleepAwake.runAsleep()
 
 		elif _data == "awake":
 			## AWAKE TO FACE INFANT
 			self.asleepAwake.runAwake( disable_ht=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif (_data == "greeting" or _data == "headnod"):
 			## ONE HEAD NOD
 			self.lookIntro.macroGreeting()
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "startle":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			## ONE STARTLE WITH RELAX
 			self.lookIntro.macroStartleRelax( startle=True, relax=True )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif (_data == "startle start" or _data == "startle hold"):
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 			## ONE STARTLE WITHOUT RELAX
 			self.lookIntro.macroStartleRelax( startle=True, relax=False )
 
 		elif (_data == "startle stop" or _data == "startle relax"):
 			## STARTLE RELAX ONLY
 			self.lookIntro.macroStartleRelax( startle=False, relax=True )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "hideFromStartle":
 			#self.startleGame.hideFromStartle()	## requires context of the game
 			freeplayAnnexController.hide( self )
 
 		elif _data == "hide":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			freeplayAnnexController.hide( self )
 
 		elif _data == "unhideIntoStartle":
@@ -920,19 +932,33 @@ class freeplayAnnexController( object ):
 
 		elif _data == "unhide":
 			self.startleGame.unhideIntoStartle( unhide=True, startle=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "lookAt Alyssa":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 			## NOTE: This has blocking call (monitorMoveToGP)
 			self.lookStimuli.turnToScreen( right_screen=True )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "lookAt infant":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "reset neutral":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			freeplayAnnexController.controllerReset( self, disable_ht=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+
+		elif _data == "spontaneousBlink start":
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+
+		elif _data == "spontaneousBlink stop":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 
 		else:
 			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		'''
 		if _data != 'turnToInfant':
