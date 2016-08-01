@@ -169,6 +169,12 @@ class blinking( eyelidBaseBehavior ):
 		return
 
 	def startSpontaneousBlink( self ):
+		if blinking.__is_spontaneous_blinking:
+			rospy.logwarn("[WARNING] already performing spontaneous blinking... do NOT start another")
+			return
+		else:
+			rospy.sleep(0.25)
+
 		rospy.logdebug("startSpontaneousBlink(): BEGIN")
 		## call base class' start function
 		eyelidBaseBehavior.start(self)
@@ -180,7 +186,7 @@ class blinking( eyelidBaseBehavior ):
 		rospy.logdebug("startSpontaneousBlink(): END")
 		return
 
-	def stopSpontaneousBlink( self ):
+	def stopSpontaneousBlink( self, auto_reset_eyelid=True ):
 		rospy.logdebug("stopSpontaneousBlink(): BEGIN")
 		blinking.__is_spontaneous_blinking = False
 
@@ -189,9 +195,10 @@ class blinking( eyelidBaseBehavior ):
 
 		self.next_blink_time = None
 
-		## set eyelid  
-		_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
-		blinking.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+		if auto_reset_eyelid:
+			## set eyelid  
+			_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
+			blinking.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
 
 		rospy.logdebug("stopSpontaneousBlink(): END")
 		return
@@ -207,8 +214,13 @@ class blinking( eyelidBaseBehavior ):
 				thread.start_new_thread( blinking.startSpontaneousBlink, (self, ))
 			except:
 				rospy.logerr("Unable to start new thread for blinking.startSpontaneousBlink()")
+
+		elif msg.data == "spontaneousBlink stop auto_reset_eyelid":
+			blinking.stopSpontaneousBlink( self, auto_reset_eyelid=True )
+
 		elif msg.data == "spontaneousBlink stop":
-			blinking.stopSpontaneousBlink( self )
+			blinking.stopSpontaneousBlink( self, auto_reset_eyelid=False )
+
 		else:
 			pass
 
