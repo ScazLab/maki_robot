@@ -848,6 +848,15 @@ class freeplayAnnexController( object ):
 		return _invalid_transition
 
 
+	def hide( self, ipt_ms=750 ):
+		_pub_cmd = ""
+		_pub_cmd += "HT" + SC_SET_GP + str(HT_DOWN)
+		_pub_cmd += "LL" + SC_SET_GP + str(LL_CLOSE_MAX)
+		_pub_cmd += SC_SET_IPT + str(ipt_ms)
+		_pub_cmd += TERM_CHAR_SEND
+
+		self.htBB.pubTo_maki_command( _pub_cmd )
+		return
 
 	## TO FIX: HANDLE QUEUED MESSAGES. VALID STATE TRANSITIONS
 	##	ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
@@ -862,6 +871,8 @@ class freeplayAnnexController( object ):
 		_data = str(msg.data)
 		rospy.logdebug("_data = " + _data)
 
+		## TODO: ADD START LOGGING
+
 		if _data == "start":
 			## DON'T ENABLE HEAD TILT SERVO
 			## Done during awake behavior
@@ -869,7 +880,6 @@ class freeplayAnnexController( object ):
 			self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
 
 		elif _data == "end":
-			## TODO!!!!!!!!
 			self.lookIntro.stop()
 			self.lookStimuli.stop()
 			pass
@@ -888,7 +898,28 @@ class freeplayAnnexController( object ):
 
 		elif _data == "startle":
 			## ONE STARTLE WITH RELAX
-			self.lookIntro.startStartle( relax=True )
+			self.lookIntro.macroStartleRelax( startle=True, relax=True )
+
+		elif (_data == "startle start" or _data == "startle hold"):
+			## ONE STARTLE WITHOUT RELAX
+			self.lookIntro.macroStartleRelax( startle=True, relax=False )
+
+		elif (_data == "startle stop" or _data == "startle relax"):
+			## STARTLE RELAX ONLY
+			self.lookIntro.macroStartleRelax( startle=False, relax=True )
+
+		elif _data == "hideFromStartle":
+			#self.startleGame.hideFromStartle()	## requires context of the game
+			freeplayAnnexController.hide( self )
+
+		elif _data == "hide":
+			freeplayAnnexController.hide( self )
+
+		elif _data == "unhideIntoStartle":
+			self.startleGame.unhideIntoStartle( unhide=True, startle=True )
+
+		elif _data == "unhide":
+			self.startleGame.unhideIntoStartle( unhide=True, startle=False )
 
 		elif _data == "lookAt Alyssa":
 			## NOTE: This has blocking call (monitorMoveToGP)
