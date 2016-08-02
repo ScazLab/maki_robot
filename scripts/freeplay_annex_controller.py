@@ -888,6 +888,8 @@ class freeplayAnnexController( object ):
 			self.lookIntro.introStart( enable_ht=False )
 			self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
 
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+
 		elif _data == "end":
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			self.lookIntro.stop()
@@ -959,7 +961,7 @@ class freeplayAnnexController( object ):
 		elif _data == "reset neutral":
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			freeplayAnnexController.controllerReset( self, disable_ht=False )
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "spontaneousBlink start":
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
