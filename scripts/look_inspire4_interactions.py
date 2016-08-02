@@ -111,7 +111,7 @@ class lookINSPIRE4Interaction( lookAt ):
 	#	return
 
 	## override base class
-	def start( self, enable_ht=True ):
+	def start( self, enable_ht=True, auto_face_infant=True ):
 		## call base class' start
 		lookAt.start( self, enable_ht=enable_ht )
 		#headTiltBaseBehavior.start( self, enable_ht=enable_ht )
@@ -137,8 +137,9 @@ class lookINSPIRE4Interaction( lookAt ):
 
 		else:
 			rospy.logwarn("lookINSPIRE4Interaction.start(): Maki-ro not facing rightScreen, leftScreen, or infant")
-			rospy.logwarn("lookINSPIRE4Interaction.start(): resetting Maki-ro to neutral (facing infant)")
-			lookINSPIRE4Interaction.turnToInfant( self )
+			if auto_face_infant:
+				rospy.logwarn("lookINSPIRE4Interaction.start(): resetting Maki-ro to neutral (facing infant)")
+				lookINSPIRE4Interaction.turnToInfant( self )
 
 		return
 

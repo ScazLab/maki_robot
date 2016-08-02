@@ -1137,9 +1137,9 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 		lookINSPIRE4Intro.stop(self, disable_ht=disable_ht )
 		return
 
-	def introStart( self ):
+	def introStart( self, enable_ht=True ):
 		## try to nicely startup without jerking MAKI's head tilt servo
-		lookINSPIRE4Intro.start(self)
+		lookINSPIRE4Intro.start(self, enable_ht=enable_ht)
 		lookINSPIRE4Intro.__is_intro_running = True
 		return
 
