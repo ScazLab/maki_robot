@@ -910,7 +910,7 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif (_data == "startle start" or _data == "startle hold"):
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			## ONE STARTLE WITHOUT RELAX
 			self.lookIntro.macroStartleRelax( startle=True, relax=False )
 
@@ -955,6 +955,12 @@ class freeplayAnnexController( object ):
 
 		elif _data == "spontaneousBlink stop":
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+
+		elif _data == "selectiveAttention start":
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
+
+		elif _data == "selectiveAttention stop":
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
 
 		else:
 			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
