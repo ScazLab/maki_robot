@@ -170,6 +170,10 @@ class lookINSPIRE4Interaction( lookAt ):
 
 ## KATE
 	def turnToScreen_new( self, right_screen=True ):
+		## 2016-08-02, ktsui: head tilt motor is very noisy when trying to hold this
+		## 	pose variation
+		_pub_ht = True
+
 		## Use lookAt.shiftGazeVelocity()
 		if right_screen:
 			_hp_gp = lookINSPIRE4Interaction.HP_RIGHT_SCREEN
@@ -180,11 +184,15 @@ class lookINSPIRE4Interaction( lookAt ):
 
 		## remain looking at the screen
 		_ep_gp_fixed = _ep_gp_shift
-		_ht_gp = random.randint(self.ht_rand_min, self.ht_rand_max)
+		if _pub_ht:	_ht_gp = random.randint(self.ht_rand_min, self.ht_rand_max)
 		_duration_s = float(self.ipt_turn) / 1000.0	## seconds
 
 		## apparently requires a little extra time to EP to far side
-		lookINSPIRE4Interaction.shiftGazeVelocity( self, hp_gp=_hp_gp, ht_gp=_ht_gp, ep_gp_shift=_ep_gp_shift, ep_gp_fixed=_ep_gp_fixed, duration_s=_duration_s, padding=-0.1 )
+		if _pub_ht:
+			lookINSPIRE4Interaction.shiftGazeVelocity( self, hp_gp=_hp_gp, ht_gp=_ht_gp, ep_gp_shift=_ep_gp_shift, ep_gp_fixed=_ep_gp_fixed, duration_s=_duration_s, padding=-0.1 )
+		else:
+			lookINSPIRE4Interaction.shiftGazeVelocity( self, hp_gp=_hp_gp, ep_gp_shift=_ep_gp_shift, ep_gp_fixed=_ep_gp_fixed, duration_s=_duration_s, padding=-0.1 )
+
 		return
 
 	def turnToScreen_old( self, right_screen=True ):
@@ -196,6 +204,8 @@ class lookINSPIRE4Interaction( lookAt ):
 
 		_pub_hp = True
 		_pub_ep = True
+		## 2016-08-02, ktsui: head tilt motor is very noisy when trying to hold this
+		## 	pose variation
 		_pub_ht = True
 		_pub_ipt = False
 		_ipt_turn = self.ipt_turn	## 1000 ms
