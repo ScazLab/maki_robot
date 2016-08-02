@@ -395,7 +395,7 @@ class freeplayAnnexController( object ):
 		rospy.logdebug("BEGIN")
 
 		if ( (not dl_status.isalpha()) or (dl_status != "started") and (dl_status != "stopped") ):
-			rospy.logwarn( "Invalid data_logger_status (" + str( dl_status ) + "); rosnode /data_logger may not be running")
+			rospy.logwarn( "Invalid data_logger_status (" + str( dl_status ) + "); rosnode /freeplay_annex_data_logger may not be running")
 			return
 
 		_service_exception_flag = False
@@ -403,40 +403,40 @@ class freeplayAnnexController( object ):
 		if (dl_status == "started"):
 			## dl_status == "started", so stop /data_logger rosbag recording
 			try:
-				rospy.wait_for_service('/data_logger/stop', 5)	## timeout is 5 seconds
+				rospy.wait_for_service('/freeplay_annex_data_logger/stop', 5)	## timeout is 5 seconds
 			except rospy.exceptions.ROSException as _e0:
-				rospy.logerr( "Service /data_logger/stop not found: " + str(_e0) )
-				rospy.logwarn( "rosnode /data_logger may not be running" )
+				rospy.logerr( "Service /freeplay_annex_data_logger/stop not found: " + str(_e0) )
+				rospy.logwarn( "rosnode /freeplay_annex_data_logger may not be running" )
 				self.data_logger_status = "unknown"
 				return
-			dl_stop = rospy.ServiceProxy('/data_logger/stop', Empty)
+			dl_stop = rospy.ServiceProxy('/freeplay_annex_data_logger/stop', Empty)
 			try:
-				rospy.logdebug( "calling rosservice /data_logger/stop..." )
+				rospy.logdebug( "calling rosservice /freeplay_annex_data_logger/stop..." )
 				dl_stop_resp = dl_stop()
 			except rospy.ServiceException as _e1:
-				rospy.logwarn( "Service /data_logger/stop did not process request: " + str(_e1) )
+				rospy.logwarn( "Service /freeplay_annex_data_logger/stop did not process request: " + str(_e1) )
 				_service_exception_flag = True
 			else:
-				rospy.logdebug( "calling rosservice /data_logger/stop... SUCCESS" )
+				rospy.logdebug( "calling rosservice /freeplay_annex_data_logger/stop... SUCCESS" )
 
 		else:
 			## dl_status == "stopped", so start /data_logger rosbag recording
 			try:
-				rospy.wait_for_service('/data_logger/start', 5) ## timeout = 5 seconds
+				rospy.wait_for_service('/freeplay_annex_data_logger/start', 5) ## timeout = 5 seconds
 			except rospy.exceptions.ROSException as _e2:
-				rospy.logerr( "Service /data_logger/start not found: " + str(_e2) )
-				rospy.logwarn( "rosnode /data_logger may not be running" )
+				rospy.logerr( "Service /freeplay_annex_data_logger/start not found: " + str(_e2) )
+				rospy.logwarn( "rosnode /freeplay_annex_data_logger may not be running" )
 				self.data_logger_status = "unknown"
 				return
-			dl_start = rospy.ServiceProxy('/data_logger/start', Empty)
+			dl_start = rospy.ServiceProxy('/freeplay_annex_data_logger/start', Empty)
 			try:
-				rospy.logdebug( "calling rosservice /data_logger/start..." )
+				rospy.logdebug( "calling rosservice /freeplay_annex_data_logger/start..." )
 				dl_start_resp = dl_start()
 			except rospy.ServiceException as _e3:
-				rospy.logwarn( "Service /data_logger/start did not process request: " + str(_e3) )
+				rospy.logwarn( "Service /freeplay_annex_data_logger/start did not process request: " + str(_e3) )
 				_service_exception_flag = True
 			else:
-				rospy.logdebug( "calling rosservice /data_logger/start... SUCCESS" )
+				rospy.logdebug( "calling rosservice /freeplay_annex_data_logger/start... SUCCESS" )
 
 		if _service_exception_flag:
 			if self.data_logger_status == "started":
@@ -874,10 +874,15 @@ class freeplayAnnexController( object ):
 		_data = str(msg.data)
 		rospy.logdebug("_data = " + _data)
 
-		## TODO: ADD START LOGGING
-
 		if _data == "start":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			## There is no actively recording rosbag, 
+			##	so start a new one
+			freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+			rospy.sleep(0.5)	## 0.5 second delay to allow time to open rosbag
+			freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )	## we want to start recording
+			rospy.sleep(0.5)	## 0.5 second delay to allow time to open rosbag
+			rospy.loginfo("==== rosbag recording STARTED ====")
+
 			## DON'T ENABLE HEAD TILT SERVO
 			## Done during awake behavior
 			self.lookIntro.introStart( enable_ht=False )
@@ -887,6 +892,12 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			self.lookIntro.stop()
 			self.lookStimuli.stop()
+
+			rospy.loginfo("==== rosbag recording STOPPED ====")
+			## There is an actively recording rosbag, so close the existing one
+			freeplayAnnexController.toggleDataLoggerRecording( self, "started" )	## we want to stop recording
+			freeplayAnnexController.cancelAutoDataLoggerCallbacks( self )
+			rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
 
 		elif _data == "asleep":
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
@@ -1269,8 +1280,9 @@ class freeplayAnnexController( object ):
 
 		self.ALIVE = False
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
-		rospy.logdebug( "controllerExit: SHUTTING DOWN INSPIRE4 EXPERIMENT..." )
-		self.exp_pub.publish('----- SHUTTING DOWN INSPIRE4 EXPERIMENT -----')
+		rospy.logdebug( "controllerExit: SHUTTING DOWN FREEPLAY ANNEX..." )
+		self.exp_pub.publish('----- SHUTTING DOWN FREEPLAY ANNEX -----')
+		self.exp_pub.publish("==========================================")
 		rospy.logdebug("controllerExit(): END")
 		#exit    ## meant for interactive interpreter shell; unlikely this actually exits
 
@@ -1360,6 +1372,7 @@ if __name__ == '__main__':
 	global controller 
 	controller = freeplayAnnexController( True, None )
 	rospy.logdebug("-------- controller.__init__() DONE -----------")
+	controller.exp_pub.publish("=========================================")
 	controller.exp_pub.publish("...\tInitializing Freeplay annex controller... Please wait.")
 
 	# allow closing the program using CTRL+C
@@ -1370,8 +1383,8 @@ if __name__ == '__main__':
 	rospy.Subscriber( "freeplay_annex_command", String, controller.parse_annex_command )
 	rospy.logdebug( "now subscribed to freeplay_annex_command" )
 
-	rospy.Subscriber( "data_logger/status", String, controller.updateDataLoggerStatus_callback )
-	rospy.logdebug( "now subscribed to data_logger/status" )
+	rospy.Subscriber( "freeplay_annex_data_logger/status", String, controller.updateDataLoggerStatus_callback )
+	rospy.logdebug( "now subscribed to freeplay_annex_data_logger/status" )
 
 	controller.start( neutral_head=False )
 	rospy.logdebug("-------- controller.start() DONE -----------")
