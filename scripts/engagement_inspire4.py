@@ -823,12 +823,12 @@ class engagementStartleGame( eyelidHeadTiltBaseBehavior ):	#headTiltBaseBehavior
 		rospy.logdebug("startStartle(): END")
 		return
 
-	def stopStartle( self ):
+	def stopStartle( self, disable_ht=True ):
 		## shift into eyelid and headtilt neutral
 		engagementStartleGame.macroStartleRelax( self, startle=False, relax=True )
 
 		## call base class' stop function
-		eyelidHeadTiltBaseBehavior.stop(self)
+		eyelidHeadTiltBaseBehavior.stop(self, disable_ht=disable_ht)
 		return
 
 
