@@ -977,6 +977,7 @@ class freeplayAnnexController( object ):
 		elif _data == "selectiveAttention start":
 			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=True )
+			freeplayAnnexController.eyelids.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
 
 		elif _data == "selectiveAttention stop":
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
