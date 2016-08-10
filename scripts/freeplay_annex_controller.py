@@ -975,10 +975,11 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 
 		elif _data == "selectiveAttention start":
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=True )
 
 		elif _data == "selectiveAttention stop":
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		else:
 			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
