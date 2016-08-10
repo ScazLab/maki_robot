@@ -81,6 +81,7 @@ class freeplayAnnexController( object ):
 		self.lookIntro = lookINSPIRE4Intro( verbose_debug, self.ros_pub )
 		self.startleGame = engagementStartleGame( verbose_debug, self.ros_pub )
 		self.lookStimuli = lookINSPIRE4Interaction( verbose_debug, self.ros_pub )
+		self.eyelids = blinking( verbose_debug, self.ros_pub )
 		#self.blinking = blinking( verbose_debug, self.ros_pub )
 		#self.scanning = selectiveAttention( verbose_debug, self.ros_pub )
 		## and a generic one for dealing with resetting to neutral
@@ -962,6 +963,10 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
 			freeplayAnnexController.controllerReset( self, disable_ht=False )
 			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+
+		elif _data == "reset eyelids":
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.eyelids.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
 
 		elif _data == "spontaneousBlink start":
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
