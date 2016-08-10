@@ -75,8 +75,8 @@ class selectiveAttention( headTiltBaseBehavior ):
 		## additional rest period
 		self.visual_scan_rest_occurence_percent = 35	#25	## [1,100)
 		self.visual_scan_rest_enabled = True
-		self.visual_scan_rest_min = 200	#250	#100	#50	## milliseconds
-		self.visual_scan_rest_max = 600 #750	#400	#300	## milliseconds
+		self.visual_scan_rest_min = 400 #200	#250	#100	#50	## milliseconds
+		self.visual_scan_rest_max = 800	#600 #750	#400	#300	## milliseconds
 		## NOTE: Scaz wanted longer rest durations between visual scan movements
 
 		if selectiveAttention.__is_scanning == None:
