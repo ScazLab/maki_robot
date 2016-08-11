@@ -2,6 +2,7 @@
 
 import rospy
 from std_msgs.msg import String
+from std_msgs.msg import Int16
 import os
 
 import math
@@ -73,7 +74,7 @@ class blinking( eyelidBaseBehavior ):
 		## 10 times per minute == 0.17 times per second == 0.17 Hz
 		self.spontaneous_blink_rate_max = 10	
 		## 2 times per minute ==  0.033 times per second == 0.033 Hz
-		self.spontaneous_blink_rate_min = 2	 
+		self.spontaneous_blink_rate_min = 3	#2	 
 
 		## variables relating to endogenous eye blinks
 		## 4 times per minute == 0.067 times per second == 0.067 Hz
@@ -84,9 +85,11 @@ class blinking( eyelidBaseBehavior ):
 		
 		## variables relating to the duration of 1 eye blink
 		## length of time for eyelid to close and re-open
-		self.blink_action_duration = 300	#250	#200	## milliseconds
+		self.blink_action_duration = 350	#300	#250	#200	## milliseconds
 		self.last_blink_time = None
 		self.next_blink_time = None
+
+		self.next_blink_pub = rospy.Publisher("blinking/next_blink", Int16, queue_size = 10)
 
 		self.ALIVE = True
 		return
@@ -146,7 +149,11 @@ class blinking( eyelidBaseBehavior ):
 			## almost 50% of the time
 			blinking.eyelidClose( self, cmd_prop=True )	
 			rospy.logdebug("SPONTANEOUS BLINK... eyelid close, DONE! eyelid open, GO!")
-			blinking.eyelidOpen( self, monitor=True )
+			try:
+				blinking.eyelidOpen( self, monitor=True )
+			except rospy.exceptions.ROSException as e:
+				rospy.logwarn("[WARNING] eyelids stalled when opening from blink...")
+				blinking.eyelidOpen( self, monitor=False, cmd_prop=True )
 			_spontaneous_blink_end_time = rospy.get_time()
 			rospy.logdebug("SPONTANEOUS BLINK... eyelid open, DONE!")
 			self.last_blink_time = rospy.get_time()
@@ -154,6 +161,7 @@ class blinking( eyelidBaseBehavior ):
 			self.count_movements = self.count_movements +1
 
 			_seconds_until_next_blink = random.uniform(self.spontaneous_blink_rate_min, self.spontaneous_blink_rate_max)
+			self.next_blink_pub.publish( int(_seconds_until_next_blink) )
 			self.next_blink_time = self.last_blink_time + _seconds_until_next_blink
 			rospy.logdebug("Next spontaneous blink in " + str(_seconds_until_next_blink) + " seconds... at time " + str(self.next_blink_time))
 
@@ -161,6 +169,8 @@ class blinking( eyelidBaseBehavior ):
 		#end	while self.ALIVE and not rospy.is_shutdown():
 
 		self.next_blink_time = None
+		self.next_blink_pub.publish( 0 )
+		self.seconds_until_next_blink = None
 
 		rospy.loginfo( "NUMBER OF SPONTANEOUS BLINKS: " + str(self.count_movements) )
 		rospy.loginfo( "Duration: " + str(_duration) + " seconds" )
@@ -196,18 +206,26 @@ class blinking( eyelidBaseBehavior ):
 		self.next_blink_time = None
 
 		if auto_reset_eyelid:
-			## set eyelid  
-			_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
-			blinking.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+			### set eyelid  
+			#_pub_cmd = "LLGP" + str(self.origin_ll) + str(TERM_CHAR_SEND) 
+			#blinking.monitorMoveToGP( self, _pub_cmd, ll_gp=self.origin_ll )
+			blinking.setEyelidNeutralPose( self, self.origin_ll, monitor=True )
 
 		rospy.logdebug("stopSpontaneousBlink(): END")
+		return
+
+	def reset( self ):
+		blinking.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, monitor=True )
 		return
 
 	def parse_maki_macro( self, msg ):
 		#rospy.logdebug( msg.data )
 		print msg.data
 
-		if msg.data == "spontaneousBlink start":
+		if msg.data == "reset eyelids":
+			blinking.reset( self )
+
+		elif msg.data == "spontaneousBlink start":
 			## This call is blocking
 			#blinking.startSpontaneousBlink( self )
 			try:
