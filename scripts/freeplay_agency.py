@@ -461,7 +461,20 @@ class freeplayAgency( object ):
 			if "idleHeadPan" in _data:
 				self.idleHP.abort()
 
-		elif (_data == "reset selectiveAttention" or _data == "reset eyelids"):
+		elif (_data == "reset selectiveAttention"):
+			## BEFORE RESETTING, NEED TO STOP FIRST
+			if freeplayAgency.__is_scanning:
+				freeplayAgency.setVisualScanTimer( self, Int16( 0 ) )
+				freeplayAgency.cleanupRunRandomPauseResumeScan( self )
+
+			freeplayAgency.pubTo_maki_macro( self, _data )
+
+		elif (_data == "reset eyelids"):
+			## BEFORE RESETTING, NEED TO STOP FIRST
+			if freeplayAgency.__is_blinking:
+				freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop" )
+				freeplayAgency.cleanupBlinkPrepTimer( self )
+
 			freeplayAgency.pubTo_maki_macro( self, _data )
 
 		else:
