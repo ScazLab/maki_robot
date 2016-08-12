@@ -173,7 +173,7 @@ class lookINSPIRE4Interaction( lookAt ):
 	def turnToScreen_new( self, right_screen=True ):
 		## 2016-08-02, ktsui: head tilt motor is very noisy when trying to hold this
 		## 	pose variation
-		_pub_ht = True
+		_pub_ht = False #True
 
 		## Use lookAt.shiftGazeVelocity()
 		if right_screen:
