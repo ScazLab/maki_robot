@@ -89,7 +89,8 @@ HT_MIDDLE = 505
 HT_DOWN = 460
 HT_MIN = 444	## update 2016-07-20; HT motor replacement
 
-HP_ALISSA = 620
+#HP_ALISSA = 620	## to maki's right
+HP_ALISSA = 349		## to maki's left
 HT_ALISSA = 540
 
 HP_EXPERIMENTER = 620
