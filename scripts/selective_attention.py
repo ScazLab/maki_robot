@@ -70,7 +70,7 @@ class selectiveAttention( headTiltBaseBehavior ):
 		#self.et_delta_range = 30	## ticks	
 		## 10 ticks looks like visual scanning on a focused point
 		self.ep_delta_range = 10	## ticks
-		self.et_delta_range = 20	#15	#10	## ticks	
+		self.et_delta_range = 10	#20	#15	#10	## ticks	
 		## in addition to 100ms command propogation delay, provide option
 		## additional rest period
 		self.visual_scan_rest_occurence_percent = 35	#25	## [1,100)
@@ -202,11 +202,14 @@ class selectiveAttention( headTiltBaseBehavior ):
 		rospy.logdebug("ETilt range: (" + str(self.et_rand_min) + ", " + str(self.et_rand_max) + ")")
 		return
 
-	def setVisualScanTargetPose( self, ep, et):
+	def setVisualScanTargetPose( self, ep, et, ipt=None ):
 		self.origin_ep = ep
 		self.origin_et = et
 
-		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) + str(TERM_CHAR_SEND) 
+		_pub_cmd = "EPGP" + str(self.origin_ep) + "ETGP" + str(self.origin_et) 
+		if (ipt != None and isinstance(ipt, int) and ipt > 0):
+			_pub_cmd += SC_SET_IPT + str(ipt)
+		_pub_cmd += str(TERM_CHAR_SEND) 
 		selectiveAttention.monitorMoveToGP( self, _pub_cmd, ep_gp=self.origin_ep, et_gp=self.origin_et )
 
 	def stopVisualScan( self, disable_ht=True ):
@@ -237,6 +240,10 @@ class selectiveAttention( headTiltBaseBehavior ):
 				selectiveAttention.stopVisualScan( self, disable_ht=False )
 			else:
 				selectiveAttention.stopVisualScan( self, disable_ht=True )
+
+		elif msg.data == "reset selectiveAttention":
+			selectiveAttention.setVisualScanTargetPose( self, EP_FRONT, ET_MIDDLE, ipt=300)
+
 		else:
 			pass
 
