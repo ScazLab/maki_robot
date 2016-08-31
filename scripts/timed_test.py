@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+## TODO: update with changes made to baseBehavior
+
 import rospy
 from std_msgs.msg import String
 import os
