@@ -92,9 +92,13 @@ class lookINSPIRE4Interaction( lookAt ):
 			self.makiPP = dict( zip(F_VAL_SEQ, [ INVALID_INT ] * len(F_VAL_SEQ) ) )
 
 		self.ipt_turn = 1000	## ms
+		#self.delta_ht = 10	## ticks
+		#self.ht_rand_min = lookINSPIRE4Interaction.HT_LEFT_SCREEN - self.delta_ht
+		#self.ht_rand_max = lookINSPIRE4Interaction.HT_LEFT_SCREEN +- self.delta_ht
 		self.delta_ht = 10	## ticks
 		self.ht_rand_min = lookINSPIRE4Interaction.HT_LEFT_SCREEN - self.delta_ht
-		self.ht_rand_max = lookINSPIRE4Interaction.HT_LEFT_SCREEN +- self.delta_ht
+		self.delta_ht = 0	## ticks
+		self.ht_rand_max = lookINSPIRE4Interaction.HT_LEFT_SCREEN + self.delta_ht
 
 		self.__use_shift_gaze = True	## CHANGE TO FALSE TO REVERT
 
