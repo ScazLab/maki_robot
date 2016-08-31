@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+## TODO: update with changes made to headTiltBaseBehavior
+
 import rospy
 from std_msgs.msg import String
 import os
@@ -14,7 +16,7 @@ import re		# see http://stackoverflow.com/questions/5749195/how-can-i-split-and-
 from maki_robot_common import *
 from dynamixel_conversions import dynamixelConversions
 from timed_test import timedTest
-from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterupt
+from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
 
 ########################
@@ -62,15 +64,15 @@ class headTiltTimedTest(timedTest):
 		headTiltTimedTest.__ht_enabled = False
 
 	#def startTimedTest(self, makiPP):
-	#	self.mTT_INTERUPT = False
+	#	self.mTT_INTERRUPT = False
 	#	self.makiPP = makiPP
 
 	#def stopTimedTest(self):
-	#	self.mTT_INTERUPT = True
+	#	self.mTT_INTERRUPT = True
 
 	#def exitTimedTest(self):
 	#	self.ALIVE = False
-	#	self.mTT_INTERUPT = True
+	#	self.mTT_INTERRUPT = True
 
 	#def update( self, makiPP ):
 	#	self.makiPP = makiPP
