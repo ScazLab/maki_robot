@@ -13,7 +13,7 @@
 	<node name="maki_arbotix_interface" pkg="maki_robot" type="MAKI-Arbotix-Interface.py" output="screen" if="$(arg arbotix)" />
 
 	<!-- controller -->
-	<node name="freeplay_annex_controller" pkg="maki_robot" type="INSPIRE4_freeplay_annex_controller.py" output="screen" if="$(arg exp_controller)" />
+	<node name="freeplayAnnexController" pkg="maki_robot" type="INSPIRE4_freeplay_annex_controller.py" output="screen" if="$(arg exp_controller)" />
 
 	<!-- behaviors -->
 	<group if="$(arg task_behaviors)" >
@@ -21,7 +21,7 @@
 		<node name="look_inspire4_intro" pkg="maki_robot" type="INSPIRE4_look_intro.py" output="screen" />
 		<node name="look_inspire4_interactions" pkg="maki_robot" type="INSPIRE4_look_interactions.py" output="screen" />
 		<node name="engagement_inspire4" pkg="maki_robot" type="INSPIRE4_engagement.py" output="screen" />
-		<node name="freeplay_agency" pkg="maki_robot" type="freeplay_agency.py" output="screen" />
+		<node name="freeplayAgency" pkg="maki_robot" type="freeplay_agency.py" output="screen" />
 	</group>
 	<group if="$(arg agentic_behaviors)" >
 		<node name="blinking" pkg="maki_robot" type="blinking.py" output="screen" />

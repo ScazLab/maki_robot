@@ -32,6 +32,7 @@ from base_behavior import *
 class idleHeadPan( headPanBaseBehavior ):
 
 	__is_idling = None
+	__pause_idling = None
 
 	def __init__( self, verbose_debug, ros_pub ):
 		headPanBaseBehavior.__init__( self, verbose_debug, ros_pub )
@@ -39,24 +40,71 @@ class idleHeadPan( headPanBaseBehavior ):
 		self.ALIVE = False
 
 		idleHeadPan.__is_idling = False
+		idleHeadPan.__pause_idling = False
 		self.origin_hp = HP_FRONT
 
 		self.delta_HP_idle = 10
         	self.idle_ipt = 600
+        	self.delta_idle_ipt = 100
+
+		self.idle_hp_pause_timer = None
+		self.idle_hp_resume_timer = None
+		return
 
 	def start( self ):
 		self.ALIVE = True
 		idleHeadPan.__is_idling = False
+		idleHeadPan.__pause_idling = False
+		return
 
 	def abort( self ):
 		self.ALIVE = False
 		idleHeadPan.__is_idling = False
+		idleHeadPan.__pause_idling = False
+		idleHeadPan.cancelIdlingPauseResumeTimers( self )
+		return
 
 	def isIdling( self ):
 		return idleHeadPan.__is_idling
 
+	def pauseIdling( self ):
+		idleHeadPan.__pause_idling = True
+		return
+
+	def resumeIdling( self ):
+		idleHeadPan.__pause_idling = False
+		return
+
+	def idlingPauseTimer_callback( self, event ):
+		return idleHeadPan.pauseIdling( self )
+
+	def idlingResumeTimer_callback( self, event ):
+		return idleHeadPan.resumeIdling( self )
+
+	def setIdlingPauseResumeTimers( self, pause_duration=1, resume_duration=1 ):
+		idleHeadPan.cancelIdlingPauseResumeTimers( self )
+
+		## similar for idle head pan
+		if idleHeadPan.isIdling( self ):
+			self.idle_hp_pause_timer = rospy.Timer(rospy.Duration(pause_duration), self.idlingPauseTimer_callback, oneshot=True)
+			self.idle_hp_resume_timer = rospy.Timer(rospy.Duration(pause_duration+resume_duration), self.idlingResumeTimer_callback, oneshot=True)
+		return
+
+	def cancelIdlingPauseResumeTimers( self ):
+		## neutralize outstanding timers
+		if self.idle_hp_pause_timer != None:
+			self.idle_hp_pause_timer.shutdown()
+			self.idle_hp_pause_timer = None
+			rospy.logdebug("CANCELLED self.idle_hp_pause_timer")
+
+		if self.idle_hp_resume_timer != None:
+			self.idle_hp_resume_timer.shutdown()
+			self.idle_hp_resume_timer = None
+			rospy.logdebug("CANCELLED self.idle_hp_resume_timer")
+		return
+
 	def doIdle( self, repeat=100, delta_HP_idle=None, idle_ipt=None ):
-		if idleHeadPan.__is_idling:
+		if idleHeadPan.isIdling( self ):
 			return
 		else:
 			idleHeadPan.__is_idling = True
@@ -72,22 +120,38 @@ class idleHeadPan( headPanBaseBehavior ):
 		if idle_ipt == None:
 			idle_ipt = self.idle_ipt
 
-		idleHeadPan.requestFeedback( self, SC_GET_PP )
-		self.origin_hp = self.makiPP["LL"]
+		## need time for head pan to compelete
+		##otherwise, headpan recenters
+		rospy.sleep(0.5)
 
+		idleHeadPan.requestFeedback( self, SC_GET_PP )
+		try:
+			self.origin_hp = self.makiPP["HP"]
+		except TypeError as e_DI:
+			rospy.logwarn("[WARNING]: UNABLE TO RUN doIdle(): self.makiPP has not yet been populated... Active connection with maki_arbotix_interface?")
+			return
+		rospy.loginfo("self.origin_hp=" + str(self.origin_hp))
+
+		## THIS IS MEANT TO BE A LONG LOOP, but not infinite
 		for i in range(1,repeat):
 			## break loop early
 			if (not self.ALIVE or not idleHeadPan.__is_idling):
 				i = repeat
 				continue
 
+			if idleHeadPan.__is_idling and idleHeadPan.__pause_idling:
+				i -= 1	## counter act incrementing
+				rospy.sleep(0.5)
+				continue
+
+			my_idle_ipt = random.randrange( idle_ipt - self.delta_idle_ipt, idle_ipt + self.delta_idle_ipt, 25 )
 			hp_gp = random.randint( self.origin_hp - delta_HP_idle, self.origin_hp + delta_HP_idle )
 			_pub_cmd = "HP" + SC_SET_GP + str(hp_gp)
-			_pub_cmd += SC_SET_IPT + str(idle_ipt)
+			_pub_cmd += SC_SET_IPT + str(my_idle_ipt)
 			_pub_cmd += TERM_CHAR_SEND
 			rospy.loginfo( "# " +  str(i) + ": " + _pub_cmd )
 			idleHeadPan.pubTo_maki_command( self, _pub_cmd )
-			rospy.sleep( float(idle_ipt) / 1000.0 )
+			rospy.sleep( float(my_idle_ipt) / 1000.0 )
 
 			## break loop early
 			if (not self.ALIVE or not idleHeadPan.__is_idling):
@@ -96,17 +160,27 @@ class idleHeadPan( headPanBaseBehavior ):
 			else:
 				if (random.randint(0,repeat) % random.randint(2,9) == 0):
 					rospy.loginfo("BONUS random sleep")
+					rospy.sleep( float(my_idle_ipt) / 1000.0 )
+
+
+		## CLEANUP... repeat 2x
+		for pass_count in range(0,2):
+			if not idleHeadPan.verifyPose( self, hp=self.origin_hp, delta_pp=2 ):
+				_pub_cmd = "HP" + SC_SET_GP + str(self.origin_hp)
+				if (pass_count == 0):
+					_pub_cmd += SC_SET_IPT + str(idle_ipt)
+				_pub_cmd += TERM_CHAR_SEND
+				rospy.loginfo( "CLEANUP doIdle(): " + _pub_cmd )
+				idleHeadPan.pubTo_maki_command( self, _pub_cmd )
+				if (pass_count == 0):
 					rospy.sleep( float(idle_ipt) / 1000.0 )
+			else:
+				break
 
-
-		## CLEANUP
-		_pub_cmd = "HP" + SC_SET_GP + str(hp_gp)
-		_pub_cmd += SC_SET_IPT + str(idle_ipt)
-		_pub_cmd += TERM_CHAR_SEND
-		rospy.loginfo( "CLEANUP doIdle(): " + _pub_cmd )
-		idleHeadPan.pubTo_maki_command( self, _pub_cmd )
-		rospy.sleep( float(idle_ipt) / 1000.0 )
-
+		if idleHeadPan.isIdling( self ):
+			## ONLY IF for loop DID NOT END EARLY
+			## reset behavior for next invocation
+			idleHeadPan.abort( self )
 		return
 
 ## ------------------------------
@@ -116,6 +190,10 @@ class freeplayAgency( object ):
 	__is_scanning = None
 	__is_blinking = None
 	__is_nodding = None
+
+	ENABLE_VS = None
+	ENABLE_BL = None
+	ENABLE_IL = None
 
 	def __init__(self, verbose_debug, ros_pub):
 
@@ -164,6 +242,10 @@ class freeplayAgency( object ):
 		self.duration_until_scan_pause = 0
         	self.thread_pauseResumeScan = None
 
+		freeplayAgency.ENABLE_VS = False
+		freeplayAgency.ENABLE_BL = True
+		freeplayAgency.ENABLE_IL = True
+
 		self.ALIVE = True
 		return
 
@@ -180,10 +262,11 @@ class freeplayAgency( object ):
 
 		return 
 
-	def pubTo_maki_macro( self, commandOut ):
+	def pubTo_maki_macro( self, commandOut, cmd_prop=True, time_s=0.1 ):
 		rospy.logdebug( commandOut )
 		if not rospy.is_shutdown():
 			self.ros_pub.publish( commandOut )
+			if cmd_prop:	rospy.sleep(time_s)
 		return
 
 
@@ -199,6 +282,7 @@ class freeplayAgency( object ):
 			self.pause_blinkPrep = False
 		else:
 			freeplayAgency.__is_blinking = False
+			self.pause_blinkPrep = False
 			freeplayAgency.cleanupBlinkPrepTimer( self )
 			return False
 
@@ -209,6 +293,9 @@ class freeplayAgency( object ):
 		return
 
 	def blinkPrepTimer_callback( self, event ):
+		_pause_duration = 0.01	## seconds
+		_resume_duration = 2.0
+
 		if not freeplayAgency.__is_blinking:	return
 
 		## before upcoming blink, make sure to pause scanning
@@ -217,8 +304,14 @@ class freeplayAgency( object ):
 			self.pause_blinkPrep = True
 			freeplayAgency.cancelScanTimers( self )
 			## fire immediately
-			self.scan_pause_timer = rospy.Timer(rospy.Duration(0), self.scanPauseTimer_callback, oneshot=True)
-			self.scan_resume_timer = rospy.Timer(rospy.Duration(2), self.scanResumeTimer_callback, oneshot=True)
+			self.scan_pause_timer = rospy.Timer(rospy.Duration(_pause_duration), self.scanPauseTimer_callback, oneshot=True)
+			self.scan_resume_timer = rospy.Timer(rospy.Duration(_pause_duration+_resume_duration), self.scanResumeTimer_callback, oneshot=True)
+
+
+		## similar for idle head pan
+		if self.idleHP.isIdling():
+			self.idleHP.setIdlingPauseResumeTimers( pause_duration=_pause_duration, resume_duration=_resume_duration )
+
 
 		## TODO: similar for head nodding
 
@@ -230,6 +323,7 @@ class freeplayAgency( object ):
 			self.blink_prep_timer.shutdown()
 			self.blink_prep_timer = None
 			rospy.logdebug("CANCELLED self.blink_prep_timer")
+		return
 
 	def cleanupBlinkPrepTimer( self ):
 		self.pause_blinkPrep = False
@@ -246,8 +340,8 @@ class freeplayAgency( object ):
 	def setVisualScanTimer( self, msg ):
 		## check if visual scanning already exists
 		if freeplayAgency.__is_scanning:
-			freeplayAgency.__is_scanning = False
 			freeplayAgency.cancelScanTimers( self )
+			freeplayAgency.__is_scanning = False
         		#self.thread_pauseResumeScan = None
 
 		duration_until_scan_pause = 0
@@ -257,9 +351,8 @@ class freeplayAgency( object ):
 			self.duration_until_scan_pause = msg.data
 			freeplayAgency.__is_scanning = True
 		else:
+			#freeplayAgency.cleanupRunRandomPauseResumeScan( self )
 			freeplayAgency.__is_scanning = False
-			#freeplayAgency.cancelScanTimers( self )
-			freeplayAgency.cleanupRunRandomPauseResumeScan( self )
 			return False
 
 		# start new thread to randomly pause and resume visual scanning
@@ -283,7 +376,7 @@ class freeplayAgency( object ):
 			freeplayAgency.__is_scanning):
 
 			rospy.sleep(0.5)
-			if self.pause_blinkPrep:	continue
+			if self.pause_blinkPrep and freeplayAgency.__is_blinking:	continue
 
 			_rand_pause = random.uniform(duration_until_scan_pause, duration_until_scan_pause+1)
 			_rand_resume = random.uniform(0, duration_until_scan_pause)
@@ -301,6 +394,7 @@ class freeplayAgency( object ):
 
 		rospy.logwarn("runRandomPauseResumeScan: AFTER while()")
 		freeplayAgency.cleanupRunRandomPauseResumeScan( self )
+		rospy.logwarn("runRandomPauseResumeScan: DONE")
 		return
 
 	def cleanupRunRandomPauseResumeScan( self ):
@@ -311,7 +405,7 @@ class freeplayAgency( object ):
 		freeplayAgency.cancelScanTimers( self )
 		self.scan_pause_timer = rospy.Timer(rospy.Duration(0.1), self.scanPauseTimer_callback, oneshot=True)
 		rospy.sleep(0.25)	## make sure that scanPauseTimer_callback publishes
-		freeplayAgency.cancelScanTimers( self )
+		#freeplayAgency.cancelScanTimers( self )
 		self.scan_pause_resume_timer_count = 0
 		freeplayAgency.pubTo_maki_macro( self, "reset selectiveAttention" )
 
@@ -321,19 +415,21 @@ class freeplayAgency( object ):
 		return
 
 	def scanPauseTimer_callback( self, event ):
-		rospy.loginfo("scanPauseTimer_callback: FIRED!!")
 		## simulate a longer pause
-		#if freeplayAgency.__is_scanning:
-		_pub_cmd = "visualScan stop"
-		_pub_cmd += " disable_ht=False"
-		freeplayAgency.pubTo_maki_macro( self, _pub_cmd )
-		self.scan_pause_timer = None	## IS THIS NECESSARY??
-		self.scan_pause_resume_timer_count -= 1
+		#if freeplayAgency.__is_scanning and self.scan_pause_timer != None:
+		if self.scan_pause_timer != None:
+			rospy.loginfo("scanPauseTimer_callback: FIRED!!")
+			_pub_cmd = "visualScan stop"
+			_pub_cmd += " disable_ht=False"
+			freeplayAgency.pubTo_maki_macro( self, _pub_cmd )
+			self.scan_pause_timer = None	## IS THIS NECESSARY??	-- Helps for restarting visualScan
+			self.scan_pause_resume_timer_count -= 1
+
 		return
 
 	def scanResumeTimer_callback( self, event ):
 		## resume from pause
-		if freeplayAgency.__is_scanning:
+		if freeplayAgency.__is_scanning and self.scan_resume_timer != None:
 			_pub_cmd = "visualScan start"
 			freeplayAgency.pubTo_maki_macro( self, _pub_cmd )
 			self.scan_resume_timer = None	## IS THIS NECESSARY??
@@ -346,8 +442,9 @@ class freeplayAgency( object ):
 			self.scan_pause_timer.shutdown()
 			self.scan_pause_timer = None
 			rospy.logdebug("CANCELLED self.scan_pause_timer")
-			## for good measure
-			self.scan_pause_timer = rospy.Timer(rospy.Duration(0.1), self.scanPauseTimer_callback, oneshot=True)
+			## TO REMOVE
+			### for good measure
+			#self.scan_pause_timer = rospy.Timer(rospy.Duration(0.1), self.scanPauseTimer_callback, oneshot=True)
 
 		if self.scan_resume_timer != None:
 			self.scan_resume_timer.shutdown()
@@ -428,21 +525,38 @@ class freeplayAgency( object ):
 		rospy.logdebug("received: " + str(msg))
 
 		_data = str(msg.data)
-		rospy.logdebug("_data = " + _data)
+		#rospy.logdebug("_data = " + _data)
+		rospy.loginfo("_data = " + _data)
 
 		if "start" in _data:
 			## THERE IS AN ORDERING HERE.. put visualScan first
-			if "visualScan" in _data:
-				freeplayAgency.pubTo_maki_macro( self, "reset selectiveAttention" )
+			if (freeplayAgency.ENABLE_VS and 
+				("visualScan" in _data or "selectiveAttention" in _data)):
+				#freeplayAgency.pubTo_maki_macro( self, "reset selectiveAttention" )
+
+				## BEFORE RESETTING, NEED TO STOP FIRST
+				if freeplayAgency.__is_scanning:
+					freeplayAgency.setVisualScanTimer( self, Int16( 0 ) )
+					freeplayAgency.pubTo_maki_macro( self, "reset selectiveAttention" )
+
 				rospy.sleep(0.5)
 				freeplayAgency.setVisualScanTimer( self, Int16( 4 ) )
 
-			if "spontaneousBlink" in _data:
-				freeplayAgency.pubTo_maki_macro( self, "reset eyelids" )
+			if (freeplayAgency.ENABLE_BL and "spontaneousBlink" in _data):
+				## BEFORE RESETTING, NEED TO STOP FIRST
+				if freeplayAgency.__is_blinking:
+					#freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop" )
+					#freeplayAgency.cleanupBlinkPrepTimer( self )
+
+					freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop auto_reset_eyelid" )
+					## DO something more immediate
+					freeplayAgency.setBlinkTimer( self, Int16(0) )
+					freeplayAgency.pubTo_maki_macro( self, "reset eyelids" )
+
 				rospy.sleep(0.5)
 				freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink start" )
 
-			if "idleHeadPan" in _data:
+			if (freeplayAgency.ENABLE_IL and "idleHeadPan" in _data):
 				self.idleHP.start()
 				# start new thread for idleHeadPan.doIdle()
 				try:
@@ -452,28 +566,38 @@ class freeplayAgency( object ):
 
 		elif "stop" in _data:
 			## THERE IS AN ORDERING HERE.. put visualScan first
-			if "visualScan" in _data:
+			if ("visualScan" in _data or "selectiveAttention" in _data):
 				freeplayAgency.setVisualScanTimer( self, Int16( 0 ) )
+				#freeplayAgency.pubTo_maki_macro( self, "visualScan stop disable_ht=False" )
+				rospy.sleep(0.5)
 
 			if "spontaneousBlink" in _data:
 				freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop auto_reset_eyelid" )
+				## DO something more immediate
+				freeplayAgency.setBlinkTimer( self, Int16(0) )
+				rospy.sleep(0.5)
 			
 			if "idleHeadPan" in _data:
 				self.idleHP.abort()
+				rospy.sleep(0.5)
 
 		elif (_data == "reset selectiveAttention"):
 			## BEFORE RESETTING, NEED TO STOP FIRST
 			if freeplayAgency.__is_scanning:
 				freeplayAgency.setVisualScanTimer( self, Int16( 0 ) )
-				freeplayAgency.cleanupRunRandomPauseResumeScan( self )
+				#freeplayAgency.cleanupRunRandomPauseResumeScan( self )
 
 			freeplayAgency.pubTo_maki_macro( self, _data )
 
 		elif (_data == "reset eyelids"):
 			## BEFORE RESETTING, NEED TO STOP FIRST
 			if freeplayAgency.__is_blinking:
-				freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop" )
-				freeplayAgency.cleanupBlinkPrepTimer( self )
+				#freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop" )
+				#freeplayAgency.cleanupBlinkPrepTimer( self )
+
+				freeplayAgency.pubTo_maki_macro( self, "spontaneousBlink stop auto_reset_eyelid" )
+				## DO something more immediate
+				freeplayAgency.setBlinkTimer( self, Int16(0) )
 
 			freeplayAgency.pubTo_maki_macro( self, _data )
 
@@ -496,6 +620,9 @@ class freeplayAgency( object ):
 		if freeplayAgency.__is_scanning:
 			freeplayAgency.setVisualScanTimer( self, Int16( 0 ) )
 			freeplayAgency.cleanupRunRandomPauseResumeScan( self )
+
+		if self.idleHP.isIdling():
+			self.idleHP.abort()
 
 		rospy.sleep(1)  # give a chance for everything else to shutdown nicely
 		self.ALIVE = False

@@ -24,10 +24,10 @@ from asleep_awake import *
 from INSPIRE4_look_intro import *
 from INSPIRE4_engagement import *
 from INSPIRE4_look_interactions import *
-
-
-##	Copied with light modifications from INSPIRE4_controller.py
-##	TODO: needs cleaning
+ 
+ 
+##     Copied with light modifications from INSPIRE4_controller.py
+##     TODO: needs cleaning
 
 ## ------------------------------
 class freeplayAnnexController( object ):
@@ -96,6 +96,8 @@ class freeplayAnnexController( object ):
 
 		self.start_watch_timer = None
 		self.stop_watch_timer = None
+
+		self.use_freeplay_agency = True	#False	## TODO: Try this!!!
 		return
 
 	#def __del__(self):
@@ -195,15 +197,27 @@ class freeplayAnnexController( object ):
 	#####################
 	def initROSPub( self, latch=False ):
 		rospy.logdebug( "setup rostopic publisher to /maki_macro" )
-			
 		self.ros_pub = rospy.Publisher( "maki_macro", String, queue_size = 26, latch = latch)	## if LATCH==True, any new subscribers will see the most recent message published
+	
+		rospy.logdebug( "setup rostopic publisher to /freeplay_agency" )
+		self.fa_pub = rospy.Publisher( "freeplay_agency", String, queue_size = 26, latch = latch)	## if LATCH==True, any new subscribers will see the most recent message published
 	
 		return 
 
-	def pubTo_maki_macro( self, commandOut ):
+	def pubTo_maki_macro( self, commandOut, cmd_prop=True, time_s=0.1 ):
 		rospy.logdebug( commandOut )
 		if not rospy.is_shutdown():
 			self.ros_pub.publish( commandOut )
+		
+			if cmd_prop:	rospy.sleep(time_s)
+		return
+
+	def pubTo_freeplay_agency( self, commandOut, cmd_prop=True, time_s=0.1 ):
+		rospy.logdebug( commandOut )
+		if not rospy.is_shutdown():
+			self.fa_pub.publish( commandOut )
+
+			if cmd_prop:	rospy.sleep(time_s)
 		return
 
 	def pubTo_maki_internal_monologue( self, thought ):
@@ -228,8 +242,14 @@ class freeplayAnnexController( object ):
 		rospy.logdebug( "now subscribed to /freeplay_annex_command" )
 		return
 
-
 	def setBlinkAndScan( self, blink=False, auto_reset_eyelid=True, scan=False, disable_ht=False ):
+		if self.use_freeplay_agency:
+			freeplayAnnexController.setBlinkAndScan_new( self, blink=blink, auto_reset_eyelid=auto_reset_eyelid, scan=scan, disable_ht=disable_ht)
+		else:
+			freeplayAnnexController.setBlinkAndScan_old( self, blink=blink, auto_reset_eyelid=auto_reset_eyelid, scan=scan, disable_ht=disable_ht)
+		return
+
+	def setBlinkAndScan_old( self, blink=False, auto_reset_eyelid=True, scan=False, disable_ht=False ):
 		rospy.logdebug("setBlinkAndScan(): BEGIN")
 		_pub_cmd = ""
 
@@ -247,6 +267,28 @@ class freeplayAnnexController( object ):
 			_pub_cmd = "visualScan stop"
 			if not disable_ht:	_pub_cmd += " disable_ht=False"
 			freeplayAnnexController.pubTo_maki_macro( self, _pub_cmd )
+
+		rospy.logdebug("setBlinkAndScan(): END")
+		return
+
+	def setBlinkAndScan_new( self, blink=False, auto_reset_eyelid=True, scan=False, disable_ht=False ):
+		rospy.logdebug("setBlinkAndScan(): BEGIN")
+		_pub_cmd = ""
+
+		if (isinstance(blink, bool) and blink):
+			freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink start" )
+		else:
+			if auto_reset_eyelid:
+				freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink stop auto_reset_eyelid" )
+			else:
+				freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink stop" )
+
+		if (isinstance(scan, bool) and scan):
+			freeplayAnnexController.pubTo_freeplay_agency( self, "visualScan start" )
+		else:
+			_pub_cmd = "visualScan stop"
+			if not disable_ht:	_pub_cmd += " disable_ht=False"
+			freeplayAnnexController.pubTo_freeplay_agency( self, _pub_cmd )
 
 		rospy.logdebug("setBlinkAndScan(): END")
 		return
@@ -855,6 +897,7 @@ class freeplayAnnexController( object ):
 		return _invalid_transition
 
 
+## ---------------------------------
 	def hide( self, ipt_ms=750 ):
 		_pub_cmd = ""
 		_pub_cmd += "HT" + SC_SET_GP + str(HT_DOWN)
@@ -864,6 +907,21 @@ class freeplayAnnexController( object ):
 
 		self.htBB.pubTo_maki_command( _pub_cmd )
 		return
+
+	def stopAgencyBehaviors( self ):
+		if self.use_freeplay_agency:
+			## THERE IS AN ORDERING HERE, stop blink first
+			freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink stop" )
+			freeplayAnnexController.pubTo_freeplay_agency( self, "idleHeadPan stop" )
+			freeplayAnnexController.pubTo_freeplay_agency( self, "visualScan stop" )
+			rospy.sleep(0.5)
+			freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink stop" )
+		else:
+			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+
+		rospy.sleep(0.5)	## wait for agentic behaviors to stop
+		return
+
 
 	## TO FIX: HANDLE QUEUED MESSAGES. VALID STATE TRANSITIONS
 	##	ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
@@ -892,10 +950,10 @@ class freeplayAnnexController( object ):
 			self.lookIntro.introStart( enable_ht=False )
 			self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
 
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			##freeplayAnnexController.stopAgencyBehaviors( self )
 
 		elif _data == "end":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
 			self.lookIntro.stop()
 			self.lookStimuli.stop()
 
@@ -906,14 +964,15 @@ class freeplayAnnexController( object ):
 			rospy.sleep(0.5)	## 0.5 second delay to allow time to close rosbag
 
 		elif _data == "asleep":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
 			## has own invocation to headTiltBaseBehavior.start() and .stop( disable_ht=True )
 			self.asleepAwake.runAsleep()
 
 		elif _data == "awake":
 			## AWAKE TO FACE INFANT
 			self.asleepAwake.runAwake( disable_ht=False )
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
 
 		elif (_data == "greeting" or _data == "headnod"):
 			## ONE HEAD NOD
@@ -921,13 +980,14 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "startle":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
 			## ONE STARTLE WITH RELAX
 			self.lookIntro.macroStartleRelax( startle=True, relax=True )
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
 
 		elif (_data == "startle start" or _data == "startle hold"):
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
 			## ONE STARTLE WITHOUT RELAX
 			self.lookIntro.macroStartleRelax( startle=True, relax=False )
 
@@ -941,7 +1001,7 @@ class freeplayAnnexController( object ):
 			freeplayAnnexController.hide( self )
 
 		elif _data == "hide":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
 			freeplayAnnexController.hide( self )
 
 		elif _data == "unhideIntoStartle":
@@ -949,45 +1009,107 @@ class freeplayAnnexController( object ):
 
 		elif _data == "unhide":
 			self.startleGame.unhideIntoStartle( unhide=True, startle=False )
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
 
-		elif _data == "lookAt Alyssa":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
-			## NOTE: This has blocking call (monitorMoveToGP)
-			self.lookStimuli.turnToScreen( right_screen=True )
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+		### ATTEND TO VIRTUAL HUMAN
+		elif (_data == "lookAt Alyssa" or  _data == "lookAt Alissa"):
+			freeplayAnnexController.stopAgencyBehaviors( self )
 
+			if self.htBB.verifyPose( hp=HP_ALISSA ):
+				rospy.loginfo("... SKIP: lookAt SIGNING AGENT... already facing SIGNING AGENT")
+			else:
+				rospy.loginfo("... lookAt SIGNING AGENT")
+				## NOTE: This has blocking call (monitorMoveToGP)
+				self.lookStimuli.turnToScreen( right_screen=True )
+
+			#if self.use_freeplay_agency:
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "visualScan start" )
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink start" )
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "idleHeadPan start" )
+			#else:
+			#	freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+
+		### ATTEND TO INFANT
 		elif _data == "lookAt infant":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
-			self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
+
+			if self.htBB.verifyPose( hp=HP_FRONT ):
+				rospy.loginfo("... SKIP: lookAt INFANT... already facing infant")
+			else:
+				rospy.loginfo("... lookAt INFANT")
+				self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+
+			#if self.use_freeplay_agency:
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "visualScan start" )
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink start" )
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "idleHeadPan start" )
+			#else:
+			#	freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+
+		### WHEN INFANT IS FUSSING, PAUSE: Face infant, blink
+		elif _data == "pause infant":
+			freeplayAnnexController.stopAgencyBehaviors( self )
+
+			if self.htBB.verifyPose( hp=HP_FRONT ):
+				rospy.loginfo("... SKIP: pause INFANT... already facing infant")
+			else:
+				rospy.loginfo("... pause INFANT")
+				self.lookStimuli.turnToInfant()	## blocking call, monitorMoveToGP
+
+			#if self.use_freeplay_agency:
+			#	freeplayAnnexController.pubTo_freeplay_agency( self, "spontaneousBlink idleHeadPan start" )
+			#else:
+			#	freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "reset neutral":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
+			freeplayAnnexController.stopAgencyBehaviors( self )
+
 			freeplayAnnexController.controllerReset( self, disable_ht=False )
 			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "reset eyelids":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, auto_reset_eyelid=False, scan=False )
-			freeplayAnnexController.eyelids.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				freeplayAnnexController.pubTo_maki_macro( self, _data )
+				#self.eyelids.setEyelidNeutralPose( LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
+
+		elif _data == "reset selectiveAttention":
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				freeplayAnnexController.pubTo_maki_macro( self, _data )
 
 		elif _data == "spontaneousBlink start":
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		elif _data == "spontaneousBlink stop":
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 
 		elif _data == "selectiveAttention start":
-			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
-			freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=True )
-			freeplayAnnexController.eyelids.setEyelidNeutralPose( self, LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=True )
+				freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=True )
+				#self.eyelids.setEyelidNeutralPose( LL_OPEN_DEFAULT, cmd_prop=True, monitor=True )
 
 		elif _data == "selectiveAttention stop":
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			if self.use_freeplay_agency:
+				freeplayAnnexController.pubTo_freeplay_agency( self, _data )
+			else:
+				freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		else:
 			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
-			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+			#freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
 		'''
 		if _data != 'turnToInfant':
@@ -1306,9 +1428,10 @@ class freeplayAnnexController( object ):
 
 
 	## NOTE: head tilt motor will be disabled after reset movement
-	#def controllerReset( self, disable_ht=True ):
 	def controllerReset( self, disable_ht=True ):
-## 2016-06-16, KATE
+		rospy.loginfo("controllerReset(): BEGIN")
+		
+		## 2016-06-16, KATE
 		## TODO: FIX: There seems to be a lot of lag time in this function
 
 		_delta_pp = 2		#ticks
@@ -1369,10 +1492,11 @@ class freeplayAnnexController( object ):
 
 		except TypeError as _e1:
 			if (not self.htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
-				rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
+				rospy.logwarn("controllerReset(): TYPE ERROR: " + str(_e1))
 				self.htBB.pubTo_maki_command( _pub_reset )
 				rospy.sleep( _reset_duration + _reset_buffer )
 			if disable_ht:	self.htBB.pubTo_maki_command( "HTTL0Z" )
+		rospy.loginfo("controllerReset(): BEGIN")
 		return
 
 ## ------------------------------
