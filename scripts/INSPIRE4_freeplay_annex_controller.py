@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-#	RUN AS:	rosrun maki_robot freeplay_annex_controller.py 
+#	RUN AS:	rosrun maki_robot INSPIRE4_freeplay_annex_controller.py 
 
 # 	NOTE:	To be run in conjunction with master-table.xls
 
@@ -21,10 +21,13 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 from blinking import *
 from selective_attention import *
 from asleep_awake import *
-from look_inspire4_intro import *
-from engagement_inspire4 import *
-from look_inspire4_interactions import *
+from INSPIRE4_look_intro import *
+from INSPIRE4_engagement import *
+from INSPIRE4_look_interactions import *
 
+
+##	Copied with light modifications from INSPIRE4_controller.py
+##	TODO: needs cleaning
 
 ## ------------------------------
 class freeplayAnnexController( object ):
