@@ -26,7 +26,6 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 ##	- Maki-ro will watch the stimuli for 8 seconds
 ##	- Maki-ro will return to face center (1 second)
 ########################
-#class lookINSPIRE4Interaction( headTiltBaseBehavior, headPanBaseBehavior ):
 class lookINSPIRE4Interaction( lookAt ):
 	## variables private to this class
 	## all instances of this class share the same value

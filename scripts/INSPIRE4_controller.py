@@ -21,9 +21,9 @@ from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 from blinking import *
 from selective_attention import *
 from asleep_awake import *
-from look_inspire4_intro import *
-from engagement_inspire4 import *
-from look_inspire4_interactions import *
+from INSPIRE4_look_intro import *
+from INSPIRE4_engagement import *
+from INSPIRE4_look_interactions import *
 
 
 ## ------------------------------

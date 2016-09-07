@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 
+## To be used in conjunction with INSPIRE4_controller.py
+
 import rospy
 from std_msgs.msg import String
 
