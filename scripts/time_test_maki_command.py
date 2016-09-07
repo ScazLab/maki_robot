@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-#RUN AS: rosrun maki_robot maki_command_time_test.py
+#RUN AS: rosrun maki_robot time_test_maki_command.py
 
 import rospy
 from std_msgs.msg import String
@@ -26,12 +26,12 @@ from dynamixel_conversions import dynamixelConversions
 
 from ROS_sleepWhileWaiting import ROS_sleepWhileWaiting_withInterrupt
 
-from saccade_test import saccadeTest
-from startle_test import startleTest
-from head_nod_test import headNodTest
-from blink_test import blinkTest
-from asleep_awake_test import asleepAwakeTest
-from turn_to_screen_test import turnToScreenTest
+from test_saccade import saccadeTest
+from test_startle import startleTest
+from test_head_nod import headNodTest
+from test_blink import blinkTest
+from test_asleep_awake import asleepAwakeTest
+from test_turn_to_screen import turnToScreenTest
 
 ## subset of servo control infix for type of feedback
 FEEDBACK_SC = [ #SC_GET_MX,
