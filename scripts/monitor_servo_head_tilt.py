@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-#RUN AS: rosrun maki_robot head-tilt-servo-monitor.py
+#RUN AS: rosrun maki_robot monitor_servo_head_tilt.py
 
 import rospy
 from std_msgs.msg import String
