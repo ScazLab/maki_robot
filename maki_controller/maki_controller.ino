@@ -35,6 +35,8 @@
 /*                  // WARNING: Before re-enabling, make sure that the servo's GOAL POSITION and PRESENT POSITION are the same;
 /*                  // otherwise, servo will rapidly snap into place upon executing this servo command
 /*
+/*  RESETZ to request reset to default positions and speeds
+/*
 /*  Original Authors:
 /*    Kate Tsui, Drew O'Donnell
 
@@ -69,32 +71,51 @@ int userGoalSpeed[SERVO_COUNT];
 bool hasTemporaryGoalSpeed[SERVO_COUNT];
 bool performingMovement = false;
 
+bool removeHeadTiltTorqueAfterMove = false;
+
+void doReset() {
+    //Serial << "Resetting goal speeds and positions\n";
+    for (int i = 1; i <= SERVO_COUNT; i++) {
+        dxlSetGoalSpeed(i, default_goal_speed[i - 1]);
+        delayMicroseconds(100);
+        dxlSetGoalPosition(i, default_servo_pos[i - 1]);
+        delayMicroseconds(100);
+        
+        userGoalSpeed[i - 1] = default_goal_speed[i - 1];
+        hasTemporaryGoalSpeed[i - 1] = false;
+    }
+
+    performingMovement = true;
+    // Default to having the head tilt motor torque disabled for safety
+    removeHeadTiltTorqueAfterMove = true;
+}
+
 void setup() {
     Serial.begin(COMP_BAUD_RATE);
-    Serial << "Setup Start\n";
     dxlInit(DYN_BAUD_RATE);
     // minimal delay for status packet return
     dxlSetReturnDelayTime(DXL_BROADCAST, 1);
+    delayMicroseconds(100);
 
     for (int i = 1; i <= SERVO_COUNT; i++) {
         // These are stored in EEPROM, so check before saving to keep it from wearing down
         if (dxlGetMode(i) != 1) {
             axSetJointMode(i);
+            delayMicroseconds(100);
         }
         if (dxlGetCWAngleLimit(i) != min_servo_pos[i - 1]) {
             dxlSetCWAngleLimit(i, min_servo_pos[i - 1]);
+            delayMicroseconds(100);
         }
         if (dxlGetCCWAngleLimit(i) != max_servo_pos[i - 1]) {
             dxlSetCCWAngleLimit(i, max_servo_pos[i - 1]);
+            delayMicroseconds(100);
         }
-        
-        dxlSetGoalSpeed(i, default_goal_speed[i - 1]);
-        dxlSetGoalPosition(i, default_servo_pos[i - 1]);
-        
-        userGoalSpeed[i - 1] = default_goal_speed[i - 1];
-        hasTemporaryGoalSpeed[i - 1] = false;
     }
-    Serial << "Setup End\n";
+    
+    doReset();
+    
+    Serial << "Controller ready\n";
 }
 
 // Gets the ID of the servo from the abbreviation made by the first two characters of message
@@ -124,6 +145,10 @@ int getSetType(const char* message) {
     return getIDFromAbbreviation(message, SET_NAMES_STR);
 }
 
+int errorCorrected(int val) {
+    return val == -1 ? INVALID_INT : val;
+}
+
 void reportOn(int feedbackType, const char* feedbackAbbreviation) {
     Serial << feedbackAbbreviation[0] << feedbackAbbreviation[1]; // The feedback type
     for (byte i = 1; i <= SERVO_COUNT; i++) {
@@ -135,34 +160,34 @@ void reportOn(int feedbackType, const char* feedbackAbbreviation) {
                 Serial << min_servo_pos[i - 1];
                 break;
             case PRESENT_POS_ID:
-                Serial << dxlGetPosition(i);
+                Serial << errorCorrected(dxlGetPosition(i));
                 break;
             case GOAL_POS_ID:
-                Serial << dxlGetGoalPosition(i);
+                Serial << errorCorrected(dxlGetGoalPosition(i));
                 break;
             case PRESENT_SPEED_ID:
-                Serial << dxlGetSpeed(i);
+                Serial << errorCorrected(dxlGetSpeed(i));
                 break;
             case GOAL_SPEED_ID:
-                Serial << dxlGetGoalSpeed(i);
+                Serial << errorCorrected(dxlGetGoalSpeed(i));
                 break;
             case PRESENT_TEMP_ID:
-                Serial << dxlGetTemperature(i);
+                Serial << errorCorrected(dxlGetTemperature(i));
                 break;
             case PRESENT_LOAD_ID:
-                Serial << dxlGetTorque(i);
+                Serial << errorCorrected(dxlGetTorque(i));
                 break;
             case TORQUE_MAX_ID:
-                Serial << dxlGetStartupMaxTorque(i);
+                Serial << errorCorrected(dxlGetStartupMaxTorque(i));
                 break;
             case TORQUE_LIM_ID:
-                Serial << dxlGetTorqueLimit(i);
+                Serial << errorCorrected(dxlGetTorqueLimit(i));
                 break;
             case TORQUE_ENABLE_ID:
-                Serial << dxlGetTorqueEnable(i);
+                Serial << errorCorrected(dxlGetTorqueEnable(i));
                 break;
             case ERROR_ID:
-                Serial << dxlGetError(i);
+                Serial << errorCorrected(dxlGetError(i));
                 break;
             case DEFAULT_POS_ID:
                 Serial << default_servo_pos[i - 1];
@@ -171,7 +196,7 @@ void reportOn(int feedbackType, const char* feedbackAbbreviation) {
                 Serial << default_goal_speed[i - 1];
                 break;
         }
-        if (i < SERVO_COUNT - 1) {
+        if (i <= SERVO_COUNT - 1) {
             Serial << ':';
         }
     }
@@ -204,7 +229,7 @@ void parseSetCommand() {
     const char* command = receiveBuffer;
     while (command[0]) {
         // Reached the end of the commands.
-        if (strncmp(command, MOVEMENT_TIME_STR, sizeof(MOVEMENT_TIME_STR)) == 0) {
+        if (strncmp(command, MOVEMENT_TIME_STR, sizeof(MOVEMENT_TIME_STR) - 1) == 0) {
             return;
         }
         
@@ -224,7 +249,7 @@ void parseSetCommand() {
         int setType = getSetType(command);
         if (setType == -1) {
             // Don't error for the movement time string at the end, just ignore it and we are done here
-            if (command[0] != MOVEMENT_TIME_STR[0] && command[1] != MOVEMENT_TIME_STR[1]) {
+            if (true || command[0] != MOVEMENT_TIME_STR[0] && command[1] != MOVEMENT_TIME_STR[1]) {
                 Serial << "Error: Parameter to set '" << command[0] << command[1] << "' malformed\n";
             }
             return;
@@ -244,30 +269,37 @@ void parseSetCommand() {
                     int currentPos = dxlGetPosition(targetServo);
                     int distance = abs(currentPos - value);
                     // we add movementTimeMs / 2 for rounding
-                    int speed = (distance * 435 + movementTimeMs / 2) / movementTimeMs;
+                    int speed = min(1023, ((unsigned int)distance * 435 + (unsigned int)movementTimeMs / 2) / movementTimeMs);
                     dxlSetGoalSpeed(targetServo, speed);
+                    delayMicroseconds(100); // I'm disappointed this delay is needed at all, but the Dynamixel will ignore the second command without it.
                     dxlSetGoalPosition(targetServo, value);
+                    delayMicroseconds(100); // We put these after all of the set calls, just in case another might end up going to the same dynamixel soon after.
                     hasTemporaryGoalSpeed[targetServo - 1] = true;
                 } else {
                     dxlSetGoalPosition(targetServo, value);
+                    delayMicroseconds(100);
                 }
                 performingMovement = true;
                 break;
             case SET_SPEED_ID:
                 dxlSetGoalSpeed(targetServo, value);
+                delayMicroseconds(100);
                 userGoalSpeed[targetServo - 1] = value;
                 break;
             case SET_MAX_TORQUE_ID:
                 // In EEPROM, so check before saving to prevent eeprom from wearing down
                 if (dxlGetStartupMaxTorque(targetServo) != value) {
                     dxlSetStartupMaxTorque(targetServo, value);
+                    delayMicroseconds(100);
                 }
                 break;
             case SET_TORQUE_LIM_ID:
                 dxlSetRunningTorqueLimit(targetServo, value);
+                delayMicroseconds(100);
                 break;
             case SET_TORQUE_ENABLE_ID:
                 dxlSetTorqueEnable(targetServo, value);
+                delayMicroseconds(100);
                 break;
         }
         
@@ -278,37 +310,39 @@ void parseSetCommand() {
 void parseCommand() {
     if (receiveBuffer[0] == 'F') {
         parseFeedback();
+    } else if (strncmp(receiveBuffer, "RESET", 5) == 0) {
+        doReset();
     } else {
         parseSetCommand();
     }
 }
 
-bool motorsDoneMoving() {
-    for (int i = 1; i <= SERVO_COUNT; i++) {
-        if (dxlGetMoving(i)) {
-            return false;
-        }
-    }
-    return true;
-}
-
 void loop() {
     // Periodically report on errors
-    int now = millis();
-    if (now - lastErrorCheckMillis >= ERROR_CHECK_MS) {
+    int nowMs = millis();
+    if (nowMs - lastErrorCheckMillis >= ERROR_CHECK_MS) {
         reportOn(ERROR_ID, "ER");
-        lastErrorCheckMillis = now;
+        lastErrorCheckMillis = nowMs;
     }
     
     // Check for whether motors need their speeds changed after motion is complete
     bool allMovementComplete = true;
     for (int i = 1; i <= SERVO_COUNT; i++) {
-        if (!dxlGetMoving(i)) {
+        int moving = dxlGetMoving(i);
+        if (moving == 0) {
             if (hasTemporaryGoalSpeed[i - 1]) {
                 hasTemporaryGoalSpeed[i - 1] = false;
                 dxlSetGoalSpeed(i, userGoalSpeed[i - 1]);
+                delayMicroseconds(100);
+                //Serial << "Resetting goal speed of servo: " << i << endl;
             }
-        } else {
+            if (i == HEAD_TILT && removeHeadTiltTorqueAfterMove) {
+                removeHeadTiltTorqueAfterMove = false;
+                dxlSetTorqueEnable(HEAD_TILT, 0);
+                delayMicroseconds(100);
+                //Serial << "Disabling head tilt torque enable\n";
+            }
+        } else if (moving != -1) {
             allMovementComplete = false;
         }
     }
@@ -320,8 +354,12 @@ void loop() {
     }
     
     int serialBytes = Serial.available();
-    while(serialBytes > 0) {
+    while(serialBytes-- > 0) {
         unsigned char newChar = Serial.read();
+        // lower-case to upper-case conversion
+        if (newChar >= 'a' && newChar <= 'z') {
+            newChar += 'A' - 'a';
+        }
         // Refuse garbage characters -- only accept ASCII
         if (newChar < 128) {
             digitalWrite(USER_LED, serialBytes > 0); // led on when we have stuff to read
