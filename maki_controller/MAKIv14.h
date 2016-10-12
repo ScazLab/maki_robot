@@ -6,7 +6,7 @@
 // #define __AVR_LIBC_DEPRECATED_ENABLE__ 1
 
 #define SERVO_COUNT 6  // MAKIv1.4 has 6 servos
-#define ERROR_CHECK_MS 30000 // every 30 seconds report on error values
+#define ERROR_CHECK_MS 30000// every 30 seconds report on error values
 
 #define USER_LED 0 // Pin 0 maps to the USER LED on the ArbotiX Robocontroller.
 
