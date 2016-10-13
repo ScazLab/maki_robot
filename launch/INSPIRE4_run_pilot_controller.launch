@@ -20,5 +20,5 @@
 		<node name="engagement_inspire4" pkg="maki_robot" type="INSPIRE4_engagement.py" output="screen" />
 	</group>
 
-	<node name="ros2vhmsg" pkg="signing_creatures_INSPIRE4_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
+	<node name="ros2vhmsg" pkg="ros2vhmsg"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String'" />	
 </launch>
