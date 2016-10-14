@@ -47,7 +47,7 @@ class messageCoordinater():
             rospy.loginfo("{} is well formed!".format(_data))
             ros_pub = rospy.Publisher(_pub_topic,String, queue_size=10)
             rospy.loginfo("Publishing: {} to Maki on topic: {}".format(_behavior,_pub_topic))
-            ros_pub.publish(_behavior)
+            ros_pub.publish(_behavior+" "+_msg_id)
             rospy.Rate(1).sleep()
         else:
             rospy.loginfo("ERROR: {} is not well formed".format(msg.data))
