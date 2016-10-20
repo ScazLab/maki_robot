@@ -30,10 +30,11 @@
 #define TORQUE_MAX_ID 9
 #define TORQUE_LIM_ID 10
 #define TORQUE_ENABLE_ID 11
-#define ERROR_ID 12
-#define DEFAULT_POS_ID 13
-#define DEFAULT_SPEED_ID 14
-#define FEEDBACK_NAMES_STR "MX|MN|PP|GP|PS|GS|PT|PL|TM|TL|TS|ER|DP|DS" // Identifies a feedback type from 1 to 12.
+#define MOVING_ID 12
+#define ERROR_ID 13
+#define DEFAULT_POS_ID 14
+#define DEFAULT_SPEED_ID 15
+#define FEEDBACK_NAMES_STR "MX|MN|PP|GP|PS|GS|PT|PL|TM|TL|TS|MV|ER|DP|DS" // Identifies a feedback type from 1 to 12.
 
 #define SET_POS_ID 1
 #define SET_SPEED_ID 2

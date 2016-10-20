@@ -11,7 +11,7 @@ import random
 
 from makicom.msg import MakiCommand, MakiFeedback
 from makicom import INVALID_INT, EYELID_RIGHT, EYELID_LEFT, EYE_PAN, EYE_TILT, HEAD_TILT, HEAD_PAN
-from makicom import MAX_POS, MIN_POS, PRESENT_POS, GOAL_POS, PRESENT_SPEED, GOAL_SPEED, PRESENT_TEMP, PRESENT_LOAD, TORQUE_MAX, TORQUE_LIM, TORQUE_ENABLE, ERROR, DEFAULT_POS, DEFAULT_SPEED
+from makicom import MAX_POS, MIN_POS, PRESENT_POS, GOAL_POS, PRESENT_SPEED, GOAL_SPEED, PRESENT_TEMP, PRESENT_LOAD, TORQUE_MAX, TORQUE_LIM, TORQUE_ENABLE, MOVING, ERROR, DEFAULT_POS, DEFAULT_SPEED
 from makicom import feedbackCommand, setCommand, newMakiFeedback, getFeedback, updateFeeback
 
 import dynamixel_conversions as DX_Conv

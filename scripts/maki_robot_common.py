@@ -25,6 +25,7 @@ SC_GET_PL = "PL"	## servo command syntax for feedback with PRESENT LOAD
 SC_GET_TM = "TM" 	## servo command syntax for feedback with MAX TORQUE
 SC_GET_TL = "TL"  	## servo command syntax for feedback with TORQUE LIMIT
 SC_GET_TS = "TS"  	## servo command syntax for feedback with TORQUE ENABLE
+SC_GET_MV = "MV"  	## servo command syntax for feedback with MOVING
 SC_GET_ER = "ER"  	## servo command syntax for feedback with error returned from AX_ALARM_LED
 SC_GET_DP = "DP"  	## servo command syntax for default positions
 SC_GET_DS = "DS"  	## servo command syntax for default speed
@@ -51,6 +52,7 @@ FEEDBACK_SC = [ SC_GET_MX,
 		SC_GET_GS,
 		SC_GET_PT,
 		SC_GET_PL,
+        SC_GET_MV,
 		SC_GET_ER,
 		SC_GET_DP,
 		SC_GET_DS,
@@ -60,12 +62,13 @@ FEEDBACK_SC = [ SC_GET_MX,
 		 ]
 FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
 		    	"maki_feedback_min_pos",
-			"maki_feedback_pres_pos",
-			"maki_feedback_goal_pos",
+                "maki_feedback_pres_pos",
+                "maki_feedback_goal_pos",
 		     	"maki_feedback_pres_speed",
 		     	"maki_feedback_goal_speed",
 		     	"maki_feedback_pres_temp",
 		     	"maki_feedback_pres_load",
+                "maki_feedback_moving",
 		     	"maki_feedback_error",
 		     	"maki_feedback_default_pos",
 		     	"maki_feedback_default_speed",

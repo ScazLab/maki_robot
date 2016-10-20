@@ -3,7 +3,7 @@
 /*  v 0.3
 /*  
 /*  Listens for serial port input in the following forms:
-/*       F{MX|MN|PP|GP|PS|GS|PT|PL|TL|ER|DP|DS}Z
+/*       F{MX|MN|PP|GP|PS|GS|PT|PL|TL|MV|ER|DP|DS}Z
 /*       FMXZ              // get FEEDBACK of all servo MAXIMUM POSITION
 /*       FMNZ              // get FEEDBACK of all servo MINIMUM POSITION
 /*       FPPZ              // get FEEDBACK of all servo PRESENT POSITION
@@ -13,10 +13,11 @@
 /*       FPTZ              // get FEEDBACK of all servo PRESENT TEMPERATURE (Celsius)
 /*       FPLZ              // get FEEDBACK of all servo PRESENT LOAD
 /*       FTLZ              // get FEEDBACK of all servo TORQUE LIMIT (percentage of MAX TORQUE)
+/*       FMVZ              // get FEEDBACK of all servo MOVING
 /*       FERZ              // get FEEDBACK of all servo ERROR (AX_ALARM_LED)
 /*       FDPZ              // get FEEDBACK of all servo default position values
 /*       FDSZ              // get FEEDBACK of all servo default speed values         
-/*  returns results in the form {MX|MN|PP|GP|PS|GS|PT|PL|TL|ER|DP|DS}xxx:xxx:xxx:xxx:xxx:xxx;
+/*  returns results in the form {MX|MN|PP|GP|PS|GS|PT|PL|TL|MV|ER|DP|DS}xxx:xxx:xxx:xxx:xxx:xxx;
 /*  xxx = [0, 1023]
 /*
 /*       mm{GP|GS}xxx{IPT}yyyyyZ
@@ -185,6 +186,9 @@ void reportOn(int feedbackType, const char* feedbackAbbreviation) {
                 break;
             case TORQUE_ENABLE_ID:
                 Serial << errorCorrected(dxlGetTorqueEnable(i));
+                break;
+            case MOVING_ID:
+                Serial << errorCorrected(dxlGetMoving(i));
                 break;
             case ERROR_ID:
                 Serial << errorCorrected(dxlGetError(i));
