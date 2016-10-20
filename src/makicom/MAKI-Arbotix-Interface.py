@@ -10,7 +10,7 @@ from std_msgs.msg import String
 
 from makicom.msg import MakiCommand, MakiFeedback
 from makicom import INVALID_INT, EYELID_RIGHT, EYELID_LEFT, EYE_PAN, EYE_TILT, HEAD_TILT, HEAD_PAN
-from makicom import MAX_POS, MIN_POS, PRESENT_POS, GOAL_POS, PRESENT_SPEED, GOAL_SPEED, PRESENT_TEMP, PRESENT_LOAD, TORQUE_MAX, TORQUE_LIM, TORQUE_ENABLE, ERROR, DEFAULT_POS, DEFAULT_SPEED
+from makicom import MAX_POS, MIN_POS, PRESENT_POS, GOAL_POS, PRESENT_SPEED, GOAL_SPEED, PRESENT_TEMP, PRESENT_LOAD, TORQUE_MAX, TORQUE_LIM, TORQUE_ENABLE, MOVING, ERROR, DEFAULT_POS, DEFAULT_SPEED
 from makicom import feedbackCommand, setCommand, newMakiFeedback, getFeedback, updateFeeback
 
 SERVO_COUNT = 6
@@ -47,7 +47,7 @@ def addSimulatedFeedback(feedbackType):
     valueMax = 1023
     if feedbackType == PRESENT_TEMP:
         valueMax = 65
-    elif feedbackType == TORQUE_ENABLE:
+    elif feedbackType in [TORQUE_ENABLE, MOVING]:
         valueMax = 1
     values = [random.randint(0,valueMax) for i in xrange(SERVO_COUNT)]
     rospy.logwarn('Generated simulated values for ' + feedbackType + ' of ' + str(values))
