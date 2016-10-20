@@ -989,6 +989,8 @@ class freeplayAnnexController( object ):
 			rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
 			freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
+        waitForMovementToComplete()
+            
 		'''
 		if _data != 'turnToInfant':
 			self.exp_pub.publish('[button pressed] ' + _data)
@@ -1258,6 +1260,26 @@ class freeplayAnnexController( object ):
 		rospy.logdebug("parse_annex_command(): END")
 		return
 
+    # blocks until movement is stable for 200ms or until 4 seconds have passed.
+    def waitForMovementToComplete(self):
+        lastPP = self.makiPP
+        equalTimes = 0
+        totalTimes = 0
+        maxTimes = 80
+        
+        while not rospy.is_shutdown() and equalTimes < 4 and totalTimes < maxTimes:
+            # sleeps 50ms as well as requests.
+			baseBehavior.requestFeedback( self, SC_GET_PP, time_ms=50 )
+            if lastPP == self.makiPP:
+                equalTimes += 1
+                totalTimes += 1
+            else:
+                equalTimes = 0
+            lastPP = self.makiPP
+            
+        if totalTimes >= maxTimes:
+            rospy.logerror('Waiting for movement to complete for more than ' + str(maxTimes * 50) 'ms. Is something wrong?')
+            
 
 	def doGetReady( self, msg=None ):
 		## STEP 0: Reset but don't move to neutral head pose first
