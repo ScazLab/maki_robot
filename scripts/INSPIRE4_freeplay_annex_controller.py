@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 
-#    RUN AS:    rosrun maki_robot INSPIRE4_freeplay_annex_controller.py
+# RUN AS:    rosrun maki_robot INSPIRE4_freeplay_annex_controller.py
 
-#     NOTE:    To be run in conjunction with master-table.xls
+# NOTE:    To be run in conjunction with master-table.xls
 
 import rospy
 import re
@@ -26,8 +26,8 @@ from INSPIRE4_engagement import *
 from INSPIRE4_look_interactions import *
 
 
-##    Copied with light modifications from INSPIRE4_controller.py
-##    TODO: needs cleaning
+## Copied with light modifications from INSPIRE4_controller.py
+## TODO: needs cleaning
 
 ## ------------------------------
 class freeplayAnnexController( object ):
@@ -55,7 +55,7 @@ class freeplayAnnexController( object ):
         if ros_pub == None:
             self.initROS( self )
         else:
-            self.ros_pub = ros_pub        ## can we pass a ros publisher??? Apparently so!
+            self.ros_pub = ros_pub ## can we pass a ros publisher??? Apparently so!
         freeplayAnnexController.initROSPub( self )
 
         ## publisher for curated message to the experimenter
@@ -99,9 +99,9 @@ class freeplayAnnexController( object ):
         return
 
     #def __del__(self):
-    #    rospy.loginfo( "signal_handler: CTRL+C" )
-    #    controller.controllerExit()
-    #    rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
+    # rospy.loginfo( "signal_handler: CTRL+C" )
+    # controller.controllerExit()
+    # rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
 
     def resetInteractionCount( self ):
         self.interaction_count = 0
@@ -128,7 +128,7 @@ class freeplayAnnexController( object ):
 
     def stop( self, neutral_head=True, disable_ht=True ):
         ## STEP 1: CLEAN UP
-        ##    return to neutral position
+        ## return to neutral position
         if self.previous_state == freeplayAnnexController.ENGAGEMENT:
             ## if pressed during startleGame, then stop
             self.startleGame.stopStartleGame( disable_ht=False )
@@ -136,7 +136,7 @@ class freeplayAnnexController( object ):
             freeplayAnnexController.cancelWatchStimuliCallbacks( self )
             ## also taken care of in runWatchStimuli
             ## KATE 14:39
-            #rospy.sleep(1)    ## need time to face front
+            #rospy.sleep(1) ## need time to face front
             pass
         else:
             pass
@@ -154,8 +154,8 @@ class freeplayAnnexController( object ):
     #####################
     def initROS( self, nodename="anon" ):
         ## get function name for logging purposes
-        _fname = sys._getframe().f_code.co_name        ## see http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-tracebacko
-        print str(_fname) + ": BEGIN"    ## THIS IS BEFORE ROSNODE INIT
+        _fname = sys._getframe().f_code.co_name ## see http://stackoverflow.com/questions/5067604/determine-function-name-from-within-that-function-without-using-tracebacko
+        print str(_fname) + ": BEGIN" ## THIS IS BEFORE ROSNODE INIT
 
         _anon_rosnode = False
         if nodename == "anon":
@@ -180,10 +180,10 @@ class freeplayAnnexController( object ):
 
             # see http://wiki.ros.org/rospy/Overview/Logging
             # if self.VERBOSE_DEBUG:
-            #         self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
+            # self.ros_pub = rospy.init_node(str(nodename), anonymous=_anon_rosnode, log_level=rospy.DEBUG)
             # rospy.logdebug("log_level=rospy.DEBUG")
             # else:
-            self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode)       ## defaults to log_level=rospy.INFO
+            self.ros_pub = rospy.init_node(nodename, anonymous=_anon_rosnode) ## defaults to log_level=rospy.INFO
 
             rospy.logdebug("anonymous=" + str(_anon_rosnode))
             rospy.loginfo( str(_fname) + ": END")
@@ -196,7 +196,7 @@ class freeplayAnnexController( object ):
     def initROSPub( self, latch=False ):
         rospy.logdebug( "setup rostopic publisher to /maki_macro" )
 
-        self.ros_pub = rospy.Publisher( "maki_macro", String, queue_size = 26, latch = latch)    ## if LATCH==True, any new subscribers will see the most recent message published
+        self.ros_pub = rospy.Publisher( "maki_macro", String, queue_size = 26, latch = latch) ## if LATCH==True, any new subscribers will see the most recent message published
 
         return
 
@@ -296,7 +296,7 @@ class freeplayAnnexController( object ):
         freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
 
         self.startleGame.stopStartleGame( disable_ht=False )
-        self.startleGame.eyelidOpen()    ## make sure that eyelid is open
+        self.startleGame.eyelidOpen() ## make sure that eyelid is open
 
         self.lookStimuli.start()
         self.state = freeplayAnnexController.STIMULI
@@ -365,12 +365,12 @@ class freeplayAnnexController( object ):
                 _elapsed_duration = rospy.get_time() - _start_time
                 rospy.logdebug("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
                 self.exp_pub.publish("watching stimuli; Elapsed Duration: " + str(_elapsed_duration) + " seconds")
-                rospy.sleep(1)    ## sleep for 1 second
+                rospy.sleep(1) ## sleep for 1 second
 
         if auto_return and not (self.state == freeplayAnnexController.INVALID_TRIAL):
-            _data = "turnToInfant"    ## QUICK HACK
+            _data = "turnToInfant" ## QUICK HACK
             rospy.logdebug("====> turnToInfant")
-            self.lookStimuli.turnToInfant()    ## blocking call, monitorMoveToGP
+            self.lookStimuli.turnToInfant() ## blocking call, monitorMoveToGP
             freeplayAnnexController.transitionToEngagement( self, _data )
             self.exp_pub.publish("Stimuli done... Returning to face infant... END OF INTERACTION")
             self.interaction_count += 1
@@ -407,7 +407,7 @@ class freeplayAnnexController( object ):
         if (dl_status == "started"):
             ## dl_status == "started", so stop /data_logger rosbag recording
             try:
-                rospy.wait_for_service('/freeplay_annex_data_logger/stop', 5)    ## timeout is 5 seconds
+                rospy.wait_for_service('/freeplay_annex_data_logger/stop', 5) ## timeout is 5 seconds
             except rospy.exceptions.ROSException as _e0:
                 rospy.logerr( "Service /freeplay_annex_data_logger/stop not found: " + str(_e0) )
                 rospy.logwarn( "rosnode /freeplay_annex_data_logger may not be running" )
@@ -455,8 +455,8 @@ class freeplayAnnexController( object ):
 
 
     ## self.data_logger_status is only updated by the value
-    ##    published to rostopic /data_logger/status
-    ##    by calling its start/stop services
+    ## published to rostopic /data_logger/status
+    ## by calling its start/stop services
     def updateDataLoggerStatus_callback( self, msg ):
         rospy.logdebug( "updateDataLoggerStatus_callback(): BEGIN" )
         _data = str( msg.data )
@@ -500,7 +500,7 @@ class freeplayAnnexController( object ):
         rospy.logdebug("BEGIN")
         if self.start_logger_timer != None:
             rospy.logdebug("startAutoDataLogger_callback() called at " + str( event.current_real))
-            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )    ## we want to start recording
+            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
         else:
             rospy.logdebug("INVALID ACTION: self.start_logger_timer = " + str(self.start_logger_timer))
         rospy.logdebug("END")
@@ -511,7 +511,7 @@ class freeplayAnnexController( object ):
         rospy.logdebug("BEGIN")
         if self.stop_logger_timer != None:
             rospy.loginfo("stopAutoDataLogger_callback() called at " + str( event.current_real))
-            freeplayAnnexController.toggleDataLoggerRecording( self, "started" )    ## we want to stop recording
+            freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop recording
         else:
             rospy.logdebug("INVALID ACTION: self.stop_logger_timer = " + str(self.stop_logger_timer))
         rospy.logdebug("END")
@@ -544,7 +544,7 @@ class freeplayAnnexController( object ):
         self.exp_pub.publish('familiarization skit: BEGIN... Please wait.')
 
         _verbose = True
-        _thought = ""    ## start off not thinking of anything, beginner's mind
+        _thought = "" ## start off not thinking of anything, beginner's mind
 
         #AA = asleepAwake( _verbose, self.ros_pub )
         #lookIntro = lookINSPIRE4Intro( _verbose, self.ros_pub )
@@ -580,7 +580,7 @@ class freeplayAnnexController( object ):
         rospy.logdebug("...\tMaki-ro should now be awake... self.asleepAwake.awake_p()=" + str( self.asleepAwake.awake_p() ))
 
         ## STEP 3: Experimenter greets Maki-ro
-        rospy.sleep(0.75)    ## 750 ms
+        rospy.sleep(0.75) ## 750 ms
 
         ## STEP 4: Maki-ro acknowledges greeting
         self.publishMonologue('runFamiliarizationSkit', "Maki-ro, mind your manners and say hello...")
@@ -588,7 +588,7 @@ class freeplayAnnexController( object ):
         self.lookIntro.macroGreeting()
 
         ## STEP 5: Friend plays peek-a-boo. Covers own eyes with hands, then uncover
-        rospy.sleep(0.75)    ## 750 ms
+        rospy.sleep(0.75) ## 750 ms
 
         ## STEP 6: Maki-ro reacts with a startle expression and immediately relaxes
         self.publishMonologue('runFamiliarizationSkit', "Maki-ro is startled!!! Peek-a-boo does that...")
@@ -596,7 +596,7 @@ class freeplayAnnexController( object ):
         self.lookIntro.startStartle( relax=True )
 
         ## STEP 7: Friend show Maki-ro the flashing ball
-        rospy.sleep(0.5)    ## 500 ms
+        rospy.sleep(0.5) ## 500 ms
 
         ## TODO: Insert agentic behaviors where appropriate
         #freeplayAnnexController.setBlinkAndScan( self, blink=True )
@@ -611,7 +611,7 @@ class freeplayAnnexController( object ):
         self.publishMonologue('runFamiliarizationSkit', "Maki-ro might be a little dizzy now...")
 
         ## STEP 9: Friend moves the flashing ball to the UPPER RIGHT calibration point
-        ##    and jiggles it to attract Maki-ro's attention
+        ## and jiggles it to attract Maki-ro's attention
         rospy.sleep(0.5)
 
         ## STEP 10: Maki-ro looks at the upper right calibration point
@@ -619,7 +619,7 @@ class freeplayAnnexController( object ):
         self.lookIntro.macroLookAtBallLocationRight( upper=True )
 
         ## STEP 11: Friend moves the flashing ball to the LOWER RIGHT calibration point
-        ##    and jiggles it to attract Maki-ro's attention
+        ## and jiggles it to attract Maki-ro's attention
         rospy.sleep(0.5)
 
         ## STEP 12: Maki-ro looks at the lower right calibration point
@@ -627,7 +627,7 @@ class freeplayAnnexController( object ):
         self.lookIntro.macroLookAtBallLocationRight( lower=True )
 
         ## STEP 13: Friend moves the flashing ball between the infant and Maki-ro
-        ##    and jiggles it to attract Maki-ro's attention
+        ## and jiggles it to attract Maki-ro's attention
         #rospy.sleep(0.5)
 
         ## KATE 14:39
@@ -660,7 +660,7 @@ class freeplayAnnexController( object ):
         self.publishMonologue('runFamiliarizationSkit', "<<<< END SCENE >>>>")
         self.lookIntro.stop( disable_ht=False )
         ## disable_ht might have to change to False once in the
-        ##    larger context of the experiment
+        ## larger context of the experiment
 
         rospy.logdebug("runFamiliarizationSkit(): END")
         self.exp_pub.publish('familiarization skit: END')
@@ -679,8 +679,8 @@ class freeplayAnnexController( object ):
         freeplayAnnexController.doSetup( self )
 
         ## STEP 1: Stop logging
-        if msg != None:    rospy.loginfo( "ADD SYNC MARKER: " + str(msg) )    ## add BEFORE stop recording
-        freeplayAnnexController.toggleDataLoggerRecording( self, "started" )    ## we want to stop the rcording
+        if msg != None:    rospy.loginfo( "ADD SYNC MARKER: " + str(msg) ) ## add BEFORE stop recording
+        freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop the rcording
         freeplayAnnexController.cancelAutoDataLoggerCallbacks( self )
 
         ### STEP 2: Reset number of interactions
@@ -717,10 +717,10 @@ class freeplayAnnexController( object ):
 ## 2016-06-16, KATE
         ## We should be able to get to these states at any time
         #if ((state == freeplayAnnexController.READY) or
-        #    (state == freeplayAnnexController.RESET_EXP) or
-        #    (state == freeplayAnnexController.END)):
-        #    rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
-        #    self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+        # (state == freeplayAnnexController.RESET_EXP) or
+        # (state == freeplayAnnexController.END)):
+        # rospy.loginfo("[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
+        # self.exp_pub.publish( prefix_msg + "[usage] You can transition from any state to this state '" + self.state_dict[state] + "' anytime")
 
         ## We should be able to transition into this state from EVERY state
         if (state == freeplayAnnexController.READY):
@@ -769,18 +769,18 @@ class freeplayAnnexController( object ):
         _invalid_transition = True
 
         #if (self.state == None) or (not isinstance(self.state, int)):
-        #    rospy.logerr("transitionToEngagement(): ERROR: Unknown self.state: " + self.state_dict[self.state])
-        #    rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO, STIMULI, or INVALID_TRIAL")
-        #    return
+        # rospy.logerr("transitionToEngagement(): ERROR: Unknown self.state: " + self.state_dict[self.state])
+        # rospy.logwarn("transitionToEngagement(): WARN: Expected transitions from INTRO, STIMULI, or INVALID_TRIAL")
+        # return
 
 
 ## 2016-06-16, KATE
         ## We should be able to get to these states at any time
         #if ((future_state == freeplayAnnexController.READY) or
-        #    (future_state == freeplayAnnexController.RESET_EXP) or
-        #    (future_state == freeplayAnnexController.END)):
-        #    rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
-        #    _invalid_transition = False
+        # (future_state == freeplayAnnexController.RESET_EXP) or
+        # (future_state == freeplayAnnexController.END)):
+        # rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
+        # _invalid_transition = False
 
         if (future_state == freeplayAnnexController.READY):
             rospy.loginfo("Transitions from any state to state " + self.state_dict[future_state] + " are VALID anytime")
@@ -811,9 +811,9 @@ class freeplayAnnexController( object ):
                 _invalid_transition = False
             else:
                 #if self.__is_sync_done:
-                #    rospy.logwarn("Invalid transition... If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
+                # rospy.logwarn("Invalid transition... If all 3 'Tobii verify' buttons and 'Visual clap sync' buttons have been pressed, you can choose to press button 'Run Familiarization Skit'")
                 #else:
-                #    rospy.logwarn("Invalid transition... You can choose to press buttons: 'Tobii verify *' or  'Visual clap sync'")
+                # rospy.logwarn("Invalid transition... You can choose to press buttons: 'Tobii verify *' or  'Visual clap sync'")
                 rospy.logwarn("Invalid transition... TODO: USAGE MESSAGE'")
                 _invalid_transition = True
 
@@ -866,13 +866,13 @@ class freeplayAnnexController( object ):
         return
 
     ## TO FIX: HANDLE QUEUED MESSAGES. VALID STATE TRANSITIONS
-    ##    ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
-    ##    BEHAVIORS, e.g., watchStimuli and engagementGame
+    ## ARE POSSIBLE AND MAY YIELD CONCURRENTLY EXECUTING
+    ## BEHAVIORS, e.g., watchStimuli and engagementGame
     def parse_annex_command( self, msg ):
         rospy.logdebug("parse_annex_command(): BEGIN")
         rospy.logdebug("received: " + str(msg))
 
-        self.previous_state = self.state    ## for later comparison
+        self.previous_state = self.state ## for later comparison
         _unknown_flag = False
         _invalid_transition = False
         _data = str(msg.data)
@@ -880,11 +880,11 @@ class freeplayAnnexController( object ):
 
         if _data == "start":
             ## There is no actively recording rosbag,
-            ##    so start a new one
-            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )    ## we want to start recording
-            rospy.sleep(0.5)    ## 0.5 second delay to allow time to open rosbag
-            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )    ## we want to start recording
-            rospy.sleep(0.5)    ## 0.5 second delay to allow time to open rosbag
+            ## so start a new one
+            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
+            rospy.sleep(0.5) ## 0.5 second delay to allow time to open rosbag
+            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
+            rospy.sleep(0.5) ## 0.5 second delay to allow time to open rosbag
             rospy.loginfo("==== rosbag recording STARTED ====")
 
             ## DON'T ENABLE HEAD TILT SERVO
@@ -903,9 +903,9 @@ class freeplayAnnexController( object ):
 
             rospy.loginfo("==== rosbag recording STOPPED ====")
             ## There is an actively recording rosbag, so close the existing one
-            freeplayAnnexController.toggleDataLoggerRecording( self, "started" )    ## we want to stop recording
+            freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop recording
             freeplayAnnexController.cancelAutoDataLoggerCallbacks( self )
-            rospy.sleep(0.5)    ## 0.5 second delay to allow time to close rosbag
+            rospy.sleep(0.5) ## 0.5 second delay to allow time to close rosbag
 
         elif _data == "asleep":
             freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
@@ -945,7 +945,7 @@ class freeplayAnnexController( object ):
             freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
         elif _data == "hideFromStartle":
-            #self.startleGame.hideFromStartle()    ## requires context of the game
+            #self.startleGame.hideFromStartle() ## requires context of the game
             freeplayAnnexController.hide( self )
             self.lookIntro.waitForMovementToComplete()
 
@@ -971,7 +971,7 @@ class freeplayAnnexController( object ):
 
         elif _data == "lookAt infant":
             freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
-            self.lookStimuli.turnToInfant()    ## blocking call, monitorMoveToGP
+            self.lookStimuli.turnToInfant() ## blocking call, monitorMoveToGP
             freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
         elif _data == "reset neutral":
@@ -1021,8 +1021,8 @@ class freeplayAnnexController( object ):
                 self.exp_pub.publish('[RESET] resetting experiment...')
 
                 ## STEP 0: Reset self.state and self.previous_state
-                ##    Reset interaction count
-                ##    Reset to neutral pose
+                ## Reset interaction count
+                ## Reset to neutral pose
                 ## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
                 freeplayAnnexController.stop( self, disable_ht=False )
                 freeplayAnnexController.start( self )
@@ -1048,33 +1048,33 @@ class freeplayAnnexController( object ):
 
         elif _data.startswith( "sync" ):
             ## We should only be able to get to this controller state from READY
-            ##    or if in SYNC state since there are multiple sync points to ePrime
+            ## or if in SYNC state since there are multiple sync points to ePrime
             _invalid_transition = freeplayAnnexController.invalidTransition( self, self.state, freeplayAnnexController.SYNC )
             #if ((self.previous_state != freeplayAnnexController.READY) and
-            #    (self.previous_state != freeplayAnnexController.SYNC)):
-            #    rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + self.state_dict[self.state])
-            #    _invalid_transition = True
-            #    self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-            #    ## TODO: auto fix prior state
+            # (self.previous_state != freeplayAnnexController.SYNC)):
+            # rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state SYNC from READY or SYNC...\tcurrent STATE = " + self.state_dict[self.state])
+            # _invalid_transition = True
+            # self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+            # ## TODO: auto fix prior state
 
             #elif (self.previous_state == freeplayAnnexController.READY):
             if (not _invalid_transition) and (self.previous_state == freeplayAnnexController.READY):
                 if self.data_logger_status == "started":
                     ## There is an actively recording rosbag,
-                    ##    so close the existing one and start a new one
-                    rospy.loginfo( "ADD SYNC MARKER: " + str(_data) )    ## add BEFORE stop recording
-                    freeplayAnnexController.toggleDataLoggerRecording( self, "started" )    ## we want to stop recording
+                    ## so close the existing one and start a new one
+                    rospy.loginfo( "ADD SYNC MARKER: " + str(_data) ) ## add BEFORE stop recording
+                    freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop recording
                     freeplayAnnexController.cancelAutoDataLoggerCallbacks( self )
-                    rospy.sleep(0.5)    ## 0.5 second delay to allow time to close rosbag
-                    freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )    ## we want to start recording
+                    rospy.sleep(0.5) ## 0.5 second delay to allow time to close rosbag
+                    freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
                     ## resend this message for synchronization purposes
                     _msg = _data + " (resend to mark the new rosbag)"
                     freeplayAnnexController.pubTo_freeplay_annex_command( self, _msg )
                 else:
                     ## There is no actively recording rosbag,
-                    ##    so start a new one
-                    freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" )    ## we want to start recording
-                    rospy.sleep(0.5)    ## 0.5 second delay to allow time to open rosbag
+                    ## so start a new one
+                    freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
+                    rospy.sleep(0.5) ## 0.5 second delay to allow time to open rosbag
                     ## resend this message for synchronization purposes
                     _msg = _data + " (resend to mark the new rosbag)"
                     freeplayAnnexController.pubTo_freeplay_annex_command( self, _msg )
@@ -1083,7 +1083,7 @@ class freeplayAnnexController( object ):
                 pass
 
             if _invalid_transition:
-                pass    ## jump past this logic
+                pass ## jump past this logic
             elif _data.endswith( "Tobii calibration start" ):
                 ## no longer shown in pilt GUI
                 pass
@@ -1119,10 +1119,10 @@ class freeplayAnnexController( object ):
             ## We should only be able to get to this controller state from SYNC
             _invalid_transition = freeplayAnnexController.invalidTransition( self, self.state, freeplayAnnexController.INTRO )
             #if (self.previous_state != freeplayAnnexController.SYNC):
-            #    rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + self.state_dict[self.state])
-            #    _unknown_flag = True
-            #    self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-            #    ## TODO: auto fix prior state
+            # rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INTRO from SYNC...\tcurrent STATE = " + self.state_dict[self.state])
+            # _unknown_flag = True
+            # self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+            # ## TODO: auto fix prior state
 
             if not _invalid_transition:
                 self.exp_pub.publish('[state] run familiarization skit')
@@ -1131,15 +1131,15 @@ class freeplayAnnexController( object ):
 
         elif (_data == "startleGame start" ):
             ## We should only be able to get to this controller state from
-            ##    INTRO, STIMULI, or INVALID_TRIAL
+            ## INTRO, STIMULI, or INVALID_TRIAL
             _invalid_transition = freeplayAnnexController.invalidTransition( self, self.state, freeplayAnnexController.ENGAGEMENT )
             #if ((self.previous_state != freeplayAnnexController.INTRO) and
-            #    (self.previous_state != freeplayAnnexController.STIMULI) and
-            #    (self.previous_state != freeplayAnnexController.INVALID_TRIAL)):
-            #    rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO, STIMULI, or INVALID_TRIAL...\tcurrent STATE = " + self.state_dict[self.state])
-            #    _unknown_flag = True
-            #    self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-            #    ## TODO: auto fix prior state
+            # (self.previous_state != freeplayAnnexController.STIMULI) and
+            # (self.previous_state != freeplayAnnexController.INVALID_TRIAL)):
+            # rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state ENGAGEMENT from INTRO, STIMULI, or INVALID_TRIAL...\tcurrent STATE = " + self.state_dict[self.state])
+            # _unknown_flag = True
+            # self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+            # ## TODO: auto fix prior state
 
             if self.__is_running_stimuli:
                 rospy.logerr("Do NOT attempt to interrupt the turnToScreen stimuli!!!")
@@ -1148,7 +1148,7 @@ class freeplayAnnexController( object ):
             if (not _invalid_transition) and (not _unknown_flag):
                 self.exp_pub.publish('[state] startle game start')
                 rospy.loginfo("Start engagement game; forward the message contents to /maki_macro: " + _data)
-                self.startleGame.startStartleGame()    ## runs game in new thread
+                self.startleGame.startStartleGame() ## runs game in new thread
                 self.state = freeplayAnnexController.ENGAGEMENT
                 self.exp_pub.publish('[state] ' + self.state_dict[self.state])
 
@@ -1156,10 +1156,10 @@ class freeplayAnnexController( object ):
             ## We should only be able to get to this controller state from ENGAGEMENT
             _invalid_transition = freeplayAnnexController.invalidTransition( self, self.state, freeplayAnnexController.STIMULI )
             #if (self.previous_state != freeplayAnnexController.ENGAGEMENT):
-            #    rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + self.state_dict[self.state])
-            #    _unknown_flag = True
-            #    self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
-            #    ## TODO: auto fix prior state
+            # rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state STIMULI from ENGAGEMENT...\tcurrent STATE = " + self.state_dict[self.state])
+            # _unknown_flag = True
+            # self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+            # ## TODO: auto fix prior state
 
             _right_screen = None
             if ("left" in _data):
@@ -1197,10 +1197,10 @@ class freeplayAnnexController( object ):
             ## We should only be able to get to this controller state from STIMULI or ENGAGEMENT
             _invalid_transition = freeplayAnnexController.invalidTransition( self, self.state, freeplayAnnexController.INVALID_TRIAL )
             #if ((self.previous_state != freeplayAnnexController.ENGAGEMENT) and
-            #    (self.previous_state != freeplayAnnexController.STIMULI)):
-            #    rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INVALID_TRIAL from ENGAGEMENT or STIMULI...\tcurrent STATE = " + self.state_dict[self.state])
-            #    _unknown_flag = True
-            #    self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
+            # (self.previous_state != freeplayAnnexController.STIMULI)):
+            # rospy.logwarn("INVALID STATE TRANSITION: Expected to enter state INVALID_TRIAL from ENGAGEMENT or STIMULI...\tcurrent STATE = " + self.state_dict[self.state])
+            # _unknown_flag = True
+            # self.exp_pub.publish('[WARNING] Invalid state transition at (' + self.state_dict[self.state] + ')')
 
             if not _invalid_transition:
                 ## STEP 1: update state
@@ -1216,7 +1216,7 @@ class freeplayAnnexController( object ):
                     pass
 
                 else:
-                    pass    ## cannot get here
+                    pass ## cannot get here
 
                 ## always begin in neutral position
                 ## 2016-07-21 ktsui: to prevent jerk, don't disable HT motor
@@ -1235,10 +1235,10 @@ class freeplayAnnexController( object ):
 
                 ## HACK to shorten ending
                 ## if 6 interactions have taken place without any issue and we've
-                ##    just finished watching stimuli, then the robot is already
-                ##    in neutral pose... SKIP
+                ## just finished watching stimuli, then the robot is already
+                ## in neutral pose... SKIP
                 if (self.state == freeplayAnnexController.STIMULI) and (self.interaction_count >= freeplayAnnexController.NUMBER_OF_INTERACTIONS):
-                    freeplayAnnexController.cancelWatchStimuliCallbacks( self )    ## just in case
+                    freeplayAnnexController.cancelWatchStimuliCallbacks( self ) ## just in case
                     pass
                 else:
                     ## clean up first, and reset to neutral pose
@@ -1246,7 +1246,7 @@ class freeplayAnnexController( object ):
                     freeplayAnnexController.stop( self, disable_ht=False )
 
                 freeplayAnnexController.transitionToReady(self, _data)
-                self.state = freeplayAnnexController.END    ## override state
+                self.state = freeplayAnnexController.END ## override state
                 self.exp_pub.publish( str(self.interaction_count) + " of " + str(freeplayAnnexController.NUMBER_OF_INTERACTIONS) + " interactions performed with this participant")
                 self.exp_pub.publish('[state] ' + self.state_dict[self.state] + "\t---- END OF INSPIRE4 EXPERIMENT ----")
 
@@ -1285,7 +1285,7 @@ class freeplayAnnexController( object ):
 
     def controllerExit( self ):
         rospy.logdebug("controllerExit(): BEGIN")
-        freeplayAnnexController.toggleDataLoggerRecording( self, "started" )    ## we want to stop recording
+        freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop recording
         if self.ALIVE:
             #self.ALIVE = False
             ## NOTE: head tilt motor will be disabled after reset
@@ -1298,25 +1298,25 @@ class freeplayAnnexController( object ):
         self.lookIntro.abort()
         self.startleGame.abort()
         self.lookStimuli.abort()
-        self.htBB.stop()    ## make sure that the head tilt motor is disengaged
+        self.htBB.stop() ## make sure that the head tilt motor is disengaged
 
-        rospy.sleep(1)  # give a chance for everything else to shutdown nicely
+        rospy.sleep(1) # give a chance for everything else to shutdown nicely
 
         ## 2016-07-20, ktsui: nicely deal with neck; don't jerk up when restarted
         _BB = baseBehavior( False, self.ros_pub )
         _BB.start()
         #_BB.requestFeedback( SC_GET_PP )
         rospy.loginfo( "controllerExit: Cleanup to prevent HT jerking... HT PP=" + str(_BB.makiPP["HT"]) )
-        _BB.pubTo_maki_command( "HTGP" + str(_BB.makiPP["HT"]) + TERM_CHAR_SEND)    ## after head has fallen down, make nice
+        _BB.pubTo_maki_command( "HTGP" + str(_BB.makiPP["HT"]) + TERM_CHAR_SEND) ## after head has fallen down, make nice
         _BB.requestFeedback( SC_GET_GP )
 
         self.ALIVE = False
-        rospy.sleep(1)  # give a chance for everything else to shutdown nicely
+        rospy.sleep(1) # give a chance for everything else to shutdown nicely
         rospy.logdebug( "controllerExit: SHUTTING DOWN FREEPLAY ANNEX..." )
         self.exp_pub.publish('----- SHUTTING DOWN FREEPLAY ANNEX -----')
         self.exp_pub.publish("==========================================")
         rospy.logdebug("controllerExit(): END")
-        #exit    ## meant for interactive interpreter shell; unlikely this actually exits
+        #exit ## meant for interactive interpreter shell; unlikely this actually exits
 
 
     ## NOTE: head tilt motor will be disabled after reset movement
@@ -1325,13 +1325,13 @@ class freeplayAnnexController( object ):
 ## 2016-06-16, KATE
         ## TODO: FIX: There seems to be a lot of lag time in this function
 
-        _delta_pp = 2        #ticks
-        _reset_duration = 0    #ms
-        _reset_buffer = 500    #ms
+        _delta_pp = 2 #ticks
+        _reset_duration = 0 #ms
+        _reset_buffer = 500 #ms
 
         ## NOTE: changed to self.htBB since instantiating this behavior
-        ##    has become expensive given the number of times controllerReset()
-        ##    is called
+        ## has become expensive given the number of times controllerReset()
+        ## is called
         #_htBB = headTiltBaseBehavior( True, self.ros_pub )
         self.htBB.start()
 
@@ -1360,18 +1360,18 @@ class freeplayAnnexController( object ):
         rospy.loginfo("controllerReset(): _pub_reset = " + str(_pub_reset))
 
         try:
-            if (_reset_duration >= 300):    ## ms
+            if (_reset_duration >= 300): ## ms
                 ## THIS IS CUSTOM RESET
-                ##      reset goal speeds and goal positions
-                ##      and monitor moving into goal positions
+                ## reset goal speeds and goal positions
+                ## and monitor moving into goal positions
                 self.htBB.monitorMoveToGP( _pub_reset, ht_gp=HT_MIDDLE, hp_gp=HP_FRONT, ll_gp=LL_OPEN_DEFAULT, ep_gp=EP_FRONT, et_gp=ET_MIDDLE, delta_pp=_delta_pp )
-            else:    ## monitoring is a waste for anything less than 300 ms
+            else: ## monitoring is a waste for anything less than 300 ms
                 self.htBB.pubTo_maki_command( _pub_reset )
 
             if disable_ht:
-                rospy.logdebug("controllerReset(): publish reset command... Now STOP using self.htBB.stop()")    ## debugging
-                self.htBB.stop()    ## NOTE: .stop() is closed loop and depends on feedback from motors
-                self.htBB.requestFeedback( SC_GET_TL )    ## debugging
+                rospy.logdebug("controllerReset(): publish reset command... Now STOP using self.htBB.stop()") ## debugging
+                self.htBB.stop() ## NOTE: .stop() is closed loop and depends on feedback from motors
+                self.htBB.requestFeedback( SC_GET_TL ) ## debugging
 
         except rospy.exceptions.ROSException as _e:
             if (not self.htBB.verifyPose( ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
@@ -1395,7 +1395,7 @@ def signal_handler(signal, frame):
     rospy.loginfo( "signal_handler: CTRL+C" )
     controller.controllerExit()
     rospy.loginfo( "signal_handler: CTRL+C says goodnight" )
-    sys.exit()      ## use this instead of exit (which is meant for interactive shells)
+    sys.exit() ## use this instead of exit (which is meant for interactive shells)
 
 
 if __name__ == '__main__':
@@ -1424,14 +1424,14 @@ if __name__ == '__main__':
 
 
     ## hack to make sure that the head tilt motor is shutoff after controllerReset() in start
-    #controller.htBB.stop()    ## make sure that the head tilt motor is disengaged
-    controller.htBB.requestFeedback( SC_GET_TL )        ## debugging
+    #controller.htBB.stop() ## make sure that the head tilt motor is disengaged
+    controller.htBB.requestFeedback( SC_GET_TL ) ## debugging
 
-    rospy.sleep(0.5)    ## tiny sleep
-    controller.doGetReady( msg="__main__" )    ## when controller comes up, just IMMEDIATELY put Maki-ro into 'get ready'
+    rospy.sleep(0.5) ## tiny sleep
+    controller.doGetReady( msg="__main__" ) ## when controller comes up, just IMMEDIATELY put Maki-ro into 'get ready'
 
     rospy.logdebug("-------- controller.__main__() DONE ---------- now rospy.spin()")
-    rospy.spin()   ## keeps python from exiting until this node is stopped
+    rospy.spin() ## keeps python from exiting until this node is stopped
 
     print "__main__: END"
 
