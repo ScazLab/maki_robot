@@ -875,17 +875,23 @@ class freeplayAnnexController( object ):
         self.previous_state = self.state ## for later comparison
         _unknown_flag = False
         _invalid_transition = False
-
-        _data_list= str(msg.data).split()
+        
+        _data_list = str(msg.data).split()
         rospy.loginfo(msg)
         try:
             _data = _data_list[0]
             _msg_id  = _data_list[1]
+            _estimate = _data_list[2]
         except IndexError:
-             rospy.logdebug("ERROR: Msg not well formed!")
-             return
+             rospy.logerr("ERROR: Msg not well formed!")
+             _data = str(msg.data)
+             _msg_id = None
+             _estimate = None
+             #return
         rospy.logdebug("_data = " + _data)
+        vh_pub =rospy.Publisher("behavior_status",String,queue_size=10)
 
+        vh_pub.publish("{} START {}".format(_msg_id,_estimate))
         if _data == "start":
             ## There is no actively recording rosbag,
             ## so start a new one
@@ -898,6 +904,7 @@ class freeplayAnnexController( object ):
             ## DON'T ENABLE HEAD TILT SERVO
             ## Done during awake behavior
             self.lookIntro.introStart( enable_ht=False )
+            
             self.lookStimuli.start( enable_ht=False, auto_face_infant=False )
             self.lookStimuli.waitForMovementToComplete()
 
@@ -1011,7 +1018,8 @@ class freeplayAnnexController( object ):
         else:
             rospy.logwarn("[WARNING] UNKNOWN ANNEX COMMAND: " + _data)
             freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
-
+        vh_pub.publish("{} COMPLETED".format(_msg_id))
+        
         '''
         if _data != 'turnToInfant':
             self.exp_pub.publish('[button pressed] ' + _data)
