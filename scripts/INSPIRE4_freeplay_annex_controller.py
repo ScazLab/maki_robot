@@ -245,7 +245,7 @@ class freeplayAnnexController( object ):
             freeplayAnnexController.pubTo_maki_macro( self, "visualScan start" )
         else:
             _pub_cmd = "visualScan stop"
-            if not disable_ht:    _pub_cmd += " disable_ht=False"
+            if not disable_ht: _pub_cmd += " disable_ht=False"
             freeplayAnnexController.pubTo_maki_macro( self, _pub_cmd )
 
         rospy.logdebug("setBlinkAndScan(): END")
@@ -350,7 +350,7 @@ class freeplayAnnexController( object ):
 
     def runWatchStimuli( self, watch=True, auto_return=True ):
         rospy.logdebug("runWatchStimuli(): BEGIN")
-        if self.blocking_gui:    self.__is_running_stimuli=True
+        if self.blocking_gui: self.__is_running_stimuli=True
 
         if watch and not (self.state == freeplayAnnexController.INVALID_TRIAL):
             _start_time = rospy.get_time()
@@ -679,7 +679,7 @@ class freeplayAnnexController( object ):
         freeplayAnnexController.doSetup( self )
 
         ## STEP 1: Stop logging
-        if msg != None:    rospy.loginfo( "ADD SYNC MARKER: " + str(msg) ) ## add BEFORE stop recording
+        if msg != None: rospy.loginfo( "ADD SYNC MARKER: " + str(msg) ) ## add BEFORE stop recording
         freeplayAnnexController.toggleDataLoggerRecording( self, "started" ) ## we want to stop the rcording
         freeplayAnnexController.cancelAutoDataLoggerCallbacks( self )
 
@@ -875,7 +875,15 @@ class freeplayAnnexController( object ):
         self.previous_state = self.state ## for later comparison
         _unknown_flag = False
         _invalid_transition = False
-        _data = str(msg.data)
+
+        _data_list= str(msg.data).split()
+        rospy.loginfo(msg)
+        try:
+            _data = _data_list[0]
+            _msg_id  = _data_list[1]
+        except IndexError:
+             rospy.logdebug("ERROR: Msg not well formed!")
+             return
         rospy.logdebug("_data = " + _data)
 
         if _data == "start":
@@ -1379,14 +1387,14 @@ class freeplayAnnexController( object ):
                 rospy.logdebug("controllerReset(): ERROR: " + str(_e))
                 self.htBB.pubTo_maki_command( _pub_reset )
                 rospy.sleep( _reset_duration + _reset_buffer )
-            if disable_ht:    self.htBB.pubTo_maki_command( "HTTL0Z" )
+            if disable_ht: self.htBB.pubTo_maki_command( "HTTL0Z" )
 
         except TypeError as _e1:
             if (not self.htBB.verifyPose( delta_pp=_delta_pp, ht=HT_MIDDLE, hp=HP_FRONT, ll=LL_OPEN_DEFAULT, ep=EP_FRONT, et=ET_MIDDLE )):
                 rospy.logerror("controllerReset(): TYPE ERROR: " + str(_e1))
                 self.htBB.pubTo_maki_command( _pub_reset )
                 rospy.sleep( _reset_duration + _reset_buffer )
-            if disable_ht:    self.htBB.pubTo_maki_command( "HTTL0Z" )
+            if disable_ht: self.htBB.pubTo_maki_command( "HTTL0Z" )
         return
 
 ## ------------------------------

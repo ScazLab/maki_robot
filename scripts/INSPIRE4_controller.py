@@ -42,7 +42,8 @@ class INSPIRE4Controller( object ):
 	NUMBER_OF_INTERACTIONS = 6
 
 	#state_dict = {RESET_EXP: 'reset experiment', READY: 'ready', SYNC: 'sync', INTRO: 'intro', ENGAGEMENT: 'engagement', STIMULI: 'stimuli', END: 'end', INVALID_TRIAL: 'invalid trial'}
-	state_dict = {RESET_EXP: 'RESET EXPERIMENT', READY: 'READY', SYNC: 'SYNC', INTRO: 'INTRO', ENGAGEMENT: 'ENGAGEMENT', STIMULI: 'STIMULI', END: 'THE END', INVALID_TRIAL: 'INVALID TRIAL'}
+	state_dict = {RESET_EXP: 'RESET EXPERIMENT', READY: 'READY', SYNC: 'SYNC', INTRO:
+                  'INTRO', ENGAGEMENT: 'ENGAGEMENT', STIMULI: 'STIMULI', END: 'THE END', INVALID_TRIAL: 'INVALID TRIAL'}
 
 
 	def __init__(self, verbose_debug, ros_pub):
