@@ -36,7 +36,7 @@ LATCH = False			## if LATCH==True, any new subscribers will see the most recent 
 TTY_PORT = "USB0"		## default port for the MAKI Arbotix-M board
 
 ## ---- CONSTANTS ----
-BAUD_RATE = 19200		## 9600
+BAUD_RATE = 115200		## 9600
 EC_TIMER_DURATION = 30	## 30s, or 30000ms
 
 ## ---- DYNAMIC GLOBALS ---- modified programmatically ----

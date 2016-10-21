@@ -15,20 +15,17 @@ class messageCoordinater():
 
         #self.ros_pub = rospy.Publisher("test_topic",String,queue_size=10)
         self.behaviorDict = self.createBehaviorDict(behavior_file)
-        self.msg_id
         # This is how we talk to ros2vhmsg
         self.vh_pub= rospy.Publisher(vh_topic,String,queue_size=10)
 
 
-    # Outgoing messages look like:
-    # <behavior> <msg_id> <estimate>
     def parseVHMessage(self, msg):
         rospy.logdebug("parseVHMessage(): BEGIN")
         rospy.logdebug("received: " + str(msg))
         # Turns message into array for easy manipulation
         _data = str(msg.data).strip().split()
         _data = [d.strip() for d in _data]
-        rospy.loginfo(_data)
+        rospy.loginfo("Message received from VH: {}".format(_data))
 
         ## These will help us check that the message is well formed
         # Right now there is only one command, but might add more later
@@ -38,7 +35,7 @@ class messageCoordinater():
         #[Jake] For October, all valid messages will adhere to this length
         try:
             _command = _data[0]
-            self.msg_id = _data[1]
+            _msg_id = _data[1]
             _agent = _data[2]
             _behavior ,_pub_topic,_estimate = self.behaviorDict[_data[3]]
         except IndexError:
@@ -52,8 +49,9 @@ class messageCoordinater():
             rospy.loginfo("{} is well formed!".format(_data))
             ros_pub = rospy.Publisher(_pub_topic,String, queue_size=10)
             rospy.loginfo("Publishing: {} to Maki on topic: {}".format(_behavior,_pub_topic))
+            # Outgoing messages look like:
+            # <behavior> <msg_id> <estimate>
             ros_pub.publish(_behavior+" "+_msg_id+" "+_estimate)
-            rospy.Rate(1).sleep()
         else:
             rospy.loginfo("ERROR: {} is not well formed".format(msg.data))
             rospy.logerr("parseVHMessage(): ERROR: Message is not well formed!")
@@ -61,7 +59,9 @@ class messageCoordinater():
     # Incoming messages look like:
     # <msg_id> <status> <estimate> 
     def parseROSMessage(self, msg):
+        rospy.logdebug("BEGIN: parseROSMessage()")
         _data = str(msg.data).strip().split()
+        rospy.logdebug("RECEIVED: {}".format(str(msg.data)))
         _data = [d.strip() for d in _data]
         rospy.loginfo("Msg received from Maki: {}".format(_data))
 
@@ -81,10 +81,11 @@ class messageCoordinater():
             if _status == "COMPLETED":
                 _estimate = ""
             else:
-                rospy.logerr("parseROSMessage: ERROR: Missing time estiamte!")
+                rospy.logerr("parseROSMessage: ERROR: Missing time estimate!")
                 return 
         try:
             new_msg  = "{} {} {} {}".format(_command_dict[_status],_msg_id, "Maki-ro",_estimate)
+            rospy.loginfo("sending message: {}".format(new_msg))
         except KeyError: 
             rospy.logerr("parseROSMessage: ERROR: Not a valid behavior status!")
             return 
@@ -106,12 +107,13 @@ class messageCoordinater():
 if __name__ == '__main__':
     try:
         vhmsg_topic="from_central_brain"
+        ros_topic ="behavior_status"
 
-        infile = '/home/jakebrawer/Desktop/Maki_stuff/Catkin_ws/src/ros2vhmsg/WoZ/freeplay-annex-behaviors.csv' 
+        infile = '/home/jakebrawer/Desktop/maki_stuff/catkin_ws/src/ros2vhmsg/WoZ/freeplay-annex-behaviors.csv'
         m = messageCoordinater(infile)
+        rospy.Subscriber(vhmsg_topic,String,m.parseVHMessage)
+        rospy.Subscriber(ros_topic,String,m.parseROSMessage)
         while not rospy.is_shutdown():
-            rospy.Subscriber(ros_topic,String,m.parseVHMessage)
-            rospy.Subscriber(vhmsg_topic,String,m.parseROSMessage)
             rospy.Rate(1).sleep()
     except rospy.ROSInterruptException:
         pass
