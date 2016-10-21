@@ -60,7 +60,7 @@
 #define COMP_BAUD_RATE 115200
 #define DYN_BAUD_RATE 1000000 // 1Mbps
 
-int lastErrorCheckMillis = 0;
+unsigned int lastErrorCheckMillis = 0;
 
 char receiveBuffer[100];
 unsigned int receiveBufferI = 0;
@@ -78,9 +78,9 @@ void doReset() {
     //Serial << "Resetting goal speeds and positions\n";
     for (int i = 1; i <= SERVO_COUNT; i++) {
         dxlSetGoalSpeed(i, default_goal_speed[i - 1]);
-        delayMicroseconds(100);
+        delayMicroseconds(200);
         dxlSetGoalPosition(i, default_servo_pos[i - 1]);
-        delayMicroseconds(100);
+        delayMicroseconds(200);
         
         userGoalSpeed[i - 1] = default_goal_speed[i - 1];
         hasTemporaryGoalSpeed[i - 1] = false;
@@ -96,27 +96,27 @@ void setup() {
     dxlInit(DYN_BAUD_RATE);
     // minimal delay for status packet return
     dxlSetReturnDelayTime(DXL_BROADCAST, 1);
-    delayMicroseconds(100);
+    delayMicroseconds(200);
 
     for (int i = 1; i <= SERVO_COUNT; i++) {
         // These are stored in EEPROM, so check before saving to keep it from wearing down
         if (dxlGetMode(i) != 1) {
             axSetJointMode(i);
-            delayMicroseconds(100);
+            delayMicroseconds(200);
         }
         if (dxlGetCWAngleLimit(i) != min_servo_pos[i - 1]) {
             dxlSetCWAngleLimit(i, min_servo_pos[i - 1]);
-            delayMicroseconds(100);
+            delayMicroseconds(200);
         }
         if (dxlGetCCWAngleLimit(i) != max_servo_pos[i - 1]) {
             dxlSetCCWAngleLimit(i, max_servo_pos[i - 1]);
-            delayMicroseconds(100);
+            delayMicroseconds(200);
         }
     }
     
     doReset();
     
-    Serial << "Controller ready\n";
+    Serial << "Controller ready\n\n";
 }
 
 // Gets the ID of the servo from the abbreviation made by the first two characters of message
@@ -252,10 +252,7 @@ void parseSetCommand() {
 
         int setType = getSetType(command);
         if (setType == -1) {
-            // Don't error for the movement time string at the end, just ignore it and we are done here
-            if (true || command[0] != MOVEMENT_TIME_STR[0] && command[1] != MOVEMENT_TIME_STR[1]) {
-                Serial << "Error: Parameter to set '" << command[0] << command[1] << "' malformed\n";
-            }
+            Serial << "Error: Parameter to set '" << command[0] << command[1] << "' malformed\n";
             return;
         }
         command += 2;
@@ -273,37 +270,41 @@ void parseSetCommand() {
                     int currentPos = dxlGetPosition(targetServo);
                     int distance = abs(currentPos - value);
                     // we add movementTimeMs / 2 for rounding
-                    int speed = min(1023, ((unsigned int)distance * 435 + (unsigned int)movementTimeMs / 2) / movementTimeMs);
-                    dxlSetGoalSpeed(targetServo, speed);
-                    delayMicroseconds(100); // I'm disappointed this delay is needed at all, but the Dynamixel will ignore the second command without it.
+                    int speed = min(1023, ((unsigned int32_t)distance * 435 + (unsigned int32_t)movementTimeMs / 2) / movementTimeMs);
                     dxlSetGoalPosition(targetServo, value);
-                    delayMicroseconds(100); // We put these after all of the set calls, just in case another might end up going to the same dynamixel soon after.
+                    delayMicroseconds(200); // I'm disappointed this delay is needed at all, but the Dynamixel will ignore the second command without it.
+                    dxlSetGoalSpeed(targetServo, speed);
+                    delayMicroseconds(200); // We put these after all of the set calls, just in case another might end up going to the same dynamixel soon after.
                     hasTemporaryGoalSpeed[targetServo - 1] = true;
+                    //Serial << "For servo: " << targetServo << " with currentpos: " << currentPos << " and goal pos: " << value << " and distance " << distance << " and then speed " << speed << endl;
                 } else {
                     dxlSetGoalPosition(targetServo, value);
-                    delayMicroseconds(100);
+                    delayMicroseconds(200);
+                }
+                if (targetServo == HEAD_TILT) {
+                    removeHeadTiltTorqueAfterMove = true;
                 }
                 performingMovement = true;
                 break;
             case SET_SPEED_ID:
                 dxlSetGoalSpeed(targetServo, value);
-                delayMicroseconds(100);
+                delayMicroseconds(200);
                 userGoalSpeed[targetServo - 1] = value;
                 break;
             case SET_MAX_TORQUE_ID:
                 // In EEPROM, so check before saving to prevent eeprom from wearing down
                 if (dxlGetStartupMaxTorque(targetServo) != value) {
                     dxlSetStartupMaxTorque(targetServo, value);
-                    delayMicroseconds(100);
+                    delayMicroseconds(200);
                 }
                 break;
             case SET_TORQUE_LIM_ID:
                 dxlSetRunningTorqueLimit(targetServo, value);
-                delayMicroseconds(100);
+                delayMicroseconds(200);
                 break;
             case SET_TORQUE_ENABLE_ID:
                 dxlSetTorqueEnable(targetServo, value);
-                delayMicroseconds(100);
+                delayMicroseconds(200);
                 break;
         }
         
@@ -323,7 +324,7 @@ void parseCommand() {
 
 void loop() {
     // Periodically report on errors
-    int nowMs = millis();
+    unsigned int nowMs = millis();
     if (nowMs - lastErrorCheckMillis >= ERROR_CHECK_MS) {
         reportOn(ERROR_ID, "ER");
         lastErrorCheckMillis = nowMs;
@@ -337,13 +338,13 @@ void loop() {
             if (hasTemporaryGoalSpeed[i - 1]) {
                 hasTemporaryGoalSpeed[i - 1] = false;
                 dxlSetGoalSpeed(i, userGoalSpeed[i - 1]);
-                delayMicroseconds(100);
+                delayMicroseconds(200);
                 //Serial << "Resetting goal speed of servo: " << i << endl;
             }
             if (i == HEAD_TILT && removeHeadTiltTorqueAfterMove) {
                 removeHeadTiltTorqueAfterMove = false;
                 dxlSetTorqueEnable(HEAD_TILT, 0);
-                delayMicroseconds(100);
+                delayMicroseconds(200);
                 //Serial << "Disabling head tilt torque enable\n";
             }
         } else if (moving != -1) {
@@ -367,7 +368,7 @@ void loop() {
         // Refuse garbage characters -- only accept ASCII
         if (newChar < 128) {
             digitalWrite(USER_LED, serialBytes > 0); // led on when we have stuff to read
-            Serial << (char)newChar;
+            //Serial << (char)newChar;
             // Reset on white-space
             if (newChar == ' ' || newChar == '\n' || newChar == '\r') {
                 receiveBufferI = 0;
