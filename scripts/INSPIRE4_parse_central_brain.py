@@ -45,7 +45,7 @@ class messageCoordinater():
             rospy.logerr("parseVHMessage(): ERROR:{} is not a valid behavior!".format(_data[3]))
             return
 
-        if _command in _command_list and _agent in _agent_list and len(_data)==4: 
+        if _command.lower() in _command_list and _agent in _agent_list and len(_data)==4: 
             rospy.loginfo("{} is well formed!".format(_data))
             ros_pub = rospy.Publisher(_pub_topic,String, queue_size=10)
             rospy.loginfo("Publishing: {} to Maki on topic: {}".format(_behavior,_pub_topic))
@@ -53,7 +53,6 @@ class messageCoordinater():
             # <behavior> <msg_id> <estimate>
             ros_pub.publish(_behavior+" "+_msg_id+" "+_estimate)
         else:
-            rospy.loginfo("ERROR: {} is not well formed".format(msg.data))
             rospy.logerr("parseVHMessage(): ERROR: Message is not well formed!")
 
     # Incoming messages look like:
