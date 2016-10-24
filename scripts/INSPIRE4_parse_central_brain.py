@@ -108,7 +108,7 @@ if __name__ == '__main__':
         vhmsg_topic="from_central_brain"
         ros_topic ="behavior_status"
 
-        infile = '/home/jakebrawer/Desktop/maki_stuff/catkin_ws/src/ros2vhmsg/WoZ/freeplay-annex-behaviors.csv'
+        infile = '../../ros2vhmsg/WoZ/freeplay-annex-behaviors.csv'
         m = messageCoordinater(infile)
         rospy.Subscriber(vhmsg_topic,String,m.parseVHMessage)
         rospy.Subscriber(ros_topic,String,m.parseROSMessage)
