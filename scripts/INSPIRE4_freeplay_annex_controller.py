@@ -876,12 +876,13 @@ class freeplayAnnexController( object ):
         _unknown_flag = False
         _invalid_transition = False
         
-        _data_list = str(msg.data).split()
+        _data_list = str(msg.data).split(':')
         rospy.loginfo(msg)
         try:
             _data = _data_list[0]
-            _msg_id  = _data_list[1]
-            _estimate = _data_list[2]
+            _data_list2 = _data_list[1].split()
+            _msg_id  = _data_list2[0]
+            _estimate = _data_list[1]
         except IndexError:
              rospy.logerr("ERROR: Msg not well formed!")
              _data = str(msg.data)

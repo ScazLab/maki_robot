@@ -51,7 +51,7 @@ class messageCoordinater():
             rospy.loginfo("Publishing: {} to Maki on topic: {}".format(_behavior,_pub_topic))
             # Outgoing messages look like:
             # <behavior> <msg_id> <estimate>
-            ros_pub.publish(_behavior+" "+_msg_id+" "+_estimate)
+            ros_pub.publish(_behavior+":"+_msg_id+" "+_estimate)
         else:
             rospy.logerr("parseVHMessage(): ERROR: Message is not well formed!")
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         vhmsg_topic="from_central_brain"
         ros_topic ="behavior_status"
 
-        infile = '../../ros2vhmsg/WoZ/freeplay-annex-behaviors.csv'
+        infile = '/home/scaz-maki-1/catkin_ws/src/ros2vhmsg/WoZ/freeplay-annex-behaviors.csv'
         m = messageCoordinater(infile)
         rospy.Subscriber(vhmsg_topic,String,m.parseVHMessage)
         rospy.Subscriber(ros_topic,String,m.parseROSMessage)
