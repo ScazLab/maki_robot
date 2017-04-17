@@ -113,7 +113,7 @@ if __name__ == '__main__':
         rospy.Subscriber(vhmsg_topic,String,m.parseVHMessage)
         rospy.Subscriber(ros_topic,String,m.parseROSMessage)
         while not rospy.is_shutdown():
-            rospy.Rate(1).sleep()
+            rospy.Rate(10).sleep()
     except rospy.ROSInterruptException:
         pass
 
