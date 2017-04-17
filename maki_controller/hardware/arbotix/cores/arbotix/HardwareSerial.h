@@ -67,8 +67,8 @@ class HardwareSerial : public Stream
 //  extern HardwareSerial Serial_;  
 #endif
 #if defined(UBRR1H)
-  //Provided in ax12 lib.
-  //extern HardwareSerial Serial1;
+  //Used directly by ax12 lib.
+  extern HardwareSerial Serial1;
 #endif
 #if defined(UBRR2H)
   extern HardwareSerial Serial2;
