@@ -72,7 +72,12 @@ int userGoalSpeed[SERVO_COUNT];
 bool hasTemporaryGoalSpeed[SERVO_COUNT];
 bool performingMovement = false;
 
+// Wait for completion of head tilt move to turn off the torque to that motor
 bool removeHeadTiltTorqueAfterMove = false;
+//To keep the head from flailing around, though, we add a small delay...
+#define REMOVE_HEAD_TILT_TORQUE_DELAY 1000
+unsigned int removeHeadTiltDelayStartTime = 0;
+bool removeHeadTiltTorqueAfterDelay = false;
 
 void doReset() {
     //Serial << "Resetting goal speeds and positions\n";
@@ -343,13 +348,20 @@ void loop() {
             }
             if (i == HEAD_TILT && removeHeadTiltTorqueAfterMove) {
                 removeHeadTiltTorqueAfterMove = false;
-                dxlSetTorqueEnable(HEAD_TILT, 0);
-                delayMicroseconds(200);
-                //Serial << "Disabling head tilt torque enable\n";
+                removeHeadTiltTorqueAfterDelay = true;
+                removeHeadTiltDelayStartTime = millis();
             }
         } else if (moving != -1) {
             allMovementComplete = false;
         }
+    }
+    
+    if (removeHeadTiltTorqueAfterDelay &&
+            millis() - removeHeadTiltDelayStartTime >= REMOVE_HEAD_TILT_TORQUE_DELAY) {
+        dxlSetTorqueEnable(HEAD_TILT, 0);
+        delayMicroseconds(200);
+        removeHeadTiltTorqueAfterDelay = false;
+        //Serial << "Disabling head tilt torque enable\n";
     }
     
     // Check if movement has completed, and report if so.

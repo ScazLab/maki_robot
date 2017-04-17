@@ -5,7 +5,7 @@
 	<env name="ROS_PYTHON_LOG_CONFIG_FILE" value="$(find maki_robot)/python_logging.conf"/>
 
 	<arg name="task_behaviors" default="false" />
-	<arg name="agentic_behaviors" default="true" />
+	<arg name="agentic_behaviors" default="false" />
 	<arg name="exp_controller" default="true" />
 	<arg name="arbotix" default="false" />
 
@@ -28,5 +28,5 @@
 		<node name="attending" pkg="maki_robot" type="selective_attention.py" output="screen" />
 	</group>
 
-	<node name="ros2vhmsg" pkg="signing_creatures_INSPIRE4_woz"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String' --VHMSG_TOPIC 'freeplay_annex_command;std_msgs/String' --VHMSG_TOPIC 'freeplay_agency;std_msgs/String" />	
+	<node name="ros2vhmsg" pkg="ros2vhmsg"  type="ros2vhmsg" output="screen" args="--VHMSG_TOPIC 'maki_command;std_msgs/String' --VHMSG_TOPIC 'inspire_four_pilot_command;std_msgs/String' --VHMSG_TOPIC 'freeplay_annex_command;std_msgs/String' --VHMSG_TOPIC 'freeplay_agency;std_msgs/String'" />
 </launch>
