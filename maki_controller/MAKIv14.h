@@ -57,6 +57,26 @@
 #define MIN_POS MIN_DYN_POS
 #define MIN_ANG MIN_DYN_ANG
 
+#define NEWER_FUNKY_MAKI
+
+#ifdef NEWER_FUNKY_MAKI
+// emperically determined reasonable values
+int min_servo_pos[] = {484,   // EYELID_RIGHT
+                       648,   // EYELID_LEFT
+                       558,   // EYE_PAN
+                       425,  //390,   // EYE_TILT
+                       143,   // HEAD_TILT
+                       259    //300   // HEAD_PAN
+                      };
+                      
+int max_servo_pos[] = {666,   // EYELID_RIGHT
+                       814,   // EYELID_LEFT
+                       604,   // EYE_PAN
+                       1000,   // EYE_TILT
+                       271,   // HEAD_TILT
+                       555    //696   // HEAD_PAN
+                      };
+#else
 // emperically determined reasonable values
 int min_servo_pos[] = {484,   // EYELID_RIGHT
                        361,   // EYELID_LEFT
@@ -73,6 +93,7 @@ int max_servo_pos[] = {666,   // EYELID_RIGHT
                        582,   // HEAD_TILT
                        768    //696   // HEAD_PAN
                       };
+#endif
                       
 int default_servo_pos[] = {525,   // EYELID_RIGHT
                            500,   // EYELID_LEFT
