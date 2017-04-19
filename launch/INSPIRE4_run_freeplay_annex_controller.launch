@@ -5,7 +5,7 @@
 	<env name="ROS_PYTHON_LOG_CONFIG_FILE" value="$(find maki_robot)/python_logging.conf"/>
 
 	<arg name="task_behaviors" default="false" />
-	<arg name="agentic_behaviors" default="false" />
+	<arg name="agentic_behaviors" default="true" />
 	<arg name="exp_controller" default="true" />
 	<arg name="arbotix" default="false" />
 

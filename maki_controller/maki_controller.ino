@@ -79,6 +79,8 @@ bool removeHeadTiltTorqueAfterMove = false;
 unsigned int removeHeadTiltDelayStartTime = 0;
 bool removeHeadTiltTorqueAfterDelay = false;
 
+int userHeadTiltGoalPosition = 0;
+
 void doReset() {
     //Serial << "Resetting goal speeds and positions\n";
     for (int i = 1; i <= SERVO_COUNT; i++) {
@@ -90,6 +92,8 @@ void doReset() {
         userGoalSpeed[i - 1] = default_goal_speed[i - 1];
         hasTemporaryGoalSpeed[i - 1] = false;
     }
+    
+    userHeadTiltGoalPosition = default_servo_pos[HEAD_TILT - 1];
 
     performingMovement = true;
     // Default to having the head tilt motor torque disabled for safety
@@ -288,6 +292,7 @@ void parseSetCommand() {
                 }
                 if (targetServo == HEAD_TILT) {
                     removeHeadTiltTorqueAfterMove = true;
+                    userHeadTiltGoalPosition = value;
                 }
                 performingMovement = true;
                 break;
@@ -362,6 +367,14 @@ void loop() {
         delayMicroseconds(200);
         removeHeadTiltTorqueAfterDelay = false;
         //Serial << "Disabling head tilt torque enable\n";
+    }
+    
+    // Accordingly with removing the torque enable on the head tilt, 
+    if (abs(dxlGetPosition(HEAD_TILT) - userHeadTiltGoalPosition) > 50) {
+        dxlSetGoalPosition(HEAD_TILT, userHeadTiltGoalPosition);
+        delayMicroseconds(200);
+        removeHeadTiltTorqueAfterMove = true;
+        performingMovement = true;
     }
     
     // Check if movement has completed, and report if so.

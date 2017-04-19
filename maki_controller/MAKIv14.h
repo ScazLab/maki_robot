@@ -57,7 +57,7 @@
 #define MIN_POS MIN_DYN_POS
 #define MIN_ANG MIN_DYN_ANG
 
-#define NEWER_FUNKY_MAKI
+//#define NEWER_FUNKY_MAKI
 
 #ifdef NEWER_FUNKY_MAKI
 // emperically determined reasonable values
@@ -82,7 +82,7 @@ int min_servo_pos[] = {484,   // EYELID_RIGHT
                        361,   // EYELID_LEFT
                        460,   // EYE_PAN
                        425,  //390,   // EYE_TILT
-                       435,   // HEAD_TILT
+                       445,   // HEAD_TILT
                        256    //300   // HEAD_PAN
                       };
                       
@@ -90,7 +90,7 @@ int max_servo_pos[] = {666,   // EYELID_RIGHT
                        535,   // EYELID_LEFT
                        578,   // EYE_PAN
                        610,   // EYE_TILT
-                       582,   // HEAD_TILT
+                       586,   // HEAD_TILT
                        768    //696   // HEAD_PAN
                       };
 #endif
