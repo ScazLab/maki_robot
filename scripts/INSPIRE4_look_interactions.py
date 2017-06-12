@@ -56,18 +56,18 @@ class lookINSPIRE4Interaction( lookAt ):
 		self.DC_helper = dynamixelConversions()
 
 		if lookINSPIRE4Interaction.HP_LEFT_SCREEN == None:	
-			lookINSPIRE4Interaction.HP_LEFT_SCREEN = 675	#650	#620
+			lookINSPIRE4Interaction.HP_LEFT_SCREEN = HP_LEFT_SCREEN	#650	#620
 		if lookINSPIRE4Interaction.HT_LEFT_SCREEN == None:	
-			lookINSPIRE4Interaction.HT_LEFT_SCREEN = 540
+			lookINSPIRE4Interaction.HT_LEFT_SCREEN = HT_LEFT_SCREEN
 		if lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE == None:
-			lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE = 578	#EP_RIGHT
+			lookINSPIRE4Interaction.EP_LEFT_SCREEN_SACCADE = EP_LEFT_SCREEN_SACCADE	#EP_RIGHT
 
 		if lookINSPIRE4Interaction.HP_RIGHT_SCREEN == None:
-			lookINSPIRE4Interaction.HP_RIGHT_SCREEN = 349	#404
+			lookINSPIRE4Interaction.HP_RIGHT_SCREEN = HP_RIGHT_SCREEN	#404
 		if lookINSPIRE4Interaction.HT_RIGHT_SCREEN == None:
 			lookINSPIRE4Interaction.HT_RIGHT_SCREEN = lookINSPIRE4Interaction.HT_LEFT_SCREEN
 		if lookINSPIRE4Interaction.EP_RIGHT_SCREEN_SACCADE == None:
-			lookINSPIRE4Interaction.EP_RIGHT_SCREEN_SACCADE = 460	#EP_LEFT
+			lookINSPIRE4Interaction.EP_RIGHT_SCREEN_SACCADE = EP_RIGHT_SCREEN_SACCADE	#EP_LEFT
 
 		if lookINSPIRE4Interaction.HP_FACE_INFANT == None:
 			lookINSPIRE4Interaction.HP_FACE_INFANT = HP_FRONT

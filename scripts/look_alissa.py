@@ -54,6 +54,7 @@ class lookAlissa( headTiltBaseBehavior ):
 	###########################
 	def macroLookAtAlissa( self ):
 		rospy.logdebug("macrolookAtAlissa: BEGIN")
+		print("====================HP_ALISSA VALUE: {}==================".format(HP_ALISSA))
 
 		if self.ALIVE:
 			if not rospy.is_shutdown():

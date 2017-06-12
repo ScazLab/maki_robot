@@ -57,32 +57,41 @@
 #define MIN_POS MIN_DYN_POS
 #define MIN_ANG MIN_DYN_ANG
 
-//#define NEWER_FUNKY_MAKI
+#define NEWER_FUNKY_MAKI
 
 #ifdef NEWER_FUNKY_MAKI
 // emperically determined reasonable values
 int min_servo_pos[] = {484,   // EYELID_RIGHT
-                       648,   // EYELID_LEFT
-                       558,   // EYE_PAN
+                       361,   // EYELID_LEFT
+                       460,   // EYE_PAN
                        425,  //390,   // EYE_TILT
-                       143,   // HEAD_TILT
-                       259    //300   // HEAD_PAN
+                       446,   // HEAD_TILT
+                       189    //300   // HEAD_PAN
                       };
                       
 int max_servo_pos[] = {666,   // EYELID_RIGHT
-                       814,   // EYELID_LEFT
-                       604,   // EYE_PAN
-                       1000,   // EYE_TILT
-                       271,   // HEAD_TILT
-                       555    //696   // HEAD_PAN
+                       535,   // EYELID_LEFT
+                       578,   // EYE_PAN
+                       610,   // EYE_TILT
+                       586,   // HEAD_TILT
+                       615    //696   // HEAD_PAN
                       };
+int default_servo_pos[] = {525,   // EYELID_RIGHT
+                           500,   // EYELID_LEFT
+                           DEFAULT_POS,   // EYE_PAN
+                           DEFAULT_POS,   // EYE_TILT
+                           522,   //490,  // HEAD_TILT
+                           410   // HEAD_PAN
+                      };
+
+                        
 #else
 // emperically determined reasonable values
 int min_servo_pos[] = {484,   // EYELID_RIGHT
                        361,   // EYELID_LEFT
                        460,   // EYE_PAN
                        425,  //390,   // EYE_TILT
-                       445,   // HEAD_TILT
+                       446,   // HEAD_TILT
                        256    //300   // HEAD_PAN
                       };
                       
@@ -93,15 +102,16 @@ int max_servo_pos[] = {666,   // EYELID_RIGHT
                        586,   // HEAD_TILT
                        768    //696   // HEAD_PAN
                       };
-#endif
-                      
 int default_servo_pos[] = {525,   // EYELID_RIGHT
                            500,   // EYELID_LEFT
                            DEFAULT_POS,   // EYE_PAN
                            DEFAULT_POS,   // EYE_TILT
                            DEFAULT_POS,   //490,  // HEAD_TILT
                            DEFAULT_POS   // HEAD_PAN
-                          };                                                                            
+                          };                
+#endif
+                      
+                                                            
 
 int default_goal_speed[] = {100,  // EYELID_RIGHT
                             100,  // EYELID_LEFT

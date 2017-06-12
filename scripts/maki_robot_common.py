@@ -1,3 +1,6 @@
+from rospy import get_param
+from rospy import loginfo
+
 ## Common definitions for maki_robot
 
 ## NOTE: These globals are #define at the top of the Arduino servo driver
@@ -77,24 +80,72 @@ FEEDBACK_TOPIC = [ "maki_feedback_max_pos",
 IPT_FACE = 1000	#ms
 IPT_NOD = 1750	#ms
 
-HP_LEFT = 312
-HP_FRONT = 512
-HP_RIGHT = 712
+# Maki 2's HP motor is mounted slightly differently than Maki 1's
+# So we need to adjust these vals accordingly
+if get_param("is_maki_2"):
+
+    HP_LEFT = 201
+    HP_FRONT = 410
+    HP_RIGHT = 601
+    HP_ALISSA = 218		## to maki's lef
+    HP_EXPERIMENTER = 509
+    #( "LR", "LL", "EP", "ET", "HT", "HP" )	
+    SERVO_MIN = ( 484, 361, 460, 425, 446, 189 )
+    SERVO_NEUTRAL = ( 525, 500, 512, 512, 522, 410 )
+    SERVO_MAX = ( 666, 535, 578, 610, 586, 615 )
+
+    HT_MAX = 583	## update 2016-07-20; HT motor replacement
+    HT_UP = 550
+    HT_MIDDLE = 525
+    HT_DOWN = 470
+    HT_MIN = 454	## update 2016-07-20; HT motor replacement
+
+    #HP_ALISSA = 620	## to maki's right
+    HT_ALISSA = 540
+
+    HT_EXPERIMENTER = 555 #560	#565	#570
+
+    HP_LEFT_SCREEN = 575
+    HT_LEFT_SCREEN = 540
+    EP_LEFT_SCREEN_SACCADE = 578
+    HP_RIGHT_SCREEN = 247
+    HT_RIGHT_SCREEN = 540
+    EP_RIGHT_SCREEN_SACCADE = 460
+
+    print("-----------------------------------USING NEW MAKI--------------------------")
+else:
+    HP_LEFT = 312
+    HP_FRONT = 512
+    HP_RIGHT = 712
+    HP_ALISSA = 349		## to maki's left
+    HP_EXPERIMENTER = 620
+    #( "LR", "LL", "EP", "ET", "HT", "HP" )	
+    SERVO_MIN = ( 484, 361, 460, 423, 444, 256 )
+    SERVO_NEUTRAL = ( 525, 500, 512, 512, 512, 512 )
+    SERVO_MAX = ( 666, 535, 578, 607, 583, 768 )
+
+    HT_MAX = 583	## update 2016-07-20; HT motor replacement
+    HT_UP = 540
+    HT_MIDDLE = 505
+    HT_DOWN = 460
+    HT_MIN = 444	## update 2016-07-20; HT motor replacement
+
+    #HP_ALISSA = 620	## to maki's right
+    HT_ALISSA = 540
+
+    HP_LEFT_SCREEN = 675
+    HT_LEFT_SCREEN = 540
+    EP_LEFT_SCREEN_SACCADE = 578
+    HP_RIGHT_SCREEN = 349
+    HT_RIGHT_SCREEN = 540
+    EP_RIGHT_SCREEN_SACCADE = 460
+
+    print("-----------------------------------USING OLD MAKI--------------------------")
+
+HT_EXPERIMENTER = 555 #560	#565	#570
 #HP_LEFT = 404	## demo
 #HP_RIGHT = 620	## demo
 
-HT_MAX = 583	## update 2016-07-20; HT motor replacement
-HT_UP = 540
-HT_MIDDLE = 505
-HT_DOWN = 460
-HT_MIN = 444	## update 2016-07-20; HT motor replacement
-
-#HP_ALISSA = 620	## to maki's right
-HP_ALISSA = 349		## to maki's left
-HT_ALISSA = 540
-
-HP_EXPERIMENTER = 620
-HT_EXPERIMENTER = 555 #560	#565	#570
 
 EP_LEFT = 468
 EP_FRONT = 512
@@ -113,10 +164,6 @@ LL_CLOSE_MAX = 361
 ## 2016-07-20 ktsui: replace HT and EP motors; full disassembly, update values
 ## 2016-06-15 ktsui: replace HT motor; full disassembly, update values
 
-#( "LR", "LL", "EP", "ET", "HT", "HP" )	
-SERVO_MIN = ( 484, 361, 460, 423, 444, 256 )
-SERVO_NEUTRAL = ( 525, 500, 512, 512, 512, 512 )
-SERVO_MAX = ( 666, 535, 578, 607, 583, 768 )
 
 DELTA_PP = 5
 ###################################

@@ -75,7 +75,7 @@ bool performingMovement = false;
 // Wait for completion of head tilt move to turn off the torque to that motor
 bool removeHeadTiltTorqueAfterMove = false;
 //To keep the head from flailing around, though, we add a small delay...
-#define REMOVE_HEAD_TILT_TORQUE_DELAY 1000
+#define REMOVE_HEAD_TILT_TORQUE_DELAY 2000
 unsigned int removeHeadTiltDelayStartTime = 0;
 bool removeHeadTiltTorqueAfterDelay = false;
 
@@ -287,8 +287,12 @@ void parseSetCommand() {
                     hasTemporaryGoalSpeed[targetServo - 1] = true;
                     //Serial << "For servo: " << targetServo << " with currentpos: " << currentPos << " and goal pos: " << value << " and distance " << distance << " and then speed " << speed << endl;
                 } else {
+                    Serial << "\n GP: " << value << " PP: " << dxlGetPosition(targetServo) << "\n"; 
                     dxlSetGoalPosition(targetServo, value);
+                    Serial << "Last Error : " << dxlGetLastError() << "\n";
                     delayMicroseconds(200);
+                    Serial << "\n GP: " << value << " PP: " << dxlGetPosition(targetServo) << "\n"; 
+
                 }
                 if (targetServo == HEAD_TILT) {
                     removeHeadTiltTorqueAfterMove = true;
@@ -344,7 +348,7 @@ void loop() {
     bool allMovementComplete = true;
     for (int i = 1; i <= SERVO_COUNT; i++) {
         int moving = dxlGetMoving(i);
-        if (moving == 0) {
+         if (moving == 0) {
             if (hasTemporaryGoalSpeed[i - 1]) {
                 hasTemporaryGoalSpeed[i - 1] = false;
                 dxlSetGoalSpeed(i, userGoalSpeed[i - 1]);
@@ -366,20 +370,30 @@ void loop() {
         dxlSetTorqueEnable(HEAD_TILT, 0);
         delayMicroseconds(200);
         removeHeadTiltTorqueAfterDelay = false;
-        //Serial << "Disabling head tilt torque enable\n";
+        Serial << "Disabling head tilt torque enable\n";
     }
     
-    // Accordingly with removing the torque enable on the head tilt, 
-    if (abs(dxlGetPosition(HEAD_TILT) - userHeadTiltGoalPosition) > 50) {
+    // Accordingly with removing the torque enable on the head tilt,
+    if (abs(dxlGetPosition(HEAD_TILT) - userHeadTiltGoalPosition) > 50 && allMovementComplete) {
         dxlSetGoalPosition(HEAD_TILT, userHeadTiltGoalPosition);
+        Serial << "userHeadTiltGoalPosition: " << userHeadTiltGoalPosition << "\n";
         delayMicroseconds(200);
         removeHeadTiltTorqueAfterMove = true;
         performingMovement = true;
     }
+
+    // corrects head tilt if it droops due to motor torque being disabled
+//    if (abs(dxlGetPosition(HEAD_TILT) - userHeadTiltGoalPosition) >= 15 && allMovementComplete) {
+//        dxlSetGoalPosition(HEAD_TILT, userHeadTiltGoalPosition);
+//        delayMicroseconds(200);
+//        Serial << "Initiating Corrective head movements"  << "\n";
+//
+//    }
     
     // Check if movement has completed, and report if so.
     if (performingMovement && allMovementComplete) {
         performingMovement = false;
+        Serial << "Error : " << dxlGetError(2) << "\n";
         reportOn(PRESENT_POS_ID, "PP");
     }
     

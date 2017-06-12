@@ -7,7 +7,15 @@
 	<arg name="task_behaviors" default="false" />
 	<arg name="agentic_behaviors" default="true" />
 	<arg name="exp_controller" default="true" />
-	<arg name="arbotix" default="false" />
+	<arg name="arbotix" default="true" />
+
+  <!-- New Maki uses slightly diff motor commands so be sure to set this depending on which Maki is being used
+       Main changes can be found in maki_robot_common.py
+       NOTE: These values will need to be changed when Maki(s) are serviced
+  -->
+  
+  <param name="is_maki_2" type="bool" value="true"/>
+  
 
   	<!-- robot interface -->
 	<node name="maki_arbotix_interface" pkg="maki_robot" type="MAKI-Arbotix-Interface.py" output="screen" if="$(arg arbotix)" />
