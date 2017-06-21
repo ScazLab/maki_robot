@@ -57,7 +57,7 @@
 #define MIN_POS MIN_DYN_POS
 #define MIN_ANG MIN_DYN_ANG
 
-#define NEWER_FUNKY_MAKI
+//#define NEWER_FUNKY_MAKI
 
 #ifdef NEWER_FUNKY_MAKI
 // emperically determined reasonable values
@@ -80,7 +80,7 @@ int default_servo_pos[] = {525,   // EYELID_RIGHT
                            500,   // EYELID_LEFT
                            DEFAULT_POS,   // EYE_PAN
                            DEFAULT_POS,   // EYE_TILT
-                           522,   //490,  // HEAD_TILT
+                           540,   //490,  // HEAD_TILT
                            410   // HEAD_PAN
                       };
 

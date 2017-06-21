@@ -14,7 +14,7 @@
        NOTE: These values will need to be changed when Maki(s) are serviced
   -->
   
-  <param name="is_maki_2" type="bool" value="true"/>
+  <param name="is_maki_2" type="bool" value="false"/>
   
 
   	<!-- robot interface -->

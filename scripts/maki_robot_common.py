@@ -91,12 +91,12 @@ if get_param("is_maki_2"):
     HP_EXPERIMENTER = 509
     #( "LR", "LL", "EP", "ET", "HT", "HP" )	
     SERVO_MIN = ( 484, 361, 460, 425, 446, 189 )
-    SERVO_NEUTRAL = ( 525, 500, 512, 512, 522, 410 )
+    SERVO_NEUTRAL = ( 525, 500, 512, 512, 540, 410 )
     SERVO_MAX = ( 666, 535, 578, 610, 586, 615 )
 
     HT_MAX = 583	## update 2016-07-20; HT motor replacement
     HT_UP = 550
-    HT_MIDDLE = 525
+    HT_MIDDLE = 540
     HT_DOWN = 470
     HT_MIN = 454	## update 2016-07-20; HT motor replacement
 
@@ -112,6 +112,7 @@ if get_param("is_maki_2"):
     HT_RIGHT_SCREEN = 540
     EP_RIGHT_SCREEN_SACCADE = 460
 
+    HT_STARTLE = 555
     print("-----------------------------------USING NEW MAKI--------------------------")
 else:
     HP_LEFT = 312
@@ -140,6 +141,7 @@ else:
     HT_RIGHT_SCREEN = 540
     EP_RIGHT_SCREEN_SACCADE = 460
 
+    HT_STARTLE = 535
     print("-----------------------------------USING OLD MAKI--------------------------")
 
 HT_EXPERIMENTER = 555 #560	#565	#570

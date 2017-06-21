@@ -51,7 +51,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
 
     HP_EXPERIMENTER = None
     HT_EXPERIMENTER = None
-    
+
     HP_BALL_LOWER_RIGHT = None
     HT_BALL_LOWER_RIGHT = None
 
@@ -113,7 +113,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
         if lookINSPIRE4Intro.HP_FACE_INFANT == None:
             lookINSPIRE4Intro.HP_FACE_INFANT = HP_FRONT
         if lookINSPIRE4Intro.HT_FACE_INFANT == None:
-            lookINSPIRE4Intro.HT_FACE_INFANT = HT_MIDDLE    
+            lookINSPIRE4Intro.HT_FACE_INFANT = HT_MIDDLE
 
         if lookINSPIRE4Intro.FACING_EXPERIMENTER == None:
             lookINSPIRE4Intro.FACING_EXPERIMENTER = "experimenter"
@@ -137,7 +137,8 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
         ## from lookINSPIRE4Intro
         if lookINSPIRE4Intro.__is_startled == None:
             lookINSPIRE4Intro.__is_startled = False
-        self.HT_STARTLE = 525   #530    #525
+        self.HT_STARTLE = HT_STARTLE   #530    #525
+
         self.HT_NEUTRAL = HT_MIDDLE
         self.HT_GS_DEFAULT = 15         ## as set in Arbotix-M driver
         self.HT_GS_MAX = 75     #60     #50
@@ -548,7 +549,7 @@ class lookINSPIRE4Intro( eyelidHeadTiltBaseBehavior, lookAt ):
         ## generate servo control command to set goal positions
         ## NOTE: on the Arbotix-M side, a sync_write function is used
         ## to simultaneously broadcast the updated goal positions
-        _duration_nod_up = float(_duration_nod) * 0.2   #0.25
+        _duration_nod_up = float(_duration_nod) * 0.25   #0.25
         _head_nod_up_gp_cmd = ""
         _head_nod_up_gp_cmd += "LL" + SC_SET_GP + str(_my_head_nod_up_ll)
         _head_nod_up_gp_cmd += "HT" + SC_SET_GP + str(_my_head_nod_up_ht)

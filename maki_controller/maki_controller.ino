@@ -366,16 +366,18 @@ void loop() {
     }
     
     if (removeHeadTiltTorqueAfterDelay &&
-            millis() - removeHeadTiltDelayStartTime >= REMOVE_HEAD_TILT_TORQUE_DELAY) {
+            millis() - removeHeadTiltDelayStartTime >= REMOVE_HEAD_TILT_TORQUE_DELAY
+            && abs(dxlGetPosition(HEAD_TILT) - default_servo_pos[HEAD_TILT - 1]) < 15 ) {
         dxlSetTorqueEnable(HEAD_TILT, 0);
         delayMicroseconds(200);
         removeHeadTiltTorqueAfterDelay = false;
-        Serial << "Disabling head tilt torque enable\n";
+        //Serial << "Disabling head tilt torque enable\n";
     }
     
     // Accordingly with removing the torque enable on the head tilt,
     if (abs(dxlGetPosition(HEAD_TILT) - userHeadTiltGoalPosition) > 50 && allMovementComplete) {
-        dxlSetGoalPosition(HEAD_TILT, userHeadTiltGoalPosition);
+         // go up slightly higher in order to prevent the head from constantly drooping
+        dxlSetGoalPosition(HEAD_TILT, userHeadTiltGoalPosition + 5);
         Serial << "userHeadTiltGoalPosition: " << userHeadTiltGoalPosition << "\n";
         delayMicroseconds(200);
         removeHeadTiltTorqueAfterMove = true;
