@@ -126,18 +126,20 @@ class lookAt( headTiltBaseBehavior, headPanBaseBehavior ):
         ## STEP 4: convert to duration 
         ##  AMOUNT OF TIME TO ELAPSE BEFORE COUNTERING EYE PAN
         _counter_ticks = self.DC_helper.convertToTicks_degrees( _counter_angle )
-        if (_delta_hp_pp > 0):
+        if (_delta_hp_pp > 20):
                 _counter_ratio = float(_counter_ticks) / float(_delta_hp_pp)
         else:
                 rospy.logerr("_delta_hp_pp == 0; cannot divide by it!")
-                _counter_ratio = 1.0 # a pretty neutral ratio if you think about it
+                _counter_ratio = .4 # a pretty neutral ratio if you think about it
         _counter_duration = _counter_ratio * duration_s     ## in seconds
         rospy.loginfo("STEP 4: _counter_ticks=" + str(_counter_ticks) + ", _counter_ratio=" + str(_counter_ratio) + ",  _counter_duration=" + str(_counter_duration))
 
         ## STEP 5A: calculate HP goal speed
 ## KATE
-        if (_delta_hp_pp > 0):
+        if (_delta_hp_pp > 10):
             _hp_gs = self.DC_helper.getGoalSpeed_ticks_duration( _delta_hp_pp, duration_s )
+            if _hp_gs < 10.0:
+                _hp_gs = self.HP_GS_DEFAULT
         else:
             ## JAKE CHANGE. NOT SURE WHAT THIS DOES
             _hp_gs = self.HP_GS_DEFAULT
