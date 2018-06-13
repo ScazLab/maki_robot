@@ -8,7 +8,7 @@
 	<arg name="split_size" default="256" />
 	<arg name="robot" default="true" />
 	<arg name="experiment" default="true" />
-	<arg name="video" default="true" />
+	<arg name="video" default="false" />
 	<arg name="enable_rectify" default="true" />
 
 	<arg name="robot_topics" default="" unless="$(arg robot)" />
@@ -41,6 +41,7 @@
 		/maki_macro
 		/experiment_info
 		/freeplay_agency
+    /from_central_brain
 		"
 		if="$(arg experiment)" />
 
