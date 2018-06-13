@@ -112,6 +112,7 @@ if __name__ == '__main__':
         m = messageCoordinater(infile)
         rospy.Subscriber(vhmsg_topic,String,m.parseVHMessage)
         rospy.Subscriber(ros_topic,String,m.parseROSMessage)
+        rospy.loginfo("Parsing central brain...")
         while not rospy.is_shutdown():
             rospy.Rate(10).sleep()
     except rospy.ROSInterruptException:

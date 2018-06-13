@@ -931,6 +931,7 @@ class freeplayAnnexController( object ):
 
         elif _data == "awake":
             ## AWAKE TO FACE INFANT
+            freeplayAnnexController.toggleDataLoggerRecording( self, "stopped" ) ## we want to start recording
             self.asleepAwake.runAwake( disable_ht=False )
             self.asleepAwake.waitForMovementToComplete()
             freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
@@ -983,6 +984,11 @@ class freeplayAnnexController( object ):
             freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
             ## NOTE: This has blocking call (monitorMoveToGP)
             self.lookStimuli.turnToScreen( right_screen=True )
+            freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
+        elif _data == "lookAt Left":
+            freeplayAnnexController.setBlinkAndScan( self, blink=False, scan=False )
+            ## NOTE: This has blocking call (monitorMoveToGP)
+            self.lookStimuli.turnToScreen( right_screen=False )
             freeplayAnnexController.setBlinkAndScan( self, blink=True, scan=False )
 
         elif _data == "lookAt infant":
