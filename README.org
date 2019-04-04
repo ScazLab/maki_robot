@@ -1,0 +1,22 @@
+# TODO Complete this!
+
+* Prereqs
+  You may need to add your user to the dialout group to send commands to Maki:
+  
+#+BEGIN_SRC shell
+  sudo gpasswd --add ${USER} dialout
+#+END_SRC
+ 
+* Test behaviors
+  To test some basic Maki behaviors first launch a roscore instance:
+ #+BEGIN_SRC shell
+   roscore
+ #+END_SRC
+ 
+And then in a separate terminal run: 
+ #+BEGIN_SRC shell
+   roslaunch maki_robot test_behaviors.launch
+ #+END_SRC
+ 
+
+
